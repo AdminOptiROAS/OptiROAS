@@ -520,6 +520,20 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
 .wlplats label:has(input:checked){border-color:var(--accent);background:var(--tint)}
 .auth .toggle{align-items:flex-start}.auth .toggle input{width:auto;margin-top:3px}
 .wldone{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:8px 0}
+.navsign{font-weight:600;font-size:14px;color:var(--ink)}
+.connect-meta{display:inline-flex;align-items:center;gap:8px;margin-top:4px;font-size:13.5px}
+.atabs2{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.atabs2 button{background:none;border:0;padding:8px 2px;margin-right:14px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+.atabs2 button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.mcard{border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.mhead2{display:flex;align-items:center;gap:10px;justify-content:space-between;flex-wrap:wrap}
+.alist2{display:flex;flex-direction:column;gap:8px}
+.arow2{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;flex-wrap:wrap}
+.arow2 .an{display:flex;flex-direction:column;min-width:0}
+.arow2 .an b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arow2 .ar{display:flex;gap:8px;align-items:center}
+.arow2 select{padding:6px 8px;border-radius:8px;border:1px solid var(--line);font:500 13px var(--body)}
+.okmsg{background:var(--good-soft);color:var(--good);border-radius:8px;padding:9px 12px;font-size:13.5px;margin:0}
 .wldone h3{color:var(--good)}
 .legal{max-width:760px}
 .legal h2{font-size:20px;margin:30px 0 8px}
@@ -537,6 +551,7 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
   <div class="links"><a href="#home" data-nav="home">Home</a><a href="#how" data-nav="how">How it works</a><a href="#platforms" data-nav="platforms">Platforms</a><a href="#pricing" data-nav="pricing">Pricing</a><a href="#faq" data-nav="faq">FAQ</a><a href="#audit-report" data-nav="audit" id="navAudit" hidden>My audit</a></div>
   <div class="navr">
     <select id="regionSel" class="regsel" aria-label="Currency"></select>
+    <button class="linkbtn navsign" id="acctBtn" type="button">Sign in</button>
     <button class="btn ghost sm" id="signInBtn" type="button">Join the waitlist</button>
     <a class="btn sm navcta" href="#audit">Run free audit</a>
   </div>
@@ -565,6 +580,7 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
     <div class="plats" id="platChips"></div>
     <div class="privacy"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
       <span>Files are analysed in your browser. Nothing is uploaded or kept.</span></div>
+    <button class="linkbtn connect-meta" type="button" id="dzMeta"><span class="dot" style="background:var(--p-meta)"></span>Or connect your Meta ad account directly <span class="pill Low">Early access</span></button>
   </div>
 </div></header>
 
@@ -776,6 +792,21 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
       <div id="live"></div>
     </div>
   </div>
+</div></section>
+
+<section id="acctView" hidden><div class="wrap authwrap">
+  <div class="card auth" id="acctCard"></div>
+  <aside class="authside">
+    <div class="eyebrow">Connect instead of exporting</div>
+    <h2 style="margin-top:8px">Audit your Meta ads straight from your account</h2>
+    <ul>
+      <li>Read-only access: OptiROAS can't change, pause or spend on your ads</li>
+      <li>You choose which ad accounts to share, and can disconnect at any time</li>
+      <li>Your access is encrypted and stored only on our servers</li>
+      <li>Pulls up to 90 days of daily, ad-level results in seconds</li>
+    </ul>
+    <p class="muted small">Accounts are invite-only during early access. See how we handle data in the <a href="/privacy" data-go-page="privacy">privacy policy</a> and <a href="/data-deletion" data-go-page="data-deletion">data deletion</a>.</p>
+  </aside>
 </div></section>
 
 <section id="authView" hidden><div class="wrap authwrap">
@@ -2605,7 +2636,7 @@ const PAGES=['home','how','delivered','pillars','calculator','platforms','pricin
 if(!ST.page)ST.page='home';
 function go(pg,anchor){
   if(pg==='audit'&&!ST.files.length)pg='home';
-  ST.page=pg;$('authView').hidden=true;
+  ST.page=pg;$('authView').hidden=true;$('acctView').hidden=true;
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.dataset.page!==pg);
   document.querySelectorAll('[data-nav]').forEach(a=>{if(a.dataset.nav===pg||(a.dataset.nav==='how'&&['delivered','pillars','calculator'].includes(pg)))a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   $('navAudit').hidden=!ST.files.length;
@@ -2614,17 +2645,17 @@ function go(pg,anchor){
   if(anchor&&$(anchor))$(anchor).scrollIntoView({block:'center'});else window.scrollTo(0,0);
   if(pg==='audit')afterRender();
 }
-const ROUTE={home:['home'],top:['home'],audit:['home','audit'],'audit-report':['audit'],how:['how'],checks:['pillars'],delivered:['delivered'],pillars:['pillars'],calculator:['calculator'],platforms:['platforms'],guides:['platforms'],pricing:['pricing'],faq:['faq'],privacy:['privacy'],terms:['terms'],'data-deletion':['data-deletion'],waitlist:['waitlist'],welcome:['welcome']};
+const ROUTE={home:['home'],top:['home'],audit:['home','audit'],'audit-report':['audit'],how:['how'],checks:['pillars'],delivered:['delivered'],pillars:['pillars'],calculator:['calculator'],platforms:['platforms'],guides:['platforms'],pricing:['pricing'],faq:['faq'],privacy:['privacy'],terms:['terms'],'data-deletion':['data-deletion'],waitlist:['waitlist'],welcome:['welcome'],account:['account']};
 document.addEventListener('click',e=>{
   const g=e.target.closest('a[data-go-page]');if(g){e.preventDefault();go(g.dataset.goPage);return}
   const a=e.target.closest('a[href^="#"]');if(!a)return;
   const r=ROUTE[a.getAttribute('href').slice(1)];if(!r)return;
-  e.preventDefault();if(r[0]==='waitlist')openAuth();else go(r[0],r[1]);
+  e.preventDefault();if(r[0]==='waitlist')openAuth();else if(r[0]==='account')$('acctBtn').click();else go(r[0],r[1]);
 });
 document.querySelectorAll('[data-example]').forEach(b=>b.addEventListener('click',()=>$('exampleBtn').click()));
 function showView(v,anchor){
   document.querySelectorAll('.page').forEach(p=>p.hidden=v!=='site'||p.dataset.page!==ST.page);
-  $('authView').hidden=v!=='auth';
+  $('authView').hidden=v!=='auth';$('acctView').hidden=v!=='acct';
   if(anchor&&$(anchor))$(anchor).scrollIntoView();else window.scrollTo(0,0);
 }
 const WL_PLATS=['meta','google','tiktok','snap','linkedin','microsoft','pinterest','x'];
@@ -2729,6 +2760,82 @@ $('copyBtn').addEventListener('click',async()=>{
   setTimeout(()=>b.textContent='Copy report',1800);
 });
 try{localStorage.removeItem('optiroas-account-v1')}catch(e){}
+/* ================= accounts and Meta connection (server) ================= */
+const API_OK=/(^|\.)optiroas\.com$|\.vercel\.app$|^localhost$/.test(location.hostname);
+ST.me=null;ST.acctMode='signin';ST.acctMsg=null;
+async function api(path,opts){
+  if(!API_OK)throw new Error('Accounts work on optiroas.com, not in this preview.');
+  const r=await fetch(path,Object.assign({credentials:'same-origin',headers:{'Content-Type':'application/json'}},opts||{}));
+  const ct=r.headers.get('content-type')||'';
+  if(!r.ok){let m='Something went wrong. Try again.';if(ct.includes('json')){try{m=(await r.json()).error||m}catch(e){}}throw new Error(m)}
+  return ct.includes('json')?r.json():r;
+}
+async function loadMe(){try{ST.me=await api('/api/auth/me')}catch(e){ST.me={user:null}}syncAcctBtn();return ST.me}
+function syncAcctBtn(){const u=ST.me&&ST.me.user;$('acctBtn').textContent=u?(u.name||u.email).split(/[ @]/)[0]:'Sign in';$('acctBtn').setAttribute('aria-label',u?'My account':'Sign in')}
+function openAcct(msg){if(msg)ST.acctMsg=msg;renderAcct();showView('acct');try{history.replaceState(null,'',PRETTY?'/#account':'#account')}catch(e){}}
+function renderAcct(){
+  const el=$('acctCard'),me=ST.me||{},u=me.user,msg=ST.acctMsg;ST.acctMsg=null;
+  const note=msg?`<p class="${msg.ok?'okmsg':'ferr'}">${esc(msg.t)}</p>`:'';
+  if(!API_OK){el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">Sign in</h2></div><p class="muted">Accounts and the Meta connection work on <b>optiroas.com</b>. Open the live site to sign in.</p>`;return}
+  if(!u){
+    const up=ST.acctMode==='signup';
+    el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">${up?'Create your account':'Sign in to OptiROAS'}</h2>
+      <p class="muted small" style="margin-top:6px">Accounts are invite-only while we're in early access. Not invited yet? <button class="linkbtn" type="button" id="toWait">Join the waitlist</button>.</p></div>
+      <div class="atabs2" role="tablist"><button type="button" role="tab" data-am="signin" aria-selected="${!up}">Sign in</button><button type="button" role="tab" data-am="signup" aria-selected="${up}">Create account</button></div>
+      ${note}
+      <form id="acctForm" novalidate>
+        ${up?'<div class="fld"><label for="acName">Full name</label><input id="acName" autocomplete="name" required></div>':''}
+        <div class="fld"><label for="acEmail">Email</label><input id="acEmail" type="email" autocomplete="email" required></div>
+        <div class="fld"><label for="acPass">Password</label><input id="acPass" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="8" required>${up?'<span class="hint">At least 8 characters</span>':''}</div>
+        <p class="ferr" id="acErr" hidden></p>
+        <button class="btn" type="submit" id="acGo">${up?'Create account':'Sign in'}</button>
+      </form>`;
+    el.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{ST.acctMode=b.dataset.am;renderAcct()});
+    $('toWait').onclick=()=>openAuth();
+    $('acctForm').onsubmit=async e=>{e.preventDefault();const err=m=>{$('acErr').textContent=m;$('acErr').hidden=false;$('acGo').disabled=false};
+      const email=$('acEmail').value.trim(),password=$('acPass').value;if(!email||!password)return err('Enter your email and password.');
+      $('acGo').disabled=true;
+      try{await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,name:up?$('acName').value.trim():undefined})});await loadMe();renderAcct()}catch(x){err(x.message)}};
+    return;
+  }
+  const m=me.meta||{},A=m.accounts||[];
+  el.innerHTML=`<div class="mhead2"><div><span class="eyebrow">Signed in</span><h2 style="margin-top:6px">${esc(u.name||'My account')}</h2><span class="muted small">${esc(u.email)}</span></div><button class="btn quiet sm" type="button" id="acOut">Sign out</button></div>
+    ${note}
+    <div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('meta')}Meta ads</b>${m.connected?'<span class="pill Opportunity">Connected</span>':'<span class="pill Low">Not connected</span>'}</div>
+    ${m.connected?(A.length?`<p class="muted small" style="margin:0">Connected${m.name?' as '+esc(m.name):''}. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><select data-days="${esc(a.id)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select><button class="btn sm" type="button" data-run="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
+      :'<p class="muted small" style="margin:0">Meta is connected, but no ad accounts were shared. Reconnect and tick at least one ad account.</p>')
+      +`<div class="arow" style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/meta/start">Reconnect or change accounts</a><button class="btn quiet sm" type="button" id="acDisc">Disconnect Meta</button></div>`
+    :`<p class="muted small" style="margin:0">Connect with Facebook and pick the ad accounts OptiROAS may read. Access is read-only and you can disconnect at any time.</p><div><a class="btn" href="/api/meta/start" id="acConn">Continue with Facebook</a></div>`}
+    </div>
+    <p class="muted small">Google, TikTok and Snapchat connections are coming. Until then, upload their exports on the audit page.</p>`;
+  $('acOut').onclick=async()=>{try{await api('/api/auth/logout',{method:'POST'})}catch(e){}await loadMe();renderAcct()};
+  if($('acDisc'))$('acDisc').onclick=async()=>{if($('acDisc').dataset.sure!=='1'){$('acDisc').dataset.sure='1';$('acDisc').textContent='Click again to disconnect';return}
+    try{await api('/api/meta/disconnect',{method:'POST'});await loadMe();ST.acctMsg={ok:true,t:'Meta disconnected. Data received from Meta will be deleted within 30 days.'};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
+  $('acctCard').querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>runMetaAudit(b.dataset.run,+$('acctCard').querySelector(`[data-days="${b.dataset.run}"]`).value,b));
+}
+async function runMetaAudit(acc,days,btn){
+  const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
+  try{const r=await api(`/api/meta/report?account=${encodeURIComponent(acc)}&days=${days}`);
+    const rows=+(r.headers.get('X-Rows')||0),txt=await r.text();
+    if(!rows){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No ad spend in the last ${days} days for this account.`};renderAcct();return}
+    const acct=((ST.me&&ST.me.meta&&ST.me.meta.accounts)||[]).find(a=>a.id===acc);
+    const file=new File([txt],`Meta · ${(acct&&acct.name)||acc} (last ${days} days, live).csv`,{type:'text/csv'});
+    ST.files=ST.files.filter(f=>!/\(last \d+ days, live\)\.csv$/.test(f.name)||!f.name.includes((acct&&acct.name)||acc));
+    btn.disabled=false;btn.textContent=t;
+    await addFiles([file]);
+  }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
+}
+$('acctBtn').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
+$('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
+(async()=>{
+  const q=new URLSearchParams(location.search),mm=q.get('meta');
+  if(API_OK)await loadMe();
+  if(mm){const n=+q.get('n')||0;
+    const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
+    try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
+    openAcct(msgs[mm]||null)}
+  else if(location.hash==='#account')openAcct();
+})();
 renderRegionSel();syncAcctUI();if(CURRENCIES.includes(regionCur()))$('currency').value=regionCur();
 /* ================= feature pages ================= */
 const PGROUPS=[
@@ -2780,7 +2887,7 @@ if($('cdK'))$('cdK').addEventListener('input',renderCalcDemo);
 document.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click',()=>{const v=b.dataset.demo;$('exampleBtn').click();if(v&&v!=='overview')setView(v)}));
 renderPillarsPage();renderCalcDemo();
 
-{const pp=location.pathname.replace(/\/+$/,'').slice(1),hh=location.hash.slice(1)||(ROUTE[pp]?pp:'');const r=ROUTE[hh];if(r&&r[0]==='waitlist'){go('home');openAuth()}else go(r&&r[0]!=='audit'?r[0]:'home',r&&r[1]&&r[0]!=='home'?r[1]:null)}
+{const pp=location.pathname.replace(/\/+$/,'').slice(1),hh=location.hash.slice(1)||(ROUTE[pp]?pp:'');const r=ROUTE[hh];if(r&&r[0]==='waitlist'){go('home');openAuth()}else if(r&&r[0]==='account'){go('home')}else go(r&&r[0]!=='audit'?r[0]:'home',r&&r[1]&&r[0]!=='home'?r[1]:null)}
 </script>
 
 </body>

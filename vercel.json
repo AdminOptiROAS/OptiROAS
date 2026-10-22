@@ -1,5 +1,8 @@
 {
   "rewrites": [
     { "source": "/(privacy|terms|data-deletion|waitlist|welcome)", "destination": "/index.html" }
-  ]
+  ],
+  "functions": {
+    "api/meta/report.js": { "maxDuration": 120 }
+  }
 }
