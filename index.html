@@ -2762,7 +2762,7 @@ $('copyBtn').addEventListener('click',async()=>{
 try{localStorage.removeItem('optiroas-account-v1')}catch(e){}
 /* ================= accounts and Meta connection (server) ================= */
 const API_OK=/(^|\.)optiroas\.com$|\.vercel\.app$|^localhost$/.test(location.hostname);
-ST.me=null;ST.acctMode='signin';ST.acctMsg=null;
+ST.me=null;ST.acctMsg=null;try{ST.acctMode=localStorage.getItem('or_has_acct')?'signin':'signup'}catch(e){ST.acctMode='signup'}
 async function api(path,opts){
   if(!API_OK)throw new Error('Accounts work on optiroas.com, not in this preview.');
   const r=await fetch(path,Object.assign({credentials:'same-origin',headers:{'Content-Type':'application/json'}},opts||{}));
@@ -2779,23 +2779,25 @@ function renderAcct(){
   if(!API_OK){el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">Sign in</h2></div><p class="muted">Accounts and the Meta connection work on <b>optiroas.com</b>. Open the live site to sign in.</p>`;return}
   if(!u){
     const up=ST.acctMode==='signup';
-    el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">${up?'Create your account':'Sign in to OptiROAS'}</h2>
+    el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">${up?'Connect Meta in two steps':'Sign in to OptiROAS'}</h2>
       <p class="muted small" style="margin-top:6px">Accounts are invite-only while we're in early access. Not invited yet? <button class="linkbtn" type="button" id="toWait">Join the waitlist</button>.</p></div>
-      <div class="atabs2" role="tablist"><button type="button" role="tab" data-am="signin" aria-selected="${!up}">Sign in</button><button type="button" role="tab" data-am="signup" aria-selected="${up}">Create account</button></div>
+      <div class="atabs2" role="tablist"><button type="button" role="tab" data-am="signup" aria-selected="${up}">1 · Create account</button><button type="button" role="tab" data-am="signin" aria-selected="${!up}">I already have an account</button></div>
       ${note}
       <form id="acctForm" novalidate>
         ${up?'<div class="fld"><label for="acName">Full name</label><input id="acName" autocomplete="name" required></div>':''}
         <div class="fld"><label for="acEmail">Email</label><input id="acEmail" type="email" autocomplete="email" required></div>
         <div class="fld"><label for="acPass">Password</label><input id="acPass" type="password" autocomplete="${up?'new-password':'current-password'}" minlength="8" required>${up?'<span class="hint">At least 8 characters</span>':''}</div>
         <p class="ferr" id="acErr" hidden></p>
-        <button class="btn" type="submit" id="acGo">${up?'Create account':'Sign in'}</button>
-      </form>`;
+        <button class="btn" type="submit" id="acGo">${up?'Create account and continue':'Sign in and continue'}</button>
+      </form>
+      <div class="mcard" style="opacity:.6"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('meta')}Step 2 · Connect your Meta ad account</b><span class="pill Low">After sign-in</span></div>
+        <p class="muted small" style="margin:0">Once you're signed in, a <b>Continue with Facebook</b> button appears here. You'll pick which ad accounts to share, read-only.</p></div>`;
     el.querySelectorAll('[data-am]').forEach(b=>b.onclick=()=>{ST.acctMode=b.dataset.am;renderAcct()});
     $('toWait').onclick=()=>openAuth();
     $('acctForm').onsubmit=async e=>{e.preventDefault();const err=m=>{$('acErr').textContent=m;$('acErr').hidden=false;$('acGo').disabled=false};
       const email=$('acEmail').value.trim(),password=$('acPass').value;if(!email||!password)return err('Enter your email and password.');
       $('acGo').disabled=true;
-      try{await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,name:up?$('acName').value.trim():undefined})});await loadMe();renderAcct()}catch(x){err(x.message)}};
+      try{await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,name:up?$('acName').value.trim():undefined})});try{localStorage.setItem('or_has_acct','1')}catch(e){}await loadMe();renderAcct()}catch(x){err(x.message);if(/already exists/.test(x.message)){ST.acctMode='signin'}}};
     return;
   }
   const m=me.meta||{},A=m.accounts||[];
