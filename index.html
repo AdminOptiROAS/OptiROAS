@@ -318,9 +318,23 @@ tr.cur td{background:var(--accent-soft);font-weight:600}
 .menu{position:absolute;right:0;top:44px;min-width:230px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px -18px color-mix(in srgb,var(--ink) 45%,transparent);padding:6px;display:flex;flex-direction:column;z-index:30}
 .menu .mhead{display:flex;flex-direction:column;gap:3px;padding:10px 10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px;overflow-wrap:anywhere}
 .menu button{text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:7px;cursor:pointer;font:500 14px var(--body)}
+.menu{display:flex;flex-direction:column;gap:2px;padding:6px;z-index:40}
+.menu[hidden]{display:none!important}
+.menu .mitem{display:flex;align-items:center;gap:10px;width:100%;color:var(--ink)}
+.menu .msec{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border-top:1px solid var(--line)}
+.menu .mlbl{font-size:13px;color:var(--muted)}
+.menu .regsel{display:inline-block!important}
+.menu .seg.sm button{padding:5px 9px;font-size:12.5px;text-align:center}
+.menu .msign{display:flex;gap:6px;padding:4px 4px 8px}
+.menu .msign .btn{flex:1;justify-content:center;text-align:center;padding:8px 10px;font-weight:600}
+.menu .msign .btn:not(.quiet){background:var(--accent);color:#fff}
+.menu .msign .btn.quiet{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.avatar svg{display:block}
+.avatar:not(.in){background:var(--sunk);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.menu .mttl{padding:10px 10px 2px;border-top:1px solid var(--line);font:600 11.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .menu button:hover{background:var(--sunk)}
 @media (max-width:720px){nav.top .navcta{display:none}.navr{margin-left:auto}}
-@media (max-width:420px){.regsel{display:none}}
+@media (max-width:720px){#signInBtn{display:none}}
 .rtabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto;margin-top:6px;position:sticky;top:calc(60px + env(safe-area-inset-top,0px));background:var(--bg);z-index:10}
 .rtab{border:0;background:transparent;padding:12px 14px;font:600 14px var(--body);color:var(--muted);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px}
 .rtab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
@@ -550,10 +564,19 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
     <span>Opti<b>ROAS</b></span></a>
   <div class="links"><a href="#home" data-nav="home">Home</a><a href="#how" data-nav="how">How it works</a><a href="#platforms" data-nav="platforms">Platforms</a><a href="#pricing" data-nav="pricing">Pricing</a><a href="#faq" data-nav="faq">FAQ</a><a href="#audit-report" data-nav="audit" id="navAudit" hidden>My audit</a></div>
   <div class="navr">
-    <select id="regionSel" class="regsel" aria-label="Currency"></select>
-    <button class="linkbtn navsign" id="acctBtn" type="button">Sign in</button>
     <button class="btn ghost sm" id="signInBtn" type="button">Join the waitlist</button>
     <a class="btn sm navcta" href="#audit">Run free audit</a>
+    <div class="prof" id="prof">
+      <button class="avatar" id="acctBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Account and settings"><span id="avatarTxt"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></span></button>
+      <div class="menu" id="profMenu" role="menu" hidden>
+        <div class="mhead" id="pmHead"></div>
+        <div id="pmAcct"></div>
+        <div class="mttl">Settings</div>
+        <div class="msec" style="border-top:0"><span class="mlbl">Currency</span><select id="regionSel" class="regsel" aria-label="Currency"></select></div>
+        <div class="msec"><span class="mlbl">Language</span><div class="seg sm" role="group" aria-label="Report language"><button type="button" data-lang="en" aria-pressed="true">English</button><button type="button" data-lang="ar" aria-pressed="false" lang="ar">العربية</button></div></div>
+        <div id="pmOut"></div>
+      </div>
+    </div>
   </div>
 </div></nav>
 
@@ -2546,7 +2569,7 @@ function ledgerToggle(f){
 }
 
 /* ---------- Arabic report (hand-written translations; numbers and names kept) ---------- */
-ST.lang='en';
+try{ST.lang=localStorage.getItem('or_lang')==='ar'?'ar':'en'}catch(e){ST.lang='en'}
 const UIAR=/*UIAR*/{"Your audit": "تدقيقك", "Copy report": "نسخ التقرير", "Start over": "ابدأ من جديد", "Example data": "بيانات تجريبية", "This report uses an invented skincare store across four platforms so you can see what OptiROAS produces. None of these figures are yours. Upload your own exports to audit your account.": "يستخدم هذا التقرير متجرًا وهميًا لمنتجات العناية بالبشرة على أربع منصات لتعرف ما يقدّمه OptiROAS. لا يعود أي من هذه الأرقام إليك. ارفع ملفاتك لتدقيق حسابك.", "Upload my files": "ارفع ملفاتي", "Files and settings": "الملفات والإعدادات", "Edit": "تعديل", "Example · Meta Ads, ads by day and device": "مثال · إعلانات Meta حسب اليوم والجهاز", "Example · Google Ads, campaigns by day": "مثال · حملات Google Ads حسب اليوم", "Example · Google Ads, search terms (last 60 days)": "مثال · عبارات البحث في Google Ads (آخر 60 يومًا)", "Example · TikTok Ads, ads by day": "مثال · إعلانات TikTok حسب اليوم", "Example · Snapchat Ads, campaigns by day": "مثال · حملات Snapchat حسب اليوم", "Example · Store orders (Salla export)": "مثال · طلبات المتجر (ملف سلة)", "Store orders": "طلبات المتجر", "+ Add files": "+ أضف ملفات", "Add one export per platform. Google search terms reports are used for keyword checks without double-counting spend.": "أضف ملفًا واحدًا لكل منصة. تُستخدم تقارير عبارات البحث في Google لفحص الكلمات المفتاحية دون احتساب الإنفاق مرتين.", "Profit margin after product costs": "هامش الربح بعد تكلفة المنتج", "% of revenue left after COGS, shipping, fees and returns": "نسبة الإيرادات المتبقية بعد تكلفة البضاعة والشحن والرسوم والمرتجعات", "Report currency": "عملة التقرير", "Detected from your files where possible": "تُكتشف من ملفاتك عند الإمكان", "Actual revenue, same period": "الإيرادات الفعلية للفترة نفسها", "From your store or CRM, to check what platforms claim": "من متجرك أو نظام العملاء، للتحقق مما تنسبه المنصات لنفسها", "Days covered, if no date column": "عدد الأيام، إن لم يوجد عمود للتاريخ", "Used only for files without dates": "يُستخدم فقط للملفات التي لا تحتوي تواريخ", "Optional": "اختياري", "PRO": "PRO", "Account health": "صحة الحساب", "Total ad spend": "إجمالي الإنفاق الإعلاني", "Est. inefficient spend": "الإنفاق غير الفعّال (تقديري)", "Upside from fixes": "المكاسب من الإصلاحات", "Audit by pillar": "التدقيق حسب المحور", "Select a pillar to see its recommendations": "اختر محورًا لرؤية توصياته", "Channels": "القنوات", "Each platform's own reported results": "النتائج كما تُبلغ عنها كل منصة", "Platform": "المنصة", "Spend": "الإنفاق", "Share of spend": "حصة الإنفاق", "Results": "النتائج", "Cost per result": "التكلفة لكل نتيجة", "Revenue": "الإيرادات", "Waste / mo": "الهدر / شهر", "Score": "الدرجة", "Recommendations": "التوصيات", "By platform": "حسب المنصة", "By priority": "حسب الأولوية", "All": "الكل", "High": "عالية", "Medium": "متوسطة", "Low": "منخفضة", "Opportunity": "فرصة", "Growth plan": "خطة النمو", "Every action from this audit, sorted by when to do it": "كل إجراءات هذا التدقيق مرتبة حسب توقيت تنفيذها", "This week": "هذا الأسبوع", "Stop the leaks and fix tracking": "أوقف التسرّب وأصلح التتبّع", "This month": "هذا الشهر", "Move budget, scale winners, start tests": "انقل الميزانية، وسّع الرابحين، وابدأ الاختبارات", "This quarter": "هذا الربع", "Build what keeps returns high": "ابنِ ما يحافظ على ارتفاع العائد", "A weekly creative routine: 3–4 new concepts tested every week": "روتين أسبوعي للتصاميم: اختبار 3–4 أفكار جديدة كل أسبوع", "A holdout test on your largest channel to learn the sales it truly adds": "اختبار مجموعة ضابطة على أكبر قنواتك لمعرفة المبيعات التي تضيفها فعلًا", "A holdout test to learn the sales your ads truly add": "اختبار مجموعة ضابطة لمعرفة المبيعات التي تضيفها إعلاناتك فعلًا", "Server-side tracking (Meta Conversions API, Google enhanced conversions) to protect conversion data": "التتبّع من جهة الخادم (Meta Conversions API وGoogle enhanced conversions) لحماية بيانات التحويل", "Weekly monitoring once direct platform connections launch": "مراقبة أسبوعية عند إطلاق الربط المباشر بالمنصات", "Add funnel events (landing page views, adds to cart, checkouts) to your exports": "أضف أحداث المسار (مشاهدات الصفحة، الإضافة للسلة، بدء الدفع) إلى ملفاتك", "Nothing urgent in this period.": "لا شيء عاجل في هذه الفترة.", "Platform detail": "تفاصيل المنصة", "Campaign": "الحملة", "Share": "الحصة", "Delivered ROAS": "ROAS المُسلَّم", "Refused or returned": "مرفوضة أو مرتجعة", "Verdict": "الحكم", "Watch": "راقب", "Hold": "ثبّت", "Cut": "خفّض", "Scale": "وسّع", "Stop": "أوقف", "Test": "اختبر", "Fix": "أصلح", "Build": "ابنِ", "Last 14 days vs the 14 before": "آخر 14 يومًا مقارنة بالـ14 السابقة", "Click-through": "معدل النقر", "Status": "الحالة", "Ad": "الإعلان", "Conversion funnel": "مسار التحويل", "avg": "المتوسط", "Budget scenarios, per month": "سيناريوهات الميزانية شهريًا", "Budget change": "تغيير الميزانية", "Monthly spend": "الإنفاق الشهري", "IS lost (budget)": "حصة الظهور المفقودة (الميزانية)", "Budget used": "الميزانية المستخدمة", "Delivered revenue": "الإيرادات المُسلَّمة", "Refused or cancelled": "مرفوضة أو ملغاة", "Returned": "مرتجعة", "Still pending": "قيد التوصيل", "Failed delivery rate": "معدل فشل التسليم", "Traced orders": "الطلبات المرتبطة", "Reported ROAS": "ROAS المُبلَّغ", "With pending": "مع قيد التوصيل", "Gap": "الفجوة", "Spend calculator": "حاسبة الإنفاق", "What happens to ROAS if you change a campaign's budget": "ماذا يحدث لـ ROAS إذا غيّرت ميزانية حملة", "Contribution profit": "ربح المساهمة", "Daily spend by platform": "الإنفاق اليومي حسب المنصة", "Live dashboard": "اللوحة المباشرة", "Clicks": "النقرات", "Today": "اليوم", "The live dashboard is part of Pro": "اللوحة المباشرة جزء من باقة Pro", "Pro connects up to 7 ad platforms, refreshes every hour and emails you the moment ROAS, cost per result or spend jumps, or tracking stops recording conversions.": "تربط باقة Pro حتى 7 منصات إعلانية، وتتحدّث كل ساعة، وترسل لك بريدًا فور قفزة في ROAS أو التكلفة لكل نتيجة أو الإنفاق، أو عند توقف التتبّع عن تسجيل التحويلات.", "Today so far vs the same hours on recent days, for every platform": "أداء اليوم حتى الآن مقارنة بالساعات نفسها في الأيام الأخيرة، لكل منصة", "Alerts on ROAS and CPA spikes or drops, spend running ahead of budget, tracking breaks and creative fatigue": "تنبيهات عند ارتفاع أو انخفاض ROAS وCPA، وتجاوز الإنفاق للميزانية، وانقطاع التتبّع، وإرهاق التصاميم", "Alerts stay quiet during Ramadan, Eid, White Friday and other GCC seasons": "تبقى التنبيهات هادئة خلال رمضان والعيد والجمعة البيضاء ومواسم الخليج الأخرى", "Alerts that would be sent": "التنبيهات التي كانت سترسل", "Nothing unusual on the latest day.": "لا شيء غير معتاد في آخر يوم.", "Preview from the latest day in your files. Once platforms are connected, this refreshes every hour and compares today so far with the same hours on recent days.": "معاينة من آخر يوم في ملفاتك. بعد ربط المنصات تتحدّث كل ساعة وتقارن اليوم حتى الآن بالساعات نفسها في الأيام الأخيرة.", "Upload exports broken down by day to preview the live view. Once your platforms are connected, it refreshes every hour on its own.": "ارفع ملفات مقسّمة حسب اليوم لمعاينة العرض المباشر. بعد ربط منصاتك تتحدّث تلقائيًا كل ساعة.", "Pro": "Pro"};
 function textNodes(root){
   const out=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
@@ -2565,7 +2588,7 @@ function syncLang(){
   $('langBtn').textContent=ar?'English':'العربية';$('langBtn').setAttribute('lang',ar?'en':'ar');
   if(!ar)textNodes(rep).forEach(n=>{if(n._en!=null){n.nodeValue=n._en;n._en=null}});
 }
-$('langBtn').addEventListener('click',()=>{ST.lang=ST.lang==='ar'?'en':'ar';syncLang();render()});
+$('langBtn').addEventListener('click',()=>{ST.lang=ST.lang==='ar'?'en':'ar';try{localStorage.setItem('or_lang',ST.lang)}catch(e){}syncLang();render();document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===ST.lang))});
 function afterRender(){syncLang();if(ST.lang==='ar')applyAr()}
 
 /* ================= region, currency, plans ================= */
@@ -2635,7 +2658,6 @@ const payLink=(k,c)=>(STRIPE[k]&&STRIPE[k][c])||'';
 const payOn=()=>!!(payLink('starter','monthly')||payLink('pro','monthly')||payLink('starter','yearly')||payLink('pro','yearly'));
 function acct(){return null}
 function syncAcctUI(){renderTiers()}
-function closeMenu(){}
 const LEGAL=['privacy','terms','data-deletion'],PRETTY=/(^|\.)optiroas\.com$|\.vercel\.app$/.test(location.hostname);
 const PAGES=['home','how','delivered','pillars','calculator','platforms','pricing','faq','audit','privacy','terms','welcome','data-deletion'];
 if(!ST.page)ST.page='home';
@@ -2655,7 +2677,7 @@ document.addEventListener('click',e=>{
   const g=e.target.closest('a[data-go-page]');if(g){e.preventDefault();go(g.dataset.goPage);return}
   const a=e.target.closest('a[href^="#"]');if(!a)return;
   const r=ROUTE[a.getAttribute('href').slice(1)];if(!r)return;
-  e.preventDefault();if(r[0]==='waitlist')openAuth();else if(r[0]==='account')$('acctBtn').click();else go(r[0],r[1]);
+  e.preventDefault();if(r[0]==='waitlist')openAuth();else if(r[0]==='account'){(async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()})()}else go(r[0],r[1]);
 });
 document.querySelectorAll('[data-example]').forEach(b=>b.addEventListener('click',()=>$('exampleBtn').click()));
 function showView(v,anchor){
@@ -2776,7 +2798,24 @@ async function api(path,opts){
   return ct.includes('json')?r.json():r;
 }
 async function loadMe(){try{ST.me=await api('/api/auth/me')}catch(e){ST.me={user:null}}syncAcctBtn();return ST.me}
-function syncAcctBtn(){const u=ST.me&&ST.me.user;$('acctBtn').textContent=u?(u.name||u.email).split(/[ @]/)[0]:'Sign in';$('acctBtn').setAttribute('aria-label',u?'My account':'Sign in')}
+const PERSON_SVG=$('avatarTxt').innerHTML;
+function syncAcctBtn(){
+  const u=ST.me&&ST.me.user;
+  $('avatarTxt').innerHTML=u?esc(initials(u.name||u.email)):PERSON_SVG;
+  $('acctBtn').classList.toggle('in',!!u);
+  $('signInBtn').hidden=!!u;
+  $('pmHead').innerHTML=u?`<b>${esc(u.name||'My account')}</b><span class="muted small">${esc(u.email)}</span>`:`<b>Welcome to OptiROAS</b><span class="muted small">Sign in to connect Meta and Google Ads</span>`;
+  $('pmAcct').innerHTML=u?`<button role="menuitem" type="button" class="mitem" data-pm="acct">My account and connections</button><button role="menuitem" type="button" class="mitem" data-pm="audit">My audit</button>`
+    :`<div class="msign"><button class="btn sm" type="button" data-pm="signin">Sign in</button><button class="btn quiet sm" type="button" data-pm="signup">Create account</button></div>`;
+  $('pmOut').innerHTML=u?`<button role="menuitem" type="button" class="mitem" data-pm="out" style="border-top:1px solid var(--line);border-radius:0 0 7px 7px">Sign out</button>`:'';
+  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lang===ST.lang));
+  $('profMenu').querySelectorAll('[data-pm]').forEach(b=>b.onclick=async()=>{const k=b.dataset.pm;closeMenu();
+    if(k==='acct')openAcct();
+    if(k==='audit'){ST.files.length?go('audit'):go('home','audit')}
+    if(k==='signin'||k==='signup'){ST.acctMode=k;openAcct()}
+    if(k==='out'){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}await loadMe();if(!$('acctView').hidden)renderAcct();toast('Signed out.')}});
+}
+const initials=n=>String(n||'?').trim().split(/[\s@.]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase()||'?';
 function openAcct(msg){if(msg)ST.acctMsg=msg;renderAcct();showView('acct');try{history.replaceState(null,'',PRETTY?'/#account':'#account')}catch(e){}}
 function renderAcct(){
   const el=$('acctCard'),me=ST.me||{},u=me.user,msg=ST.acctMsg;ST.acctMsg=null;
@@ -2859,7 +2898,12 @@ async function runMetaAudit(acc,days,btn){
     await addFiles([file]);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
-$('acctBtn').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
+function closeMenu(){$('profMenu').hidden=true;$('acctBtn').setAttribute('aria-expanded','false')}
+$('acctBtn').onclick=async e=>{e.stopPropagation();const open=$('profMenu').hidden;if(open){if(API_OK&&!ST.me)await loadMe();syncAcctBtn()}$('profMenu').hidden=!open;$('acctBtn').setAttribute('aria-expanded',String(open))};
+document.addEventListener('click',e=>{if(!$('prof').contains(e.target))closeMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
+document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{setLang(b.dataset.lang)});
+function setLang(l){ST.lang=l==='ar'?'ar':'en';try{localStorage.setItem('or_lang',ST.lang)}catch(e){}syncAcctBtn();if(ST.files.length)render();else syncLang();toast(ST.lang==='ar'?'ستظهر التقارير بالعربية.':'Reports will be in English.')}
 $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
 (async()=>{
   const q=new URLSearchParams(location.search),mm=q.get('meta'),gg=q.get('google'),wantAcct=location.hash==='#account';
