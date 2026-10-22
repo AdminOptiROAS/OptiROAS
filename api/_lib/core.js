@@ -24,6 +24,14 @@ export function ensureSchema() {
       user_id uuid not null references users(id) on delete cascade,
       account_id text not null, name text, currency text, timezone text, status int,
       primary key(user_id, account_id))`;
+    await sql`create table if not exists google_connections(
+      user_id uuid primary key references users(id) on delete cascade,
+      google_email text, token_enc text not null,
+      connected_at timestamptz not null default now(), updated_at timestamptz not null default now())`;
+    await sql`create table if not exists google_ad_accounts(
+      user_id uuid not null references users(id) on delete cascade,
+      customer_id text not null, name text, currency text, timezone text, login_customer_id text,
+      primary key(user_id, customer_id))`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
@@ -127,6 +135,7 @@ export async function graph(path, params = {}, { userId, method = 'GET' } = {}) 
 async function logCall(userId, endpoint, ok) {
   try { await sql`insert into api_log(user_id,endpoint,ok) values(${userId || null},${String(endpoint).slice(0, 200)},${ok})`; } catch {}
 }
+export async function logApi(userId, endpoint, ok) { return logCall(userId, endpoint, ok); }
 export async function metaToken(userId) {
   const r = await sql`select token_enc from meta_connections where user_id=${userId}`;
   return r[0] ? decrypt(r[0].token_enc) : null;

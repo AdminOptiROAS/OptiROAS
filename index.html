@@ -580,7 +580,7 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
     <div class="plats" id="platChips"></div>
     <div class="privacy"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
       <span>Files are analysed in your browser. Nothing is uploaded or kept.</span></div>
-    <button class="linkbtn connect-meta" type="button" id="dzMeta"><span class="dot" style="background:var(--p-meta)"></span>Or connect your Meta ad account directly <span class="pill Low">Early access</span></button>
+    <button class="linkbtn connect-meta" type="button" id="dzMeta"><span class="dot" style="background:var(--p-meta)"></span>Or connect Meta or Google Ads directly <span class="pill Low">Early access</span></button>
   </div>
 </div></header>
 
@@ -798,7 +798,7 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
   <div class="card auth" id="acctCard"></div>
   <aside class="authside">
     <div class="eyebrow">Connect instead of exporting</div>
-    <h2 style="margin-top:8px">Audit your Meta ads straight from your account</h2>
+    <h2 style="margin-top:8px">Audit Meta and Google Ads straight from your accounts</h2>
     <ul>
       <li>Read-only access: OptiROAS can't change, pause or spend on your ads</li>
       <li>You choose which ad accounts to share, and can disconnect at any time</li>
@@ -939,16 +939,16 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
   <h2>Files you audit stay on your device</h2>
   <p>When you run an audit, your ad exports and store order files are read and analysed by your own browser. They are not uploaded to our servers, and we never see them. Closing or refreshing the page clears them.</p>
   <h2>Data from ad accounts you connect</h2>
-  <p>If you connect an advertising account, for example through "Continue with Facebook", you choose which ad accounts OptiROAS can see and we receive read-only access. We never create, edit, pause or delete your ads, and we can't spend your money.</p>
+  <p>If you connect an advertising account, through "Continue with Facebook" or "Continue with Google", you choose which ad accounts OptiROAS can see and we receive read-only access. We never create, edit, pause or delete your ads, and we can't spend your money.</p>
   <ul>
-    <li><b>What we read:</b> the names and IDs of the ad accounts you select; campaign, ad set and ad names, settings and status; and performance data such as spend, impressions, reach, clicks, conversions, conversion value and breakdowns by date, placement, device, age, gender and country. From your login we receive your name, email address and account ID.</li>
+    <li><b>What we read:</b> the names and IDs of the ad accounts you select; campaign, ad set and ad names, settings and status; and performance data such as spend, impressions, reach, clicks, conversions, conversion value and breakdowns by date, placement, device, age, gender and country. From your login we receive your name, email address and account ID. For Google Ads we read the accounts your Google login can access, and campaign and search term performance.</li>
     <li><b>Why:</b> only to produce your audits, reports, dashboard and alerts, and to show you, and only you, the results.</li>
     <li><b>What we never do:</b> sell this data, share it with other customers, use it for advertising or to build audiences, combine it with other businesses' data to identify you, or use it to train AI models.</li>
     <li><b>Security:</b> access tokens are encrypted and stored only on our servers, never in your browser. Data is sent over encrypted connections and only the OptiROAS team can access it, when needed to support you.</li>
     <li><b>How long:</b> while your account stays connected, plus up to 30 days after you disconnect or close your account, then it's deleted. Invoices are kept as long as the law requires.</li>
     <li><b>Your control:</b> you can disconnect at any time and ask us to delete everything. See <a href="/data-deletion" data-go-page="data-deletion">Data deletion</a>.</li>
   </ul>
-  <p>Our use of data received from Meta follows the Meta Platform Terms and Developer Policies.</p>
+  <p>Our use of data received from Meta follows the Meta Platform Terms and Developer Policies. OptiROAS's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements: we use Google Ads data only to provide the audits you request, don't transfer it to others except as needed to run the service or by law, don't use it for advertising, and don't let people read it unless you ask us to, it's needed for security, or the law requires it.</p>
   <h2>What we collect</h2>
   <ul>
     <li><b>Waitlist details.</b> If you join the waitlist we collect your name, email, and optionally your company, country, monthly ad spend range, the platforms you use and the plan you're interested in.</li>
@@ -969,7 +969,7 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
   </ul>
   <p>We rely on your consent for waitlist emails, which you can withdraw at any time by replying to any email or writing to us.</p>
   <h2>Service providers</h2>
-  <p>We use a small number of providers to run the site: Vercel (website hosting), Formspree (receiving waitlist forms), Stripe (subscription payments and invoices), Microsoft 365 (email), Meta (when you connect your Meta ad accounts), Google Fonts (fonts) and cdnjs by Cloudflare (the spreadsheet reader used for Excel files). These providers may process data outside the UAE or Saudi Arabia, under their own security and data protection commitments.</p>
+  <p>We use a small number of providers to run the site: Vercel (website hosting), Formspree (receiving waitlist forms), Stripe (subscription payments and invoices), Microsoft 365 (email), Meta and Google (when you connect your ad accounts), Neon (encrypted database), Google Fonts (fonts) and cdnjs by Cloudflare (the spreadsheet reader used for Excel files). These providers may process data outside the UAE or Saudi Arabia, under their own security and data protection commitments.</p>
   <h2>How long we keep it</h2>
   <p>We keep waitlist details until launch and for up to 12 months afterwards, or until you ask us to delete them, whichever comes first. Connected ad account data is kept while the connection is active and deleted within 30 days of disconnecting. Account and billing records are kept while you're a customer and afterwards for as long as tax and accounting law requires.</p>
   <h2>Your rights</h2>
@@ -986,18 +986,23 @@ footer a{color:var(--muted)}footer a:hover{color:var(--ink)}
 <section class="band"><div class="wrap legal">
   <h2>What OptiROAS holds</h2>
   <p>If you connected an advertising account, we hold read-only copies of your ad account names and IDs, campaign and ad details and performance data, plus your name, email and account ID from your login. If you only used the free audit, your files never left your browser and there's nothing to delete. Full details are in the <a href="/privacy" data-go-page="privacy">privacy policy</a>.</p>
-  <h2>1. Disconnect your Meta account</h2>
+  <h2>1. Disconnect Meta</h2>
   <p>Either of these stops OptiROAS from reading any more data straight away:</p>
   <ul>
     <li><b>In OptiROAS:</b> open Account settings → Connected platforms and choose Disconnect next to Meta.</li>
     <li><b>In Facebook:</b> go to Settings &amp; privacy → Settings → Business integrations, select OptiROAS and choose Remove. You can also manage this from Meta Business Suite under Business settings → Integrations.</li>
+  </ul>
+  <h2>Disconnect Google Ads</h2>
+  <ul>
+    <li><b>In OptiROAS:</b> open your account and choose Disconnect Google Ads. This also revokes OptiROAS's access on Google's side.</li>
+    <li><b>In Google:</b> go to <a href="https://myaccount.google.com/connections" rel="noopener">myaccount.google.com/connections</a>, select OptiROAS and choose Delete all connections.</li>
   </ul>
   <h2>2. Ask us to delete your data</h2>
   <p>Email <a href="mailto:admin@optiroas.com?subject=Data%20deletion%20request">admin@optiroas.com</a> with the subject <b>"Data deletion request"</b> from the email address on your OptiROAS account, or tell us which Facebook account or ad account IDs you connected.</p>
   <ul>
     <li>We confirm we've received your request within 3 working days.</li>
     <li>We delete your connected ad account data, access tokens, audit history and profile within 30 days, and email you when it's done.</li>
-    <li>If you remove OptiROAS from Facebook without emailing us, we delete the data received from Meta automatically within 30 days.</li>
+    <li>If you remove OptiROAS from Facebook or Google without emailing us, we delete the data received from that platform automatically within 30 days.</li>
     <li>We keep only what the law requires us to keep, such as invoices and payment records, and nothing else.</li>
   </ul>
   <h2>Questions</h2>
@@ -2809,11 +2814,38 @@ function renderAcct(){
       +`<div class="arow" style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/meta/start">Reconnect or change accounts</a><button class="btn quiet sm" type="button" id="acDisc">Disconnect Meta</button></div>`
     :`<p class="muted small" style="margin:0">Connect with Facebook and pick the ad accounts OptiROAS may read. Access is read-only and you can disconnect at any time.</p><div><a class="btn" href="/api/meta/start" id="acConn">Continue with Facebook</a></div>`}
     </div>
-    <p class="muted small">Google, TikTok and Snapchat connections are coming. Until then, upload their exports on the audit page.</p>`;
+    ${googleCard(me.google||{})}
+    <p class="muted small">TikTok and Snapchat connections are coming. Until then, upload their exports on the audit page.</p>`;
   $('acOut').onclick=async()=>{try{await api('/api/auth/logout',{method:'POST'})}catch(e){}await loadMe();renderAcct()};
   if($('acDisc'))$('acDisc').onclick=async()=>{if($('acDisc').dataset.sure!=='1'){$('acDisc').dataset.sure='1';$('acDisc').textContent='Click again to disconnect';return}
     try{await api('/api/meta/disconnect',{method:'POST'});await loadMe();ST.acctMsg={ok:true,t:'Meta disconnected. Data received from Meta will be deleted within 30 days.'};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
   $('acctCard').querySelectorAll('[data-run]').forEach(b=>b.onclick=()=>runMetaAudit(b.dataset.run,+$('acctCard').querySelector(`[data-days="${b.dataset.run}"]`).value,b));
+  $('acctCard').querySelectorAll('[data-grun]').forEach(b=>b.onclick=()=>runGoogleAudit(b.dataset.grun,+$('acctCard').querySelector(`[data-gdays="${b.dataset.grun}"]`).value,b));
+  if($('gDisc'))$('gDisc').onclick=async()=>{if($('gDisc').dataset.sure!=='1'){$('gDisc').dataset.sure='1';$('gDisc').textContent='Click again to disconnect';return}
+    try{await api('/api/google/disconnect',{method:'POST'});await loadMe();ST.acctMsg={ok:true,t:'Google Ads disconnected and access revoked.'};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
+}
+const gid=id=>String(id).replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3');
+function googleCard(g){
+  const A=g.accounts||[],per=k=>`<select data-gdays="${esc(k)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select>`;
+  return `<div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('google')}Google Ads</b>${g.connected?'<span class="pill Opportunity">Connected</span>':g.available?'<span class="pill Low">Not connected</span>':'<span class="pill Low">Coming soon</span>'}</div>
+  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected${g.email?' as '+esc(g.email):''}. Choose an account and period to audit; search terms are included.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${gid(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar">${per(a.id)}<button class="btn sm" type="button" data-grun="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
+      :'<p class="muted small" style="margin:0">Google is connected, but no Google Ads accounts were found for this Google login. Reconnect with the Google account that has access to your ads.</p>')
+    +`<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/google/start">Reconnect or switch Google account</a><button class="btn quiet sm" type="button" id="gDisc">Disconnect Google Ads</button></div>`
+  :g.available?`<p class="muted small" style="margin:0">Sign in with the Google account that can see your Google Ads. Access is read-only and you can disconnect at any time.</p><div><a class="btn" href="/api/google/start">Continue with Google</a></div>`
+  :'<p class="muted small" style="margin:0">Direct Google Ads connection is being switched on. Until then, upload your Google Ads campaign and search terms reports on the audit page.</p>'}</div>`;
+}
+async function runGoogleAudit(acc,days,btn){
+  const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
+  try{
+    const a=((ST.me&&ST.me.google&&ST.me.google.accounts)||[]).find(x=>x.id===acc),nm=(a&&a.name)||gid(acc);
+    const r1=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}&type=campaigns`),n1=+(r1.headers.get('X-Rows')||0),t1=await r1.text();
+    if(!n1){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No Google Ads spend in the last ${days} days for this account.`};renderAcct();return}
+    let files=[new File([t1],`Google Ads · ${nm} (campaigns, last ${days} days, live).csv`,{type:'text/csv'})];
+    try{const r2=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}&type=searchterms`);if(+(r2.headers.get('X-Rows')||0))files.push(new File([await r2.text()],`Google Ads · ${nm} (search terms, last ${days} days, live).csv`,{type:'text/csv'}))}catch(e){}
+    ST.files=ST.files.filter(f=>!(f.name||'').startsWith(`Google Ads · ${nm} (`));
+    btn.disabled=false;btn.textContent=t;
+    await addFiles(files);
+  }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
 async function runMetaAudit(acc,days,btn){
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
@@ -2830,13 +2862,17 @@ async function runMetaAudit(acc,days,btn){
 $('acctBtn').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
 $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
 (async()=>{
-  const q=new URLSearchParams(location.search),mm=q.get('meta');
+  const q=new URLSearchParams(location.search),mm=q.get('meta'),gg=q.get('google'),wantAcct=location.hash==='#account';
   if(API_OK)await loadMe();
   if(mm){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
     openAcct(msgs[mm]||null)}
-  else if(location.hash==='#account')openAcct();
+  else if(gg){const n=+q.get('n')||0;
+    const msgs={connected:{ok:true,t:n?`Google Ads connected. ${n} account${n===1?'':'s'} available.`:'Google connected, but no Google Ads accounts were found for that Google login.'},cancelled:{t:'Google connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Google Ads.'},error:{t:'Google connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
+    try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
+    openAcct(msgs[gg]||null)}
+  else if(wantAcct)openAcct();
 })();
 renderRegionSel();syncAcctUI();if(CURRENCIES.includes(regionCur()))$('currency').value=regionCur();
 /* ================= feature pages ================= */
