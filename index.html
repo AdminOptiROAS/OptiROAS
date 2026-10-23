@@ -709,6 +709,7 @@ html[dir=rtl] .wzsteps button{padding:5px 5px 5px 12px}
 .vlegend{margin-top:12px;font-size:14px}.vlegend summary{cursor:pointer;color:var(--muted)}.vlegend ul{list-style:none;padding:0;margin:10px 0;display:flex;flex-direction:column;gap:8px}.vlegend li{display:flex;gap:10px;align-items:baseline}.vlegend .pill{min-width:84px;text-align:center}
 td .pill[title]{cursor:help}
 .wznote{margin:0;font-size:13.5px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent,#0a6c86) 7%,transparent)}.wznote.warn{background:color-mix(in srgb,#d9822b 12%,transparent)}
+.fkpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}.fkpi .card{padding:12px 14px;display:flex;flex-direction:column;gap:2px}.fkpi .num{font-size:20px;font-weight:700}
 </style>
 </head>
 <body>
@@ -1583,7 +1584,8 @@ function auditPlatform(pk,all,ctx){
   const marg=e=>Math.min(e*.7,Math.max(accEff,mode==='value'?be:0)*1.2);
   const gain=x=>{x=Math.max(0,x);return mode==='value'?{impact:x,kind:'gain',rv:x*margin}:{n:x,impact:x*cpa,kind:'results',rv:x*cpa}};
   const F=[],notes=[];
-  let PIL=2,trend=null,dow=null,funnel=null,creatives=null,forecast=null;const pacing=[];
+  let PIL=2,trend=null,dow=null,funnel=null,creatives=null,crBest=null,crWorst=null,crLearning=0,forecast=null;const pacing=[];
+  const LEARN=7,FLAG=.05; // learning phase in days; minimum share of platform spend before a campaign is flagged
   const push=f=>{f.plat=pk;if(f.pil==null)f.pil=PIL;if(f.rv==null)f.rv=(f.kind==='waste'||f.kind==='loss')?f.impact:0;if(f.waste==null)f.waste=f.kind==='waste'?f.impact:0;F.push(f)};
   const G=P.grp,Gs=plural(G),Ga=GA(G),Gsa=GSA(G);
 
@@ -1594,6 +1596,7 @@ function auditPlatform(pk,all,ctx){
     if(daily){a.l7=agg(win(rs,0,6));a.l14=agg(win(rs,0,13));a.p14=agg(win(rs,14,27))}
     const li=rs.filter(r=>r.lostb!=null&&r.impr>0),wi=li.reduce((t,r)=>t+r.impr,0);
     a.lostb=wi?li.reduce((t,r)=>t+r.lostb*r.impr,0)/wi:null;
+    a.live=new Set(rs.filter(r=>r.spend>0&&r.date).map(r=>r.date)).size;a.learning=daily&&a.live<LEARN;
     a.profit100=(a.roas*margin-1)*100;a.verdict='Hold';
     return a;
   }).sort((x,y)=>y.spend-x.spend);
@@ -1612,10 +1615,10 @@ function auditPlatform(pk,all,ctx){
       const steady=(!daily||!hasReach||c.l7.freq<1.8)&&(!daily||c.p14.conv<5||c.l14.cpa<=c.p14.cpa*1.15);
       const strong=c.eff>=scaleMin&&c.share<.35&&c.conv>=10;
       const capped=c.lostb!=null&&c.lostb>=.1&&c.eff>=accEff&&c.conv>=5&&(mode!=='value'||c.roas>=be);
-      return steady&&(strong||capped);
+      return !c.learning&&steady&&(strong||capped);
     }).sort((a,b)=>b.eff-a.eff);
     scalers.forEach(c=>c.verdict='Scale');
-    const zc=camps.filter(c=>c.conv===0&&c.spend>=Math.max(2*cpa,.01*acc.spend));
+    const zc=camps.filter(c=>!c.learning&&c.conv===0&&c.share>=FLAG&&c.spend>=2*cpa);
     zc.forEach(c=>c.verdict='Cut');
     const zcSet=new Set(zc.map(c=>c.name));
     if(zc.length&&zc.length<=3)for(const c of zc)push({sev:'High',bucket:'stop',conf:c.clicks>=30?'High':'Medium',title:A(`${c.name} spent ${money(c.spend)} with no ${Us}`,`${c.name} أنفقت ${money(c.spend)} دون أي ${Ua}`),
@@ -1626,7 +1629,7 @@ function auditPlatform(pk,all,ctx){
       act:A(`Pause these campaigns, or check that their conversion tracking works before spending more.`,`أوقف هذه الحملات، أو تأكّد أن تتبّع التحويلات فيها يعمل قبل زيادة الإنفاق.`),sst:A(`${P.short}: pause ${zc.length} campaigns with no ${Us}`,`${P.short}: أوقف ${zc.length} حملات بلا ${Usa}`),impact:s*mo,kind:'waste'})}
     PIL=3;
     if(camps.length>1)for(const c of camps){
-      if(c.conv>0&&c.share>=.10&&c.eff<.6*accEff&&c.verdict!=='Scale'){
+      if(!c.learning&&c.conv>0&&c.share>=FLAG&&c.eff<.6*accEff&&c.verdict!=='Scale'){
         const target=scalers[0]||camps.filter(x=>x!==c&&x.share>=.03).sort((a,b)=>b.eff-a.eff)[0];
         const g=target&&marg(target.eff)>c.eff?gain(c.spend*mo*.4*(marg(target.eff)-c.eff)):{impact:0,kind:'none',rv:0};
         c.verdict='Cut';
@@ -1641,21 +1644,23 @@ function auditPlatform(pk,all,ctx){
     const GOAL=/engag|awareness|reach|video ?view|thruplay|traffic|follow|brand ?lift|page ?like|profile ?visit|تفاعل|وعي|زيارات/i;
     for(const c of camps)if(c.verdict==='Hold'&&GOAL.test(c.name)&&c.conv<=1){c.verdict='Other goal';c.why=A('Named as an engagement, awareness or traffic campaign, so it isn’t judged on sales.','يبدو من اسمها أنها حملة تفاعل أو وعي أو زيارات، لذا لا تُقيَّم على المبيعات.')}
     if(mode==='value'){
-      const below=camps.filter(c=>c.verdict==='Hold'&&c.spend>0&&c.roas<be);
+      const below=camps.filter(c=>c.verdict==='Hold'&&!c.learning&&c.spend>0&&c.roas<be&&c.share>=FLAG);
+      camps.filter(c=>c.verdict==='Hold'&&!c.learning&&c.roas<be&&c.share<FLAG).forEach(c=>{c.why=A(`Below break-even (ROAS ${x2(c.roas)} vs ${x2(be)}), but under 5% of ${P.short} spend, so it isn’t flagged. Keep an eye on it if its budget grows.`,`أقل من نقطة التعادل (ROAS ${x2(c.roas)} مقابل ${x2(be)})، لكنها أقل من 5% من إنفاق ${P.short}، لذا لا تُصنَّف كمشكلة. راقبها إذا زادت ميزانيتها.`)});
       const enough=c=>c.conv>=5||c.spend>=3*cpa;
       const red=below.filter(enough),early=below.filter(c=>!enough(c));
-      red.forEach(c=>{c.verdict='Reduce';c.why=A(`ROAS ${x2(c.roas)} is below break-even ${x2(be)} at your ${Math.round(margin*100)}% margin, so it loses about ${money((1-c.roas*margin)*100,0)} per ${money(100,0)} spent. Too small to move the account on its own.`,`ROAS ${x2(c.roas)} أقل من نقطة التعادل ${x2(be)} عند هامش ${Math.round(margin*100)}%، أي خسارة نحو ${money((1-c.roas*margin)*100,0)} لكل ${money(100,0)} إنفاق. صغيرة جدًا لتؤثر في الحساب وحدها.`)});
+      red.forEach(c=>{c.verdict='Reduce';c.why=A(`ROAS ${x2(c.roas)} is below break-even ${x2(be)} at your ${Math.round(margin*100)}% margin, so it loses about ${money((1-c.roas*margin)*100,0)} per ${money(100,0)} spent, on ${pct(c.share)} of ${P.short} spend.`,`ROAS ${x2(c.roas)} أقل من نقطة التعادل ${x2(be)} عند هامش ${Math.round(margin*100)}%، أي خسارة نحو ${money((1-c.roas*margin)*100,0)} لكل ${money(100,0)} إنفاق، على ${pct(c.share)} من إنفاق ${P.short}.`)});
       early.forEach(c=>{c.verdict='Watch';c.why=A(`Below break-even so far, but only ${cnt(c.conv)} ${c.conv===1?U:Us}, too few to judge. Check again after a few more days of spend.`,`أقل من نقطة التعادل حتى الآن، لكن ${cnt(c.conv)} فقط من ${Usa}، وهذا قليل للحكم. راجعها بعد أيام أخرى من الإنفاق.`)});
       if(red.length){
         const loss=red.reduce((t,c)=>t+Math.max(0,(1-c.roas*margin)*c.spend),0)*mo,sp=red.reduce((t,c)=>t+c.spend,0);
         const best=camps.filter(c=>c.verdict!=='Reduce'&&c.verdict!=='Cut'&&c.roas>=be&&c.share>=.03).sort((x,y)=>y.roas-x.roas)[0];
         push({sev:loss>=.02*acc.spend*mo?'Medium':'Low',bucket:'stop',conf:red.some(c=>c.conv>=10)?'High':'Medium',
-          title:red.length===1?A(`${red[0].name} is losing money at your margin`,`${red[0].name} تخسر عند هامشك`):A(`${red.length} smaller ${P.short} campaigns are losing money at your margin`,`${red.length} حملات أصغر على ${P.short} تخسر عند هامشك`),
+          title:red.length===1?A(`${red[0].name} is losing money at your margin`,`${red[0].name} تخسر عند هامشك`):A(`${red.length} ${P.short} campaigns are losing money at your margin`,`${red.length} حملات على ${P.short} تخسر عند هامشك`),
           ev:red.slice(0,6).map(c=>`<b>${esc(c.name)}</b> ${x2(c.roas)} · ${money(c.spend)}`).join(', ')+A(` · break-even is ${x2(be)} at a ${Math.round(margin*100)}% margin`,` · نقطة التعادل ${x2(be)} عند هامش ${Math.round(margin*100)}%`),
-          act:A(`Halve their budgets or pause them, unless one has another job such as testing a new market or retargeting${best?`, and move the spend to ${best.name} (${x2(best.roas)})`:''}. Each is under 10% of spend, so they don’t drag the account down much, but together they cost about ${money(loss,0)} of profit a month.`,`خفّض ميزانياتها إلى النصف أو أوقفها، ما لم يكن لإحداها دور آخر كاختبار سوق جديد أو إعادة الاستهداف${best?`، وانقل الإنفاق إلى ${best.name} (${x2(best.roas)})`:''}. كل منها أقل من 10% من الإنفاق، لذا لا تؤثر كثيرًا في الحساب، لكنها معًا تكلّف نحو ${money(loss,0)} من الربح شهريًا.`),
+          act:A(`Halve their budgets or pause them, unless one has another job such as testing a new market or retargeting${best?`, and move the spend to ${best.name} (${x2(best.roas)})`:''}. Together they cost about ${money(loss,0)} of profit a month.`,`خفّض ميزانياتها إلى النصف أو أوقفها، ما لم يكن لإحداها دور آخر كاختبار سوق جديد أو إعادة الاستهداف${best?`، وانقل الإنفاق إلى ${best.name} (${x2(best.roas)})`:''}. معًا تكلّف نحو ${money(loss,0)} من الربح شهريًا.`),
           sst:A(`${P.short}: halve or pause ${red.length===1?red[0].name:red.length+' loss-making campaigns'}`,`${P.short}: خفّض أو أوقف ${red.length===1?red[0].name:red.length+' حملات خاسرة'}`),impact:loss,kind:'loss',waste:sp*mo*.5});
       }
     }
+    for(const c of camps)if(c.learning&&['Hold','Watch'].includes(c.verdict)){c.verdict='Learning';c.why=A(`Live for ${c.live} day${c.live===1?'':'s'} in this data. Platforms need about 7 days to exit the learning phase, so it isn’t judged yet.`,`نشطة ${c.live} ${c.live===1?'يومًا':'أيام'} في هذه البيانات. تحتاج المنصات نحو 7 أيام للخروج من مرحلة التعلّم، لذا لا تُقيَّم بعد.`)}
     for(const c of camps)if(c.why)c.whyV=c.verdict;
     PIL=2;
     /* 2. entities with spend and zero conversions */
@@ -1676,8 +1681,8 @@ function auditPlatform(pk,all,ctx){
       const bA=agg(base);if(!bA.conv)continue;
       const thr=Math.max(2*bA.spend/bA.conv,.01*bA.spend);
       const key=lk==='ad'?r=>r.campaign+'\u0001'+r.ad:lk==='adgroup'?r=>r.campaign+'\u0001'+r.adgroup:r=>r[lk];
-      const zero=[...groupBy(base.filter(r=>r[lk]&&!zcSet.has(r.campaign)),key)].map(([k,rs])=>({k,name:String(k).split('\u0001').pop(),camp:rs[0].campaign,a:agg(rs)}))
-        .filter(e=>e.a.spend>=thr&&e.a.conv===0&&(e.a.clicks>0||e.a.impr>0)).sort((a,b)=>b.a.spend-a.a.spend);
+      const zero=[...groupBy(base.filter(r=>r[lk]&&!zcSet.has(r.campaign)),key)].map(([k,rs])=>({k,name:String(k).split('\u0001').pop(),camp:rs[0].campaign,a:agg(rs),live:new Set(rs.filter(r=>r.spend>0&&r.date).map(r=>r.date)).size}))
+        .filter(e=>e.a.spend>=thr&&e.a.conv===0&&(e.a.clicks>0||e.a.impr>0)&&!(Ts.daily&&e.live<LEARN)&&(lk!=='campaign'||e.a.spend>=FLAG*bA.spend)).sort((a,b)=>b.a.spend-a.a.spend);
       if(!zero.length)continue;
       const per=recent?A('in the last 30 days','خلال آخر 30 يومًا'):A('in this export','في هذا الملف');
       if(zero.length<=3){
@@ -1828,17 +1833,15 @@ function auditPlatform(pk,all,ctx){
 
     /* 7c. conversion funnel */
     PIL=7;
-    if(rows.some(r=>r.atc>0||r.ic>0)){
-      const purch=mode==='value'||U==='purchase';
-      const st=[['Clicks',acc.clicks],['Landing page views',acc.lpv],['Adds to cart',acc.atc],['Checkouts started',acc.ic]].filter(s=>s[1]>0);
-      if(purch)st.push(['Purchases',acc.conv]);
-      const TH={'Clicks>Landing page views':[.6,A(`Many clicks never load the page. Check page speed on mobile, accidental clicks from in-app placements, and that the pixel loads on the landing page.`,`كثير من النقرات لا يُحمّل الصفحة. راجع سرعة الصفحة على الجوال، والنقرات العرضية من المواضع داخل التطبيقات، وأن البكسل يعمل على صفحة الهبوط.`)],
-        'Landing page views>Adds to cart':[.04,A(`Visitors arrive but don't add to cart. Test the product page: price and offer above the fold, reviews, delivery times and a clearer add-to-cart button. Check the ad promises match the page.`,`الزوار يصلون لكنهم لا يضيفون إلى السلة. اختبر صفحة المنتج: السعر والعرض في أعلى الصفحة، والتقييمات، ومدة التوصيل، وزر إضافة إلى السلة أوضح. وتأكّد أن وعد الإعلان يطابق الصفحة.`)],
-        'Clicks>Adds to cart':[.03,A(`Visitors arrive but don't add to cart. Test the product page: price and offer above the fold, reviews, delivery times and a clearer add-to-cart button.`,`الزوار يصلون لكنهم لا يضيفون إلى السلة. اختبر صفحة المنتج: السعر والعرض في أعلى الصفحة، والتقييمات، ومدة التوصيل، وزر إضافة إلى السلة أوضح.`)],
-        'Adds to cart>Checkouts started':[.35,A(`Carts are abandoned before checkout. Show shipping costs and delivery dates in the cart, and add express checkout buttons.`,`السلال تُترك قبل الدفع. اعرض تكلفة الشحن ومواعيد التوصيل في السلة، وأضف أزرار الدفع السريع.`)],
-        'Checkouts started>Purchases':[.45,A(`Shoppers drop out inside checkout. Remove forced account creation, add Apple Pay, Tabby or Tamara and cash on delivery where relevant, and check for surprise fees.`,`المتسوقون يغادرون أثناء الدفع. ألغِ إلزامية إنشاء حساب، وأضف Apple Pay وتابي وتمارا والدفع عند الاستلام عند الحاجة، وتجنّب الرسوم المفاجئة.`)]};
+    if((mode==='value'||U==='purchase')&&acc.clicks>0&&acc.conv>0){
+      const hasAtc=rows.some(r=>r.atc>0);
+      const st=[['Clicks',acc.clicks]].concat(hasAtc?[['Adds to cart',acc.atc]]:[]).concat([['Purchases',acc.conv]]);
+      const TH={'Clicks>Adds to cart':[.05,A(`Visitors arrive but don't add to cart. Test the product page: price and offer above the fold, reviews, delivery times and a clearer add-to-cart button. Check the ad's promise matches the page.`,`الزوار يصلون لكنهم لا يضيفون إلى السلة. اختبر صفحة المنتج: السعر والعرض في أعلى الصفحة، والتقييمات، ومدة التوصيل، وزر إضافة إلى السلة أوضح. وتأكّد أن وعد الإعلان يطابق الصفحة.`)],
+        'Adds to cart>Purchases':[.25,A(`Carts are abandoned before payment. Show shipping costs and delivery dates in the cart, remove forced account creation, offer Apple Pay, Tabby or Tamara and cash on delivery where relevant, and retarget cart abandoners.`,`السلال تُترك قبل الدفع. اعرض تكلفة الشحن ومواعيد التوصيل في السلة، وألغِ إلزامية إنشاء حساب، ووفّر Apple Pay وتابي وتمارا والدفع عند الاستلام عند الحاجة، وأعد استهداف من ترك السلة.`)],
+        'Clicks>Purchases':[.01,A(`Few clicks turn into orders. Check the landing page speed and offer, and that the purchase event fires on every order.`,`قليل من النقرات يتحول إلى طلبات. راجع سرعة صفحة الهبوط والعرض، وتأكّد أن حدث الشراء يُسجَّل مع كل طلب.`)]};
       const steps=[];for(let i=1;i<st.length;i++){const k=st[i-1][0]+'>'+st[i][0];steps.push({from:st[i-1][0],to:st[i][0],rate:st[i][1]/st[i-1][1],th:TH[k]?TH[k][0]:null,act:TH[k]?TH[k][1]:null})}
-      funnel={st,steps};
+      const kpi={ctr:acc.impr?acc.clicks/acc.impr:null,atcRate:hasAtc?acc.atc/acc.clicks:null,atcToSale:hasAtc&&acc.atc?acc.conv/acc.atc:null,cvr:acc.conv/acc.clicks};
+      funnel={st,steps,kpi};
       const weak=steps.filter(s=>s.th&&s.rate<s.th&&s.rate>0).sort((a,b)=>a.rate/a.th-b.rate/b.th)[0];
       if(weak&&acc.conv>0){
         const extra=acc.conv*mo*(weak.th/weak.rate-1)*.5,aov=acc.conv?acc.value/acc.conv:0;
@@ -1907,9 +1910,21 @@ function auditPlatform(pk,all,ctx){
       const base=daily?win(rows,0,29):rows,bA=agg(base),bE=eff(bA),bC=bA.conv?bA.spend/bA.conv:Infinity;
       const fat=new Set(F.filter(f=>f.rule==='fatigue').map(f=>f.adKey));
       creatives=[...groupBy(base.filter(r=>r.ad),r=>r.campaign+'\u0001'+r.ad)].map(([k,rs])=>{const a=agg(rs);const [c,ad]=k.split('\u0001');
-        a.name=ad;a.camp=c;a.share=bA.spend?a.spend/bA.spend:0;a.eff=eff(a);
-        a.status=fat.has(k)?'Tiring':a.spend<2*bC&&a.conv===0?'Learning':(a.conv===0||a.eff<.7*bE)?'Underperforming':(a.eff>=1.2*bE&&a.conv>=5)?'Winning':'Steady';
+        a.name=ad;a.camp=c;a.share=bA.spend?a.spend/bA.spend:0;a.eff=eff(a);a.live=new Set(rs.filter(r=>r.spend>0&&r.date).map(r=>r.date)).size;
+        a.status=daily&&a.live<LEARN?'Learning':fat.has(k)?'Tiring':a.spend<2*bC&&a.conv===0?'Learning':(a.conv===0||a.eff<.7*bE)?'Underperforming':(a.eff>=1.2*bE&&a.conv>=5)?'Winning':'Steady';
         return a}).filter(a=>a.spend>0).sort((a,b)=>b.spend-a.spend);
+      crLearning=creatives.filter(c=>daily&&c.live<LEARN).length;
+      const judged=creatives.filter(c=>!(daily&&c.live<LEARN));
+      if(mode==='value'){
+        const byRev=(x,y)=>(y.value-x.value)||(y.spend-x.spend);
+        crBest=judged.filter(c=>c.conv>=3&&c.roas>=Math.max(bE,0)).sort((x,y)=>y.roas-x.roas).slice(0,15).sort(byRev);
+        const bs=new Set(crBest);
+        crWorst=judged.filter(c=>!bs.has(c)&&c.spend>=2*bC&&c.roas<bE).sort((x,y)=>x.roas-y.roas||y.spend-x.spend).slice(0,15).sort(byRev);
+      } else {
+        crBest=judged.filter(c=>c.conv>=3&&c.eff>=bE).sort((x,y)=>y.eff-x.eff).slice(0,15).sort((x,y)=>y.conv-x.conv||y.spend-x.spend);
+        const bs=new Set(crBest);
+        crWorst=judged.filter(c=>!bs.has(c)&&c.spend>=2*bC&&c.eff<bE).sort((x,y)=>x.eff-y.eff).slice(0,15).sort((x,y)=>y.conv-x.conv||y.spend-x.spend);
+      }
       const meaningful=creatives.filter(c=>c.share>=.05).length,top=creatives[0],top2=creatives.slice(0,2).reduce((t,c)=>t+c.share,0);
       if(creatives.length>=3&&(top.share>.4||top2>=.8)){
         const one=top.share>.4;
@@ -2015,7 +2030,7 @@ function auditPlatform(pk,all,ctx){
   let score=100-F.reduce((t,f)=>t+PEN[f.sev],0);
   if(mode==='value'&&acc.roas<be)score-=15;
   score=Math.round(Math.max(12,Math.min(100,score)));
-  return {pk,P,mode,U,Us,acc,accEff,be,camps,segs:segs||{},F,notes,T,D,mo,daily,series,score,pcurve,trend,dow,funnel,creatives,forecast,pacing,
+  return {pk,P,mode,U,Us,acc,accEff,be,camps,segs:segs||{},F,notes,T,D,mo,daily,series,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,forecast,pacing,
     waste:F.reduce((t,f)=>t+(f.waste||0),0),monthlySpend:acc.spend*mo,files:ctx.files||[]};
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
@@ -2178,7 +2193,7 @@ function pillarSummary(F,X){
   const {has}=X;
   const NEED={5:has.ads?null:A('Export at the ad level to see winning, tiring and failing ads.','صدّر على مستوى الإعلانات لرؤية الإعلانات الرابحة والمُستهلكة والضعيفة.'),
     6:has.segs?null:A('Add a placement, device, age, gender or country breakdown to the export.','أضف تقسيمًا حسب الموضع أو الجهاز أو العمر أو الجنس أو الدولة إلى الملف.'),
-    7:has.funnel?null:A('Add Landing page views, Adds to cart and Checkouts initiated columns to the export.','أضف أعمدة مشاهدات صفحة الهبوط والإضافات إلى السلة وبدء الدفع إلى الملف.'),
+    7:has.funnel?null:A('Add Clicks, Adds to cart and Purchases columns to the export.','أضف أعمدة النقرات والإضافة إلى السلة والمشتريات إلى الملف.'),
     10:has.value?null:A('Needs a conversion value or revenue column.','يحتاج إلى عمود قيمة التحويل أو الإيرادات.'),
     11:has.fc?null:A('Needs at least 21 days of data broken down by day.','يحتاج إلى 21 يومًا على الأقل من البيانات مقسّمة حسب اليوم.')};
   const PART={1:has.daily?null:A('Trend analysis needs a breakdown by day.','تحليل الاتجاه يحتاج إلى تقسيم حسب اليوم.'),3:has.daily?null:A('Day-of-week checks need a breakdown by day.','فحوص أيام الأسبوع تحتاج إلى تقسيم حسب اليوم.'),
@@ -2530,13 +2545,13 @@ function render(scroll){
   if(!ST.tab||!A.plats.some(p=>p.pk===ST.tab))ST.tab=A.plats[0].pk;
   $('tabs').innerHTML=A.plats.map(p=>`<button class="tab" role="tab" type="button" data-t="${p.pk}" aria-selected="${ST.tab===p.pk}">${dot(p.pk)}${p.P.short}</button>`).join('');
   $('tabs').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;render()});
-  const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold'};
+  const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold',Learning:'Hold'};
   const mx=Math.max(...p.camps.map(c=>c.share),.01);
   let T=`<div class="tablewrap"><table class="wide"><thead><tr><th>Campaign</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${CPU(p)}</th>${V?'<th>Revenue</th><th>ROAS</th><th>'+TR('Profit per ','الربح لكل ')+money(100,0)+'</th>':'<th>Click-through</th>'}${p.camps.some(c=>c.lostb!=null)?'<th>IS lost (budget)</th>':''}${p.camps.some(c=>c.pacing!=null)?'<th>Budget used</th>':''}${p.camps.some(c=>c.store)?'<th>Delivered ROAS</th><th>Refused or returned</th>':''}<th>Verdict</th></tr></thead><tbody>`+
     p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]}" title="${esc(vWhy(c,p,A))}">${VDL(c.verdict)}</span></td></tr>`).join('')+'</tbody></table></div>';
   const dims=Object.entries(p.segs);
   if(dims.length)T+=`<div class="dims">${dims.map(([dl,list])=>`<div><h4>${DIM(dl)}</h4><div class="tablewrap"><table><thead><tr><th>${DIM(dl)}</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th></tr></thead><tbody>${list.slice(0,10).map(s=>`<tr><td class="lbl" style="min-width:140px">${esc(s.name)}</td><td>${money(s.spend)}</td><td>${pct(s.share,0)}</td><td>${cnt(s.conv)}</td><td>${V?x2(s.roas):money(s.cpa)}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
-  T+=`<details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, or in line with the account. Keep the budget steady.','مربحة عند هامشك أو متوافقة مع الحساب. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin but under 10% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك لكن أقل من 10% من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('A large share of spend for weak or no results. Cut or pause it.','حصة كبيرة من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul><p class="muted small">${TR('Hover over a verdict to see the reason for that campaign.','مرّر فوق الحكم لترى سببه لتلك الحملة.')}</p></details>`;
+  T+=`<details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, in line with the account, or under 5% of spend. Keep the budget steady.','مربحة عند هامشك، أو متوافقة مع الحساب، أو أقل من 5% من الإنفاق. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin, with at least 5% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك، مع 5% على الأقل من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('At least 5% of spend for weak or no results. Cut or pause it.','5% على الأقل من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Learning',TR('Live under 7 days, still in the platform’s learning phase. Not judged yet.','نشطة أقل من 7 أيام، ما زالت في مرحلة التعلّم لدى المنصة. لا تُقيَّم بعد.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul><p class="muted small">${TR('Hover over a verdict to see the reason for that campaign.','مرّر فوق الحكم لترى سببه لتلك الحملة.')}</p></details>`;
   $('tabpanel').innerHTML=T+platformExtras(p);
 
   // charts
@@ -2630,7 +2645,7 @@ function renderPlan(A){
     if(k==='quarter')std.forEach(([g,x])=>items.push(`<li><span class="ptag Build">${TAGL(g)}</span><span>${esc(x)}</span></li>`));
     return `<div class="card col"><div><h3>${t}</h3><p class="muted small">${s}</p></div>${items.length?`<ul>${items.join('')}</ul>`:'<p class="muted small">Nothing urgent in this period.</p>'}</div>`}).join('');
 }
-const VDL=v=>TR(v,{Scale:'وسّع',Hold:'ثبّت',Watch:'راقب',Reduce:'خفّض',Cut:'أوقف','Other goal':'هدف آخر'}[v]||v);
+const VDL=v=>TR(v,{Scale:'وسّع',Hold:'ثبّت',Watch:'راقب',Reduce:'خفّض',Cut:'أوقف','Other goal':'هدف آخر',Learning:'في مرحلة التعلّم'}[v]||v);
 function vWhy(c,p,A){if(c.why&&c.whyV===c.verdict)return c.why;const V=p.mode==='value';
   return c.verdict==='Scale'?TR('Returns well above the account average with steady results, so it can take more budget.','عائدها أعلى بوضوح من متوسط الحساب ونتائجها مستقرة، لذا تحتمل ميزانية أكبر.'):c.verdict==='Cut'?TR('Takes a large share of spend for weak or no results. See the recommendations.','تأخذ حصة كبيرة من الإنفاق مقابل نتائج ضعيفة أو معدومة. راجع التوصيات.'):c.verdict==='Watch'?TR('Showing early warning signs such as rising costs or tiring creative. See the recommendations.','تظهر عليها إشارات تحذير مبكرة كارتفاع التكلفة أو إرهاق الإعلانات. راجع التوصيات.'):V?TR(`Profitable at your margin: ROAS ${x2(c.roas)} vs break-even ${x2(A.be)}. Keep the budget steady.`,`مربحة عند هامشك: ROAS ${x2(c.roas)} مقابل نقطة التعادل ${x2(A.be)}. أبقِ الميزانية ثابتة.`):TR('Results are in line with the account. Keep the budget steady.','نتائجها متوافقة مع الحساب. أبقِ الميزانية ثابتة.')}
 function platformExtras(p){
@@ -2644,11 +2659,19 @@ function platformExtras(p){
   }
   if(p.creatives&&p.creatives.length){
     const cls={Winning:'Scale',Tiring:'Watch',Underperforming:'Cut',Learning:'Hold',Steady:'Hold'};
-    h+=`<div><h4 class="sub">${TR('Creatives','التصاميم الإعلانية')}${p.daily?TR(', last 30 days','، آخر 30 يومًا'):''}</h4><div class="tablewrap"><table class="wide"><thead><tr><th>Ad</th><th>Campaign</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th><th>Click-through</th><th>Status</th></tr></thead><tbody>${p.creatives.slice(0,15).map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td><td>${pct(c.share,0)}</td><td>${cnt(c.conv)}</td><td>${V?x2(c.roas):money(c.cpa)}</td><td>${pct(c.ctr,2)}</td><td><span class="pill ${cls[c.status]}">${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div></div>`;
+    const tbl=(list,kind)=>`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Ad','الإعلان')}</th><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th>${V?`<th>${TR('Revenue','الإيراد')}</th><th>ROAS</th>`:`<th>${CPU(p)}</th>`}<th>${UsL(p)}</th><th>${TR('Click-through','نسبة النقر')}</th>${p.daily?`<th>${TR('Days live','أيام النشاط')}</th>`:''}<th>${TR('Status','الحالة')}</th></tr></thead><tbody>${list.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td>${V?`<td>${money(c.value,0)}</td><td class="${kind==='best'?'pos':c.roas<p.be?'neg':''}">${x2(c.roas)}</td>`:`<td class="${kind==='best'?'pos':'neg'}">${money(c.cpa)}</td>`}<td>${cnt(c.conv)}</td><td>${pct(c.ctr,2)}</td>${p.daily?`<td>${c.live}</td>`:''}<td><span class="pill ${cls[c.status]}">${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div>`;
+    const per=p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):'';
+    const B=p.crBest||[],W=p.crWorst||[];
+    h+=`<div><h4 class="sub">${V?TR(`Best ${B.length} creatives by ROAS`,`أفضل ${B.length} إعلانات حسب ROAS`):TR(`Best ${B.length} creatives by ${CPU(p).toLowerCase()}`,`أفضل ${B.length} إعلانات حسب ${CPU(p)}`)}<span class="muted small" style="font-weight:400"> · ${V?TR('sorted by revenue','مرتبة حسب الإيراد'):TR('sorted by results','مرتبة حسب النتائج')}${per}</span></h4>
+      ${B.length?tbl(B,'best'):`<p class="muted small">${TR('No ad has at least 3 results and returns above the platform average yet.','لا يوجد إعلان لديه 3 نتائج على الأقل وعائد أعلى من متوسط المنصة بعد.')}</p>`}</div>
+      <div><h4 class="sub">${V?TR(`Weakest ${W.length} creatives by ROAS`,`أضعف ${W.length} إعلانات حسب ROAS`):TR(`Weakest ${W.length} creatives by ${CPU(p).toLowerCase()}`,`أضعف ${W.length} إعلانات حسب ${CPU(p)}`)}<span class="muted small" style="font-weight:400"> · ${V?TR('sorted by revenue','مرتبة حسب الإيراد'):TR('sorted by results','مرتبة حسب النتائج')}${per}</span></h4>
+      ${W.length?tbl(W,'worst'):`<p class="muted small">${TR('No ad with meaningful spend is below the platform average.','لا يوجد إعلان بإنفاق مؤثر أقل من متوسط المنصة.')}</p>`}
+      <p class="muted small">${TR(`Best: ads with at least 3 ${UsL(p)} and returns above the ${p.P.short} average, top 15 by ${V?'ROAS':'cost per result'}. Weakest: ads spending at least twice the average cost per result with returns below average.`,`الأفضل: إعلانات لديها 3 ${UsL(p)} على الأقل وعائد أعلى من متوسط ${p.P.short}، أعلى 15 حسب ${V?'ROAS':'تكلفة النتيجة'}. الأضعف: إعلانات أنفقت ضعف متوسط تكلفة النتيجة على الأقل بعائد أقل من المتوسط.`)}${p.crLearning?TR(` ${p.crLearning} ad${p.crLearning===1?'':'s'} live under 7 days ${p.crLearning===1?'is':'are'} left out while still in the learning phase.`,` استُبعد ${p.crLearning} من الإعلانات النشطة أقل من 7 أيام لأنها ما زالت في مرحلة التعلّم.`):''}</p></div>`;
   }
   if(p.funnel){
     const st=p.funnel.st,mx=st[0][1];
-    h+=`<div><h4 class="sub">Conversion funnel</h4><div class="card funnel">${st.map((s,i)=>{const step=i?p.funnel.steps[i-1]:null;
+    const K=p.funnel.kpi||{},kp=[[TR('Click-through rate','نسبة النقر'),K.ctr,TR('clicks ÷ impressions','النقرات ÷ مرات الظهور')],[TR('Add-to-cart rate','معدل الإضافة إلى السلة'),K.atcRate,TR('adds to cart ÷ clicks','الإضافات ÷ النقرات')],[TR('Add to cart to sale','من السلة إلى البيع'),K.atcToSale,TR('purchases ÷ adds to cart','المشتريات ÷ الإضافات')],[TR('Conversion rate','معدل التحويل'),K.cvr,TR('purchases ÷ clicks','المشتريات ÷ النقرات')]].filter(x=>x[1]!=null);
+    h+=`<div><h4 class="sub">${TR('Conversion funnel','مسار التحويل')}</h4><div class="fkpi">${kp.map(([n,v,d])=>`<div class="card"><span class="eyebrow">${n}</span><span class="num">${pct(v,2)}</span><span class="muted small">${d}</span></div>`).join('')}</div><div class="card funnel">${st.map((s,i)=>{const step=i?p.funnel.steps[i-1]:null;
       return (step?`<div class="fstep ${step.th&&step.rate<step.th?'neg':''}">↓ ${pct(step.rate,1)}${step.th?` <span class="muted">· ${TR('healthy','الجيد')} ≥ ${pct(step.th,0)}</span>`:''}</div>`:'')+
       `<div class="frow"><span>${STG(s[0])}</span><span class="fbar"><i style="width:${Math.max(.6,s[1]/mx*100).toFixed(1)}%;background:${pc(p.pk)}"></i></span><span class="num">${fmtInt(s[1])}</span></div>`}).join('')}</div></div>`;
   }
