@@ -12,5 +12,6 @@ export default async function handler(req, res) {
   } catch (e) { db = 'error: ' + String(e.message).slice(0, 120); }
   const googleMissing = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'].filter(k => !process.env[k]);
   const snapMissing = ['SNAP_CLIENT_ID', 'SNAP_CLIENT_SECRET', 'SNAP_REDIRECT_URI'].filter(k => !process.env[k]);
-  return json(res, missing.length || db !== 'ok' ? 500 : 200, { ok: !missing.length && db === 'ok', missing, googleMissing, snapMissing, emailOn: !!process.env.RESEND_API_KEY, stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET, db, users, metaCallsLast15Days: calls, graph: process.env.META_GRAPH_VERSION || null });
+  const tiktokMissing = ['TIKTOK_APP_ID', 'TIKTOK_APP_SECRET', 'TIKTOK_REDIRECT_URI'].filter(k => !process.env[k]);
+  return json(res, missing.length || db !== 'ok' ? 500 : 200, { ok: !missing.length && db === 'ok', missing, googleMissing, snapMissing, tiktokMissing, emailOn: !!process.env.RESEND_API_KEY, stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET, db, users, metaCallsLast15Days: calls, graph: process.env.META_GRAPH_VERSION || null });
 }
