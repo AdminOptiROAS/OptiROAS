@@ -70,6 +70,7 @@ export function ensureSchema() {
     await sql`create table if not exists usage_downloads(
       id bigserial primary key, user_id uuid not null references users(id) on delete cascade,
       month text not null, kind text not null, at timestamptz not null default now())`;
+    await sql`alter table usage_downloads add column if not exists ref text`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
