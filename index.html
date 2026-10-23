@@ -172,7 +172,7 @@ section.band{padding-block:56px;border-top:1px solid var(--line)}
 .warn.e{background:var(--bad-soft);border-color:var(--bad)}
 @media (max-width:860px){.setup{grid-template-columns:1fr}}
 
-.vitals{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:14px}
+.vitals{display:grid;grid-template-columns:auto repeat(auto-fit,minmax(150px,1fr));gap:14px}
 .vital{padding:16px 18px;display:flex;flex-direction:column;gap:6px;justify-content:space-between;min-width:0}
 .vital .big{font:600 clamp(18px,2vw,26px) var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;white-space:nowrap}
 .vital .big small{font-size:14px;color:var(--muted);font-weight:500}
@@ -747,6 +747,39 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
 .rf2{flex-basis:100%;display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center;margin-top:8px}
 .rfq{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);min-width:200px}
 @media(max-width:640px){.fb input[type=search]{width:100%}.fb{flex:1 1 140px}.segr{grid-template-columns:90px 1fr 56px}}
+
+.rfbar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;width:100%}
+.rfsel{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.rfsel select{padding:8px 30px 8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink);min-width:140px}
+.rfbar .rfq{flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink)}
+.rfbar .fbck{padding-bottom:8px}
+.f.fa .tl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.f.fa .fah{font-size:18px;font-weight:800;line-height:1.35;margin:6px 0 2px;color:var(--ink)}
+.f.fa .fap{margin:0;font-size:13.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.f.fa .cn{display:inline-block;max-width:24ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom;font-weight:500;font-size:.85em;padding:0 6px;border-radius:6px;background:color-mix(in srgb,var(--ink) 6%,transparent);color:var(--ink)}
+.f.fa .fap .cn{font-size:1em;background:none;padding:0;max-width:28ch}
+.f.fa .fx{margin-top:8px}.f.fa .fx summary{cursor:pointer;font-size:13px;color:var(--accent,#0a6c86);font-weight:600}
+.f.fa .fx .ev,.f.fa .fx .act{font-size:14px}
+.f.fa.isdone .fah{text-decoration:line-through;color:var(--muted)}
+.chartc{position:relative}.chartc.gated>*:not(.mgate){filter:grayscale(1);opacity:.35;pointer-events:none}
+.mgate{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:20px}
+.mgrow{display:flex;gap:6px;align-items:center;margin-top:4px}.mgin{width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit}
+
+.cxbar,.ctbar{margin:6px 0 10px}.cxbar input,.ctbar input{width:110px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink)}
+.cxop{display:flex;gap:4px}.cxop select{min-width:56px!important;padding-inline-end:22px!important}.cxop input{width:90px}
+.scat .cdot{cursor:pointer}.scat .cdot:hover{fill-opacity:1;stroke:var(--ink)}
+.avgl{stroke:var(--muted);stroke-dasharray:2 4}.bel{stroke:var(--bad,#c0392b);stroke-dasharray:6 4}.belt{fill:var(--bad,#c0392b)}
+.dlmenu{position:relative}.dlmenu>summary{list-style:none;cursor:pointer}.dlmenu>summary::-webkit-details-marker{display:none}
+.dlpop{position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:30;width:290px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 18px 40px -18px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:2px}
+.dlpop button{display:flex;flex-direction:column;gap:2px;text-align:start;border:0;background:transparent;padding:10px;border-radius:8px;font:inherit;color:var(--ink);cursor:pointer}
+.dlpop button:hover{background:color-mix(in srgb,var(--ink) 5%,transparent)}.dlpop span{font-size:12.5px;color:var(--muted)}
+.apdoc{display:flex;flex-direction:column;gap:12px}.aph{margin:6px 0 0;font-size:26px}
+.apsum{border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:14px}.apsum p{margin:4px 0 10px}.apsum ol{margin:4px 0 0;padding-inline-start:1.3em;display:flex;flex-direction:column;gap:4px}
+.aptab{width:100%;border-collapse:collapse;font-size:12.5px}.aptab th,.aptab td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:start;vertical-align:top}
+.aptab th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}.aptab td.fill{min-width:70px;border-bottom:1px solid #9aa7b1}.aptab tr.dn b{text-decoration:line-through;color:var(--muted)}
+@media print{.aptab tr{break-inside:avoid}.apsum{break-inside:avoid}}
+#findHead{flex-wrap:wrap;gap:12px}#findHead .chips{width:100%}
+.aptab td,.aptab th{font-family:inherit}.apdoc .sumk b{font-family:inherit}
 </style>
 </head>
 <body>
@@ -947,7 +980,7 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
     <div class="card"><div class="files" id="fileList"></div>
       <div class="addrow"><label class="btn ghost sm" for="fileIn">+ Add files</label><span class="muted small">Add one export per platform. Google search terms reports are used for keyword checks without double-counting spend.</span></div></div>
     <div class="card settings">
-      <div class="fld"><label for="margin">Profit margin after product costs</label><input type="number" id="margin" min="5" max="95" step="1" value="45"><span class="hint">% of revenue left after COGS, shipping, fees and returns</span></div>
+      <div class="fld"><label for="margin">Profit margin after product costs</label><input type="number" id="margin" min="5" max="95" step="1" placeholder="45"><span class="hint">% of revenue left after COGS, shipping, fees and returns</span></div>
       <div class="fld"><label for="currency">Report currency</label><select id="currency"></select><span class="hint">Detected from your files where possible</span></div>
       <div class="fld"><label for="revenue">Actual revenue, same period</label><input type="number" id="revenue" min="0" step="1" placeholder="Optional"><span class="hint">From your store or CRM, to check what platforms claim</span></div>
       <div class="fld"><label for="days">Days covered, if no date column</label><input type="number" id="days" min="1" max="400" step="1" value="30"><span class="hint">Used only for files without dates</span></div>
@@ -1621,7 +1654,7 @@ function auditPlatform(pk,all,ctx){
   const marg=e=>Math.min(e*.7,Math.max(accEff,mode==='value'?be:0)*1.2);
   const gain=x=>{x=Math.max(0,x);return mode==='value'?{impact:x,kind:'gain',rv:x*margin}:{n:x,impact:x*cpa,kind:'results',rv:x*cpa}};
   const F=[],notes=[];
-  let PIL=2,trend=null,dow=null,funnel=null,creatives=null,crBest=null,crWorst=null,crLearning=0,forecast=null;const pacing=[];
+  let PIL=2,trend=null,dow=null,funnel=null,creatives=null,crBest=null,crWorst=null,crLearning=0,crStats=null,forecast=null;const pacing=[];
   const LEARN=7,FLAG=.05; // learning phase in days; minimum share of platform spend before a campaign is flagged
   const push=f=>{f.plat=pk;if(f.pil==null)f.pil=PIL;if(f.rv==null)f.rv=(f.kind==='waste'||f.kind==='loss')?f.impact:0;if(f.waste==null)f.waste=f.kind==='waste'?f.impact:0;F.push(f)};
   const G=P.grp,Gs=plural(G),Ga=GA(G),Gsa=GSA(G);
@@ -1950,7 +1983,7 @@ function auditPlatform(pk,all,ctx){
         a.name=ad;a.camp=c;a.share=bA.spend?a.spend/bA.spend:0;a.eff=eff(a);a.live=new Set(rs.filter(r=>r.spend>0&&r.date).map(r=>r.date)).size;
         a.status=daily&&a.live<LEARN?'Learning':fat.has(k)?'Tiring':a.spend<2*bC&&a.conv===0?'Learning':(a.conv===0||a.eff<.7*bE)?'Underperforming':(a.eff>=1.2*bE&&a.conv>=5)?'Winning':'Steady';
         return a}).filter(a=>a.spend>0).sort((a,b)=>b.spend-a.spend);
-      crLearning=creatives.filter(c=>daily&&c.live<LEARN).length;
+      crLearning=creatives.filter(c=>daily&&c.live<LEARN).length;crStats={eff:bE,cpa:bC};
       const judged=creatives.filter(c=>!(daily&&c.live<LEARN));
       if(mode==='value'){
         const byRev=(x,y)=>(y.value-x.value)||(y.spend-x.spend);
@@ -2067,7 +2100,7 @@ function auditPlatform(pk,all,ctx){
   let score=100-F.reduce((t,f)=>t+PEN[f.sev],0);
   if(mode==='value'&&acc.roas<be)score-=15;
   score=Math.round(Math.max(12,Math.min(100,score)));
-  return {pk,P,mode,U,Us,acc,accEff,be,camps,segs:segs||{},F,notes,T,D,mo,daily,series,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,forecast,pacing,
+  return {pk,P,mode,U,Us,acc,accEff,be,camps,segs:segs||{},F,notes,T,D,mo,daily,series,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
     waste:F.reduce((t,f)=>t+(f.waste||0),0),monthlySpend:acc.spend*mo,files:ctx.files||[]};
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
@@ -2432,7 +2465,7 @@ $('platChips2').innerHTML=['meta','google','tiktok','snap','linkedin','microsoft
 $('platChips').innerHTML=['meta','google','tiktok','snap','linkedin','microsoft','pinterest','x'].map(k=>`<span class="pchip">${dot(k)}${PLATS[k].short}</span>`).join('')+'<span class="pchip">+ any CSV</span>';
 $('currency').innerHTML=CURRENCIES.map(c=>`<option>${c}</option>`).join('');
 
-function settings(){return {margin:Math.min(.95,Math.max(.05,(+$('margin').value||45)/100)),currency:$('currency').value||'USD',revenue:+$('revenue').value||0,days:+$('days').value||30}}
+function settings(){ST.marginSet=ST.example||$('margin').value.trim()!=='';return {margin:Math.min(.95,Math.max(.05,(+$('margin').value||45)/100)),currency:$('currency').value||'USD',revenue:+$('revenue').value||0,days:+$('days').value||30}}
 
 async function fpOf(list){try{const t=[...list].map(f=>f.name+'|'+f.size).sort().join('/');const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(h)].slice(0,16).map(b=>b.toString(16).padStart(2,'0')).join('')}catch(e){return ''}}
 // Free plan: one audit report per month. A report is counted once when it's first built; adding files to it is free.
@@ -2529,6 +2562,7 @@ function render(scroll){
   const resTxt=[...groupBy(resGain,f=>UsL(A.plats.find(p=>p.pk===f.plat)))].map(([u,fs])=>`+${cnt(fs.reduce((t,f)=>t+f.n,0))} ${u}`).join(' · ');
   $('vitals').innerHTML=`
     <div class="card vital scorecard">${dial(A.score)}<div><div class="eyebrow">Account health</div><h3 style="margin-top:4px;color:${scoreColor(A.score)}">${band}</h3><p class="muted small">${LANG==='ar'?`${arN(A.F.length,'ملاحظة واحدة','ملاحظات','ملاحظة')} عبر ${A.plats.map(p=>p.P.short).join('، ')}`:`${A.F.length} finding${A.F.length===1?'':'s'} across ${A.plats.map(p=>p.P.short).join(', ')}`}</p></div></div>
+    ${A.vs>0?`<div class="card vital"><div class="eyebrow">${TR('Blended ROAS','ROAS المجمّع')}</div><div class="big" style="color:${ST.marginSet&&A.blendedRoas<A.be?'var(--bad)':'var(--ink)'}">${x2(A.blendedRoas)}</div><span class="muted small">${TR(`${money(A.pv,0)} revenue ÷ ${money(A.vs,0)} spend`,`${money(A.pv,0)} إيراد ÷ ${money(A.vs,0)} إنفاق`)}${ST.marginSet?TR(` · break-even ${x2(A.be)}`,` · التعادل ${x2(A.be)}`):''}</span></div>`:''}
     <div class="card vital"><div class="eyebrow">Total ad spend</div><div class="big">${moneyExact(A.total)}</div><span class="muted small">≈${money(A.monthly,0)} ${LANG==='ar'?'شهريًا بهذه الوتيرة':'a month at this pace'}</span></div>
     <div class="card vital"><div class="eyebrow">Est. inefficient spend</div><div class="big" style="color:var(--bad)">${money(A.waste,0)}<small> ${LANG==='ar'?'/شهر':'/mo'}</small></div><span class="muted small">${pct(A.monthly?A.waste/A.monthly:0,0)} ${LANG==='ar'?'من الإنفاق الشهري، يمكن استرداده بإجراءات الإيقاف':'of monthly spend, recoverable by the stop actions'}</span></div>
     <div class="card vital"><div class="eyebrow">Upside from fixes</div><div class="big" style="color:var(--good)">${gains>0?money(gains,0)+`<small> ${LANG==='ar'?'/شهر':'/mo'}</small>`:resTxt?resTxt.replace(/ ·.*/,'')+`<small> ${LANG==='ar'?'/شهر':'/mo'}</small>`:'—'}</div><span class="muted small">${gains>0?(LANG==='ar'?'إيرادات إضافية':'added revenue')+(resTxt?' · '+resTxt:''):resTxt?(LANG==='ar'?'نتائج إضافية شهريًا':'extra results a month')+(resTxt.includes('·')?' · '+resTxt.split(' · ').slice(1).join(' · '):''):(LANG==='ar'?'لا توجد فرص توسّع بعد':'no scale findings yet')} · ${LANG==='ar'?'تقديري':'directional'}</span></div>`;
@@ -2551,25 +2585,37 @@ function render(scroll){
   if(!keys.includes(ST.filter))ST.filter='all';
   renderPillars(A);
   const pilName=ST.pil?pilN(ST.pil):null;
-  $('filters').innerHTML=`<div class="seg" role="group" aria-label="Group recommendations"><button type="button" data-grp="platform" aria-pressed="${ST.groupBy==='platform'}">By platform</button><button type="button" data-grp="priority" aria-pressed="${ST.groupBy==='priority'}">By priority</button></div>`+(pilName?`<button class="chip" type="button" id="clearPil" aria-pressed="true">${esc(pilName)} ×</button>`:'')+keys.map(k=>{const n=k==='all'?A.F.length:A.F.filter(f=>f.plat===k).length;return `<button class="chip" type="button" data-f="${k}" aria-pressed="${ST.filter===k}">${k==='all'?'':pdot(k)}${k==='all'?'All':pname(k)} <span class="c">${n}</span></button>`}).join('');
-  $('filters').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{ST.filter=b.dataset.f;render()});
-  $('filters').querySelectorAll('[data-grp]').forEach(b=>b.onclick=()=>{ST.groupBy=b.dataset.grp;render()});
-  if($('clearPil'))$('clearPil').onclick=()=>{ST.pil=null;render()};
   ledgerSync(A);const LD=ledgerLoad();renderLedger(A);
   ST.rf=ST.rf||{sev:'all',type:'all',q:'',hide:false};const RF=ST.rf,LDm=ledgerLoad();
   const sevs=['High','Medium','Low','Opportunity'].filter(v=>A.F.some(f=>f.sev===v)),types=['stop','scale','test','fix'].filter(t=>A.F.some(f=>(f.bucket||'fix')===t));
-  $('filters').insertAdjacentHTML('beforeend',`<div class="rf2"><div class="pkchips" role="group" aria-label="${TR('Priority','الأولوية')}"><button type="button" class="pkchip" data-rs="all" aria-pressed="${RF.sev==='all'}">${TR('Any priority','أي أولوية')}</button>${sevs.map(v=>`<button type="button" class="pkchip" data-rs="${v}" aria-pressed="${RF.sev===v}">${TR(...(SEV_L[v]||[v,v]))} <span>${A.F.filter(f=>f.sev===v).length}</span></button>`).join('')}</div>
-    <div class="pkchips" role="group" aria-label="${TR('Action','الإجراء')}"><button type="button" class="pkchip" data-rt="all" aria-pressed="${RF.type==='all'}">${TR('Any action','أي إجراء')}</button>${types.map(t=>{const l=t[0].toUpperCase()+t.slice(1);return `<button type="button" class="pkchip" data-rt="${t}" aria-pressed="${RF.type===t}"><span class="ptag ${l}">${TAGL(l)}</span> <span>${A.F.filter(f=>(f.bucket||'fix')===t).length}</span></button>`}).join('')}</div>
-    <input type="search" id="rfQ" class="rfq" placeholder="${TR('Search recommendations','ابحث في التوصيات')}" value="${esc(RF.q)}"><label class="fbck"><input type="checkbox" id="rfHide"${RF.hide?' checked':''}> ${TR('Hide done','إخفاء المنفّذ')}</label></div>`);
-  $('filters').querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{RF.sev=b.dataset.rs;render()});
-  $('filters').querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{RF.type=b.dataset.rt;render()});
+  const sel=(id,lab,val,opts)=>`<label class="rfsel"><span>${lab}</span><select id="${id}">${opts.map(([v,t])=>`<option value="${v}"${v===val?' selected':''}>${t}</option>`).join('')}</select></label>`;
+  const nP=k=>k==='all'?A.F.length:A.F.filter(f=>f.plat===k).length;
+  $('filters').innerHTML=`<div class="rfbar">
+    ${sel('rfGrp',TR('Group by','التجميع'),ST.groupBy,[['platform',TR('Platform','المنصة')],['priority',TR('Priority','الأولوية')]])}
+    ${keys.length>2?sel('rfPlat',TR('Platform','المنصة'),ST.filter,keys.map(k=>[k,`${k==='all'?TR('All platforms','كل المنصات'):pname(k)} (${nP(k)})`])):''}
+    ${sel('rfSev',TR('Priority','الأولوية'),RF.sev,[['all',TR('Any priority','أي أولوية')]].concat(sevs.map(v=>[v,`${TR(...(SEV_L[v]||[v,v]))} (${A.F.filter(f=>f.sev===v).length})`])))}
+    ${sel('rfType',TR('Action','الإجراء'),RF.type,[['all',TR('Any action','أي إجراء')]].concat(types.map(t=>{const l=t[0].toUpperCase()+t.slice(1);return [t,`${TAGL(l)} (${A.F.filter(f=>(f.bucket||'fix')===t).length})`]})))}
+    <input type="search" id="rfQ" class="rfq" placeholder="${TR('Search','بحث')}" aria-label="${TR('Search recommendations','ابحث في التوصيات')}" value="${esc(RF.q)}">
+    <label class="fbck"><input type="checkbox" id="rfHide"${RF.hide?' checked':''}> ${TR('Hide done','إخفاء المنفّذ')}</label>
+    ${pilName?`<button class="chip" type="button" id="clearPil" aria-pressed="true">${esc(pilName)} ×</button>`:''}</div>`;
+  $('rfGrp').onchange=e=>{ST.groupBy=e.target.value;render()};
+  if($('rfPlat'))$('rfPlat').onchange=e=>{ST.filter=e.target.value;render()};
+  $('rfSev').onchange=e=>{RF.sev=e.target.value;render()};
+  $('rfType').onchange=e=>{RF.type=e.target.value;render()};
+  if($('clearPil'))$('clearPil').onclick=()=>{ST.pil=null;render()};
   $('rfHide').onchange=e=>{RF.hide=e.target.checked;render()};
   $('rfQ').oninput=e=>{RF.q=e.target.value;clearTimeout(ST.rfT);ST.rfT=setTimeout(()=>{const pos=e.target.selectionStart;render();const n=$('rfQ');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(x){}}},250)};
   const rq=RF.q.trim().toLowerCase();
   const FF=A.F.filter(f=>(ST.filter==='all'||f.plat===ST.filter)&&(!ST.pil||f.pil===ST.pil)&&(RF.sev==='all'||f.sev===RF.sev)&&(RF.type==='all'||(f.bucket||'fix')===RF.type)&&(!RF.hide||!LDm[fkey(f)])&&(!rq||(String(f.title)+' '+String(f.act)).toLowerCase().includes(rq)));
-  const fCard=(f,n)=>`<div class="f"><div class="rank">${String(n).padStart(2,'0')}</div>
-    <div class="body"><div class="tl"><span class="pill ${f.sev}">${f.sev}</span>${ST.groupBy==='priority'?`<span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span>`:''}<span class="pbadge pl">${ST.groupBy==='priority'?'· ':''}${pilN(f.pil)}</span></div><h3>${esc(f.title)}</h3><p class="ev">${f.ev}</p><p class="act">${esc(f.act)}</p></div>
-    <div class="impact">${impactHTML(f,A)}<small>${TR('Confidence: ','الثقة: ')}${CONF(f.conf)}</small>${ST.example?'':`<button type="button" class="done-btn" data-done="${A.F.indexOf(f)}" aria-pressed="${!!LD[fkey(f)]}">${LD[fkey(f)]?TR('✓ Done','✓ تم'):TR('Mark done','تم التنفيذ')}</button>`}</div></div>`;
+  const CN=[...new Set(A.plats.flatMap(p=>p.camps.map(c=>c.name)).concat(A.plats.flatMap(p=>(p.creatives||[]).map(c=>c.name))))].filter(n=>n&&n.length>2).sort((a,b)=>b.length-a.length);
+  const nameWrap=t=>{let h=esc(t);const hits=[];for(const n of CN){const e=esc(n);if(h.includes(e)&&!hits.some(x=>x.includes(e)))hits.push(e)}
+    hits.forEach((e,i)=>{h=h.split(e).join('\u0000'+i+'\u0001')});return h.replace(/\u0000(\d+)\u0001/g,(m,i)=>`<span class="cn" title="${hits[i]}">${hits[i]}</span>`)};
+  const headline=f=>{const t=String(f.sst||f.title).replace(/^[^:]{1,24}:\s*/,'');return t.charAt(0).toUpperCase()+t.slice(1)};
+  const fCard=(f,n)=>{const tag=BKT(f);return `<div class="f fa${LD[fkey(f)]?' isdone':''}"><div class="rank">${String(n).padStart(2,'0')}</div>
+    <div class="body"><div class="tl"><span class="ptag ${tag}">${TAGL(tag)}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
+    <h3 class="fah">${nameWrap(headline(f))}</h3>${f.sst?`<p class="fap">${nameWrap(f.title)}</p>`:''}
+    <details class="fx"><summary>${TR('Why and how','السبب والطريقة')}</summary><p class="ev">${f.ev}</p><p class="act">${esc(f.act)}</p></details></div>
+    <div class="impact">${impactHTML(f,A)}<small>${TR('Confidence: ','الثقة: ')}${CONF(f.conf)}</small>${ST.example?'':`<button type="button" class="done-btn" data-done="${A.F.indexOf(f)}" aria-pressed="${!!LD[fkey(f)]}">${LD[fkey(f)]?TR('✓ Done','✓ تم'):TR('Mark done','تم التنفيذ')}</button>`}</div></div>`};
   if(!FF.length)$('findings').innerHTML=`<div class="card"><p class="empty">${TR(`No issues crossed the thresholds${ST.filter==='all'?'':' for this platform'}. Exports broken down by day and at the ad level unlock more checks.`,`لم تتجاوز أي مشكلة الحدود${ST.filter==='all'?'':' لهذه المنصة'}. الملفات المقسّمة حسب اليوم وعلى مستوى الإعلان تتيح فحوصًا أكثر.`)}</p></div>`;
   else if(ST.groupBy==='priority')$('findings').innerHTML=`<div class="card findings">${FF.map(f=>fCard(f,A.F.indexOf(f)+1)).join('')}</div>`;
   else{
@@ -2608,7 +2654,7 @@ function render(scroll){
   const notes=A.notes;
   $('notesBox').hidden=!notes.length;
   $('notes').innerHTML=notes.length?`<li style="list-style:none;margin-left:0;font-weight:600;color:var(--ink)">${TR('Notes on these files','ملاحظات على هذه الملفات')}</li>`+notes.map(n=>`<li>${esc(n)}</li>`).join(''):'';
-  {const nf=ST.files.filter(f=>!f.err).length;$('setupSum').textContent=LANG==='ar'?`الملفات: ${nf} · ${S.currency} · هامش ${Math.round(S.margin*100)}%${ST.example?' · بيانات تجريبية':''}`:`${nf} file${nf===1?'':'s'} · ${S.currency} · ${Math.round(S.margin*100)}% margin${ST.example?' · example data':''}`;if(W.length||ST.files.some(f=>f.err))$('setupBox').open=true}
+  {const nf=ST.files.filter(f=>!f.err).length;$('setupSum').textContent=LANG==='ar'?`الملفات: ${nf} · ${S.currency} · ${ST.marginSet?`هامش ${Math.round(S.margin*100)}%`:'الهامش غير مُدخل (يُفترض 45%)'}${ST.example?' · بيانات تجريبية':''}`:`${nf} file${nf===1?'':'s'} · ${S.currency} · ${ST.marginSet?`${Math.round(S.margin*100)}% margin`:'margin not entered (45% assumed)'}${ST.example?' · example data':''}`;if(W.length||ST.files.some(f=>f.err))$('setupBox').open=true}
   if(scroll){$('setupBox').open=!!(W.length||ST.files.some(f=>f.err));go('audit')}
   afterRender();
 }
@@ -2728,6 +2774,7 @@ function cTip(c,p){
   return {t:TR(c.status,L[c.status]||c.status),f,r};
 }
 const tipAttr=o=>` tabindex="0" role="button" data-tip="${esc(JSON.stringify(o))}"`;
+document.addEventListener('click',e=>{const b=e.target.closest('.mgok');if(!b)return;const v=+b.parentElement.querySelector('.mgin').value;if(!(v>=5&&v<=95)){toast(TR('Enter a margin between 5% and 95%.','أدخل هامشًا بين 5٪ و95٪.'));return}$('margin').value=v;render();toast(TR(`Margin set to ${v}%.`,`تم ضبط الهامش على ${v}٪.`))});
 function tipInit(){
   const box=document.createElement('div');box.id='tipbox';box.className='tipbox';box.hidden=true;box.setAttribute('role','tooltip');document.body.appendChild(box);
   let cur=null,pinned=false;
@@ -2773,7 +2820,7 @@ function platformExtras(p){
   }
   if(p.forecast){
     const f=p.forecast;
-    h+=`<div><h4 class="sub">Budget scenarios, per month</h4>${profitCurve(p)}<div class="tablewrap"><table class="wide"><thead><tr><th>Budget change</th><th>Monthly spend</th><th>${V?TR('Revenue','الإيرادات'):UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th><th>${V?TR('Return on the spend added or cut','العائد على الإنفاق المضاف أو المُخفَّض'):TR(CPU(p)+' added or lost','التكلفة لكل '+UA(p.U)+' مضافة أو مفقودة')}</th>${V?`<th>${TR('Contribution profit','ربح المساهمة')}</th>`:''}</tr></thead><tbody>${f.sc.map(s=>`<tr${s.k===0?' class="cur"':''}><td class="lbl" style="min-width:120px">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'−')+Math.abs(s.k*100)+'%'}</td><td>${money(s.s,0)}</td><td>${V?money(s.y,0):cnt(s.y)}</td><td>${V?x2(s.eff):money(s.eff)}</td><td>${s.marg==null?'—':V?`<span class="${s.marg<p.be?'neg':'pos'}">${x2(s.marg)}</span>`:money(s.marg)}</td>${V?`<td class="${s.profit<0?'neg':'pos'}">${money(s.profit,0)}</td>`:''}</tr>`).join('')}</tbody></table></div>
+    h+=`<div><h4 class="sub">Budget scenarios, per month</h4>${profitCurve(p)}<div class="tablewrap"><table class="wide"><thead><tr><th>Budget change</th><th>Monthly spend</th><th>${V?TR('Revenue','الإيرادات'):UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th><th>${V?TR('Return on the spend added or cut','العائد على الإنفاق المضاف أو المُخفَّض'):TR(CPU(p)+' added or lost','التكلفة لكل '+UA(p.U)+' مضافة أو مفقودة')}</th>${V?`<th>${TR('Contribution profit','ربح المساهمة')}</th>`:''}</tr></thead><tbody>${f.sc.map(s=>`<tr${s.k===0?' class="cur"':''}><td class="lbl" style="min-width:120px">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'−')+Math.abs(s.k*100)+'%'}</td><td>${money(s.s,0)}</td><td>${V?money(s.y,0):cnt(s.y)}</td><td>${V?x2(s.eff):money(s.eff)}</td><td>${s.marg==null?'—':V?`<span class="${s.marg<p.be?'neg':'pos'}">${x2(s.marg)}</span>`:money(s.marg)}</td>${V?(ST.marginSet?`<td class="${s.profit<0?'neg':'pos'}">${money(s.profit,0)}</td>`:`<td class="muted" title="${TR('Add your margin to see profit','أضف هامشك لرؤية الربح')}">${money(s.profit,0)}*</td>`):''}</tr>`).join('')}</tbody></table></div>${V&&!ST.marginSet?`<p class="muted small">${TR('* Contribution profit uses an assumed 45% margin. Enter your margin in Files and settings for accurate figures.','* ربح المساهمة يفترض هامشًا بنسبة 45٪. أدخل هامشك في الملفات والإعدادات لأرقام دقيقة.')}</p>`:''}
       <p class="muted small" style="margin-top:8px">${LANG==='ar'?`يعتمد على منحنى تناقص العائد: كل زيادة 10% في الإنفاق تجلب نحو ${(Math.pow(1.1,f.b)*100-100).toFixed(1)}% ${V?'إيرادات':UsL(p)} إضافية. ${f.fitted?`مُعايَر على إنفاقك ونتائجك اليومية (المرونة ${f.b.toFixed(2)}).`:`افترضنا مرونة قدرها ${f.b.toFixed(2)} لأن الإنفاق اليومي تغيّر قليلًا جدًا لحسابها.`}${V&&f.opt?(p.acc.roas>=p.be?` يبلغ ربح المساهمة ذروته قرب ${money(Math.min(f.opt.s,f.S0*3),0)} شهريًا${f.opt.ratio>3?' أو أعلى':''}.`:' عند العائد الحالي يخسر كل مستوى ميزانية بعد تكلفة المنتج، لذا حسّن الكفاءة قبل التوسّع.'):''} اعتبر هذه الأرقام نقطة انطلاق للاختبار لا ضمانًا.`:`Uses a diminishing-returns curve: each 10% more spend brings about ${(Math.pow(1.1,f.b)*100-100).toFixed(1)}% more ${V?'revenue':UsL(p)}. ${f.fitted?`Fitted to your daily spend and results (elasticity ${f.b.toFixed(2)}).`:`Elasticity of ${f.b.toFixed(2)} is assumed, because daily spend varied too little to fit one.`}${V&&f.opt?(p.acc.roas>=p.be?` Contribution profit peaks near ${money(Math.min(f.opt.s,f.S0*3),0)} a month${f.opt.ratio>3?' or higher':''}.`:' At current returns every budget level loses money after product costs, so fix efficiency before scaling.'):''} Treat these as a starting point for tests, not a guarantee.`}</p></div>`;
   }
   return h;
@@ -3065,7 +3112,7 @@ function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout
 
 /* ================= report tabs ================= */
 const VIEWS_AR={overview:'نظرة عامة',recs:'التوصيات',deep:'تحليل معمّق',deliv:'ROAS المُسلَّم',calc:'حاسبة الإنفاق',live:'لوحة مباشرة'};
-const VIEWS=[['overview','Overview'],['recs','Recommendations'],['deep','Deep analysis'],['deliv','Delivered ROAS'],['calc','Spend calculator'],['live','Live dashboard']];
+const VIEWS=[['overview','Overview'],['deep','Deep analysis'],['recs','Recommendations'],['deliv','Delivered ROAS'],['calc','Spend calculator'],['live','Live dashboard']];
 function renderTabs(A){
   if(!ST.view)ST.view='overview';
   const pro=false;
@@ -3673,7 +3720,7 @@ function renderWizard(){
       <div class="card wzsum"><span class="eyebrow">${TR('2 · Review detected currency','2 · راجع العملة المكتشفة')}</span>
         <div class="fld"><label for="wzCur">${curs.length===1?TR(`Detected ${curs[0]} in your files`,`اكتُشفت ${curs[0]} في ملفاتك`):curs.length>1?TR(`Your files mix ${curs.join(', ')}. Choose the currency for the report`,`ملفاتك تمزج ${curs.join('، ')}. اختر عملة التقرير`):TR('No currency was stated in your files. Which currency are they in?','لم تُذكر العملة في ملفاتك. بأي عملة هي؟')}</label><select id="wzCur">${CURRENCIES.map(c=>`<option${c===W.cur?' selected':''}>${c}</option>`).join('')}</select></div></div>
       <div class="card wzsum"><span class="eyebrow">${TR('3 · Add profit margin (optional)','3 · أضف هامش الربح (اختياري)')}</span>
-        <div class="fld"><label for="wzMargin">${TR('Profit margin after product costs, %','هامش الربح بعد تكلفة المنتجات، ٪')}</label><input type="number" id="wzMargin" min="5" max="95" step="1" value="${W.margin||45}"><span class="hint">${TR('Used for break-even ROAS and profit. Leave 45% if you’re not sure.','يُستخدم لحساب ROAS التعادل والربح. اترك 45٪ إن لم تكن متأكدًا.')}</span></div>
+        <div class="fld"><label for="wzMargin">${TR('Profit margin after product costs, %','هامش الربح بعد تكلفة المنتجات، ٪')}</label><input type="number" id="wzMargin" min="5" max="95" step="1" placeholder="45" value="${W.marginIn||''}"><span class="hint">${TR('% of revenue left after product costs, shipping and fees. Used for break-even ROAS and profit. If you skip it, 45% is assumed and profit charts are greyed out.','نسبة الإيراد المتبقية بعد تكلفة المنتجات والشحن والرسوم. تُستخدم لحساب ROAS التعادل والربح. إذا تخطّيتها، يُفترض 45٪ وتظهر رسوم الربح باهتة.')}</span></div>
         <div class="fld"><label for="wzRev">${TR('Actual revenue for the same dates (optional)','الإيراد الفعلي للتواريخ نفسها (اختياري)')}</label><input type="number" id="wzRev" min="0" step="1" placeholder="${TR('From your store or CRM','من متجرك أو نظام CRM')}" value="${W.rev||''}"><span class="hint">${TR('Shows how much the platforms over-claim.','يوضح مقدار مبالغة المنصات في نسب المبيعات.')}</span></div></div>
       ${lost.length?`<div class="card wzsum wzlim"><span class="eyebrow">${TR('Checks that won’t run with these files','فحوصات لن تعمل بهذه الملفات')}</span><ul>${lost.map(t=>`<li>${t}</li>`).join('')}</ul><button class="linkbtn" type="button" data-wzgo="3">${TR('Go back and add columns','ارجع وأضف الأعمدة')}</button></div>`:''}
     </div>`;
@@ -3699,8 +3746,8 @@ function renderWizard(){
   el.querySelectorAll('[data-wzpl]').forEach(s=>s.onchange=()=>{const it=W.items.find(x=>x.id===s.dataset.wzpl);it.plat=s.value;it.rec.plat=s.value;it.auto=null;it.odd=false;W.plats.add(WZ_PLATS.includes(s.value)?s.value:'other');renderWizard()});
   if($('wzCur'))$('wzCur').onchange=e=>{W.cur=e.target.value};
   if($('wzGen'))$('wzGen').onclick=async()=>{
-    W.margin=+$('wzMargin').value||45;W.rev=$('wzRev').value;W.cur=$('wzCur').value;if($('wzDays'))W.days=+$('wzDays').value||30;
-    $('margin').value=W.margin;$('revenue').value=W.rev||'';$('currency').value=W.cur;ST.userCur=true;if(W.days)$('days').value=W.days;
+    W.marginIn=$('wzMargin').value.trim();W.margin=+W.marginIn||45;W.rev=$('wzRev').value;W.cur=$('wzCur').value;if($('wzDays'))W.days=+$('wzDays').value||30;
+    $('margin').value=W.marginIn||'';$('revenue').value=W.rev||'';$('currency').value=W.cur;ST.userCur=true;if(W.days)$('days').value=W.days;
     const files=usable.map(it=>it.file);ST.platOver={};usable.filter(it=>it.plat&&it.plat!=='orders').forEach(it=>ST.platOver[it.file.name+'|'+it.file.size]=it.plat);
     ST.files=[];ST.example=false;ST.claimed=false;$('wzGen').disabled=true;
     await addFiles(files);
@@ -3721,7 +3768,8 @@ function buildSummary(A){
   const names=[...new Set(ST.files.filter(f=>!f.err&&f.kind!=='orders').map(f=>String(f.name).replace(/\.(csv|xlsx?|tsv|txt)$/i,'').replace(/ \((.*?)\)$/,'')))];
   return {label:names.slice(0,3).join(' · ').slice(0,150),period:ds.length?`${fmtDate(ds[0])} – ${fmtDate(ds[ds.length-1])}`:TR('Dates not stated','التواريخ غير محددة'),cur:CUR,score:A.score,
     total:A.total,monthly:A.monthly,waste:A.waste,upside:gains>0?money(gains,0):'',plats:A.plats.map(p=>p.P.short),lang:LANG,
-    findings:A.F.map(f=>({k:fkey(f),title:f.sst||f.title,plat:f.plat,sev:f.sev,pil:pilN(f.pil),act:f.act,impact:impactText(f,A),bucket:f.bucket,h:f.h,done:!!L[fkey(f)],doneAt:L[fkey(f)]?L[fkey(f)].doneAt:null}))};
+    roas:A.blendedRoas||0,margin:A.margin,marginSet:!!ST.marginSet,by:ST.me&&ST.me.user?(ST.me.user.name||ST.me.user.email):'',
+    findings:A.F.map(f=>({k:fkey(f),title:f.sst||f.title,problem:f.title,plat:f.plat,sev:f.sev,pil:pilN(f.pil),act:f.act,impact:impactText(f,A),bucket:f.bucket,h:f.h,done:!!L[fkey(f)],doneAt:L[fkey(f)]?L[fkey(f)].doneAt:null}))};
 }
 const sMoney=(v,c)=>`${c||''} ${Math.round(v||0).toLocaleString('en-US')}`.trim();
 // Read-only summary layout, used for the PDF and for saved reports.
@@ -3739,9 +3787,28 @@ function summaryHTML(d,{interactive=false}={}){
    <ol class="sumf">${d.findings.map(f=>`<li class="${f.done?'dn':''}"><div class="sumfh"><span class="pill ${esc(f.sev)}">${T(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><b>${esc(f.title)}</b>${interactive?`<button type="button" class="done-btn" data-sk="${esc(f.k)}" aria-pressed="${f.done}">${f.done?T('✓ Done','✓ تم'):T('Mark done','تم التنفيذ')}</button>`:f.done?`<span class="pos small">✓ ${T('done','تم')}</span>`:''}</div><p>${esc(f.act)}</p>${f.impact?`<p class="sumi">${esc(f.impact)}</p>`:''}</li>`).join('')}</ol>
    <p class="muted small sumfoot">${T('Estimates based on the files audited; not financial advice. Generated by OptiROAS · optiroas.com','تقديرات مبنية على الملفات المدقّقة؛ وليست نصيحة مالية. أُنشئ بواسطة OptiROAS · optiroas.com')}</p></div>`;
 }
-function printSummary(d){
+// Executive action plan: what to do, by when, worth how much, with owner and due columns to fill in.
+function actionPlanHTML(d){
+  const T=(en,ar)=>d.lang==='ar'?ar:en,SO={High:0,Medium:1,Low:2,Opportunity:3},F=d.findings.slice().sort((a,b)=>(SO[a.sev]??4)-(SO[b.sev]??4));
+  const stop=F.filter(f=>f.bucket==='stop').length,grow=F.filter(f=>f.bucket==='scale').length,top3=F.filter(f=>!f.done).slice(0,3);
+  const H=[['week',T('This week','هذا الأسبوع'),T('Stop the leaks','أوقف التسرّب')],['month',T('This month','هذا الشهر'),T('Move budget and test','انقل الميزانية واختبر')],['quarter',T('This quarter','هذا الربع'),T('Build for the long term','ابنِ للمدى الطويل')]];
+  const strip=t=>{const x=String(t||'').replace(/^[^:]{1,24}:\s*/,'');return x.charAt(0).toUpperCase()+x.slice(1)};
+  let n=0;
+  return `<div class="apdoc" lang="${d.lang}" dir="${d.lang==='ar'?'rtl':'ltr'}">
+   <div class="sumhead"><div class="sumbrand">Opti<span>ROAS</span></div><div class="muted small">${T('Prepared','أُعدّ في')} ${fmtDate(new Date().toISOString().slice(0,10))}${d.by?` · ${T('by','بواسطة')} ${esc(d.by)}`:''}</div></div>
+   <h1 class="aph">${T('Ad spend action plan','خطة عمل الإنفاق الإعلاني')}</h1>
+   <p class="muted">${d.label?`<span class="notr">${esc(d.label)}</span> · `:''}${esc(d.period)}</p>
+   <div class="sumk"><div><span>${T('Monthly ad spend','الإنفاق الشهري')}</span><b>${sMoney(d.monthly,d.cur)}</b></div>${d.roas?`<div><span>${T('Blended ROAS','ROAS المجمّع')}</span><b>${x2(d.roas)}</b></div>`:''}<div><span>${T('Est. waste','الهدر التقديري')}</span><b class="neg">${sMoney(d.waste,d.cur)}${T('/mo','/شهر')}</b></div>${d.upside?`<div><span>${T('Upside','العائد المحتمل')}</span><b class="pos">${esc(d.upside)}${T('/mo','/شهر')}</b></div>`:''}<div><span>${T('Health score','درجة الصحة')}</span><b>${d.score}/100</b></div></div>
+   <div class="apsum"><b>${T('Summary','الملخص')}</b><p>${T(`The audit found ${F.length} actions across ${d.plats.join(', ')}: ${stop} to stop wasted spend and ${grow} to grow what works. Doing the steps below is estimated to recover about ${sMoney(d.waste,d.cur)} a month${d.upside?` and add about ${esc(d.upside)} in revenue`:''}.`,`وجد التدقيق ${F.length} إجراءات عبر ${d.plats.join('، ')}: ${stop} لإيقاف الإنفاق المهدور و${grow} لتنمية ما ينجح. يُقدَّر أن تنفيذ الخطوات أدناه يسترد نحو ${sMoney(d.waste,d.cur)} شهريًا${d.upside?` ويضيف نحو ${esc(d.upside)} من الإيرادات`:''}.`)}</p>
+     ${top3.length?`<b>${T('Top priorities','أهم الأولويات')}</b><ol>${top3.map(f=>`<li><b>${esc(strip(f.title))}</b>${f.impact?` <span class="sumi">${esc(f.impact)}</span>`:''}</li>`).join('')}</ol>`:''}</div>
+   ${H.map(([k,t,sub])=>{const fs=F.filter(f=>f.h===k);if(!fs.length)return '';return `<h3 class="sums">${t} <span class="muted small" style="font-weight:400">· ${sub}</span></h3>
+     <table class="aptab"><thead><tr><th>#</th><th>${T('Action','الإجراء')}</th><th>${T('Platform','المنصة')}</th><th>${T('Priority','الأولوية')}</th><th>${T('Expected impact','الأثر المتوقع')}</th><th>${T('Owner','المسؤول')}</th><th>${T('Due','الموعد')}</th><th>✓</th></tr></thead><tbody>
+     ${fs.map(f=>`<tr class="${f.done?'dn':''}"><td>${++n}</td><td><b>${esc(strip(f.title))}</b>${f.problem&&f.problem!==f.title?`<div class="muted small">${esc(f.problem)}</div>`:''}</td><td>${esc(f.plat==='cross'?T('All','الكل'):(PLATS[f.plat]?PLATS[f.plat].short:f.plat))}</td><td><span class="pill ${esc(f.sev)}">${T(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span></td><td>${esc(f.impact||'—')}</td><td class="fill"></td><td class="fill"></td><td>${f.done?'✓':'☐'}</td></tr>`).join('')}</tbody></table>`}).join('')}
+   <p class="muted small sumfoot">${T(`Assumptions: ${d.marginSet?`profit margin ${Math.round(d.margin*100)}% as entered`:'profit margin not entered, 45% assumed'}; amounts in ${d.cur}; based on ${esc(d.period)}. Estimates from the files audited, not financial advice. Generated by OptiROAS · optiroas.com`,`الافتراضات: ${d.marginSet?`هامش ربح ${Math.round(d.margin*100)}٪ كما أُدخل`:'لم يُدخل هامش الربح، ويُفترض 45٪'}؛ المبالغ بعملة ${d.cur}؛ استنادًا إلى ${esc(d.period)}. تقديرات من الملفات المدقّقة وليست نصيحة مالية. أُنشئ بواسطة OptiROAS · optiroas.com`)}</p></div>`;
+}
+function printSummary(d,tpl){
   let el=$('printDoc');if(!el){el=document.createElement('div');el.id='printDoc';document.body.appendChild(el)}
-  el.innerHTML=summaryHTML(d);toast(TR('In the print window, choose “Save as PDF”.','في نافذة الطباعة، اختر «حفظ كملف PDF».'));
+  el.innerHTML=tpl==='plan'?actionPlanHTML(d):summaryHTML(d);toast(TR('In the print window, choose “Save as PDF”.','في نافذة الطباعة، اختر «حفظ كملف PDF».'));
   setTimeout(()=>window.print(),300);
 }
 // Simple dialog
@@ -3792,9 +3859,9 @@ function renderKeepBar(){
   if(ST.example||!ST.last){el.innerHTML='';return}
   const saved=ST.savedId&&ST.savedFp===ST.reportFp,us=ST.me&&ST.me.usage,free=!us||!us.unlimited;
   el.innerHTML=`<div class="keep card"><div><b>${TR('Keep this report','احتفظ بهذا التقرير')}</b><span class="muted small">${saved?TR('Saved to your account. Progress you mark is synced there.','محفوظ في حسابك. يتم حفظ التقدم الذي تعلّمه هناك.'):TR('Files are cleared when you close or refresh this page. Save a PDF or keep the summary in your account.','تُمسح الملفات عند إغلاق الصفحة أو تحديثها. احفظ ملف PDF أو احتفظ بالملخص في حسابك.')}</span></div>
-    <div class="keepbtns"><button class="btn quiet sm" type="button" id="kPdf">${TR('Download PDF','نزّل PDF')}</button><button class="btn quiet sm" type="button" id="kMail">${TR('Email it to me','أرسله إلى بريدي')}</button>${saved?`<button class="btn quiet sm" type="button" id="kOpen">${TR('View in my account','اعرضه في حسابي')}</button>`:`<button class="btn sm" type="button" id="kSave">${TR('Save to my account','احفظ في حسابي')}</button>`}</div>
+    <div class="keepbtns"><details class="dlmenu"><summary class="btn quiet sm">${TR('Download PDF','نزّل PDF')} ▾</summary><div class="dlpop"><button type="button" data-tpl="plan" data-src="open"><b>${TR('Action plan','خطة العمل')}</b><span>${TR('One page for executives: priorities, impact, owner and due date','صفحة للإدارة: الأولويات والأثر والمسؤول والموعد')}</span></button><button type="button" data-tpl="summary" data-src="open"><b>${TR('Full summary','الملخص الكامل')}</b><span>${TR('Score, key numbers and every recommendation','الدرجة والأرقام الرئيسية وكل التوصيات')}</span></button></div></details><button class="btn quiet sm" type="button" id="kMail">${TR('Email it to me','أرسله إلى بريدي')}</button>${saved?`<button class="btn quiet sm" type="button" id="kOpen">${TR('View in my account','اعرضه في حسابي')}</button>`:`<button class="btn sm" type="button" id="kSave">${TR('Save to my account','احفظ في حسابي')}</button>`}</div>
     ${free&&API_OK?`<p class="muted small keepnote">${TR('Free plan: this counts as 1 report. For the next 24 hours you can fix a file, add another platform or re-run it as often as you like at no extra cost. Use “+ Add files” below.','الخطة المجانية: يُحتسب هذا تقريرًا واحدًا. خلال الـ24 ساعة القادمة يمكنك تصحيح ملف أو إضافة منصة أو إعادة التشغيل كما تشاء دون تكلفة إضافية. استخدم «+ أضف ملفات» أدناه.')}</p>`:''}</div>`;
-  $('kPdf').onclick=()=>printSummary(buildSummary(ST.last));
+  el.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{b.closest('details').open=false;printSummary(buildSummary(ST.last),b.dataset.tpl)});
   $('kMail').onclick=()=>emailDialog(saved?{id:ST.savedId}:null);
   if($('kSave'))$('kSave').onclick=saveDialog;
   if($('kOpen'))$('kOpen').onclick=()=>openSaved(ST.savedId);
@@ -3832,12 +3899,12 @@ function renderSaved(){
   const R=ST.saved,d=R.data,el=$('acctCard');$('acctView').classList.add('picking');
   const fu=R.followup_at&&!R.followup_sent_at;
   el.innerHTML=`<div><button class="linkbtn" type="button" id="svBack">${TR('← Back to your account','→ العودة إلى حسابك')}</button></div>
-    <div class="keepbtns"><button class="btn quiet sm" type="button" id="svPdf">${TR('Download PDF','نزّل PDF')}</button><button class="btn quiet sm" type="button" id="svMail">${TR('Email it to me','أرسله إلى بريدي')}</button>
+    <div class="keepbtns"><details class="dlmenu"><summary class="btn quiet sm">${TR('Download PDF','نزّل PDF')} ▾</summary><div class="dlpop"><button type="button" data-tpl="plan" data-src="saved"><b>${TR('Action plan','خطة العمل')}</b><span>${TR('One page for executives: priorities, impact, owner and due date','صفحة للإدارة: الأولويات والأثر والمسؤول والموعد')}</span></button><button type="button" data-tpl="summary" data-src="saved"><b>${TR('Full summary','الملخص الكامل')}</b><span>${TR('Score, key numbers and every recommendation','الدرجة والأرقام الرئيسية وكل التوصيات')}</span></button></div></details><button class="btn quiet sm" type="button" id="svMail">${TR('Email it to me','أرسله إلى بريدي')}</button>
       <label class="ckrow sm"><input type="checkbox" id="svFu"${fu?' checked':''}> <span>${R.followup_sent_at?TR('Follow-up sent ','أُرسلت المتابعة ')+fmtDate(String(R.followup_sent_at).slice(0,10)):TR('7-day follow-up email','بريد متابعة بعد 7 أيام')}</span></label>
       <button class="btn quiet sm danger" type="button" id="svDel">${TR('Delete','احذف')}</button></div>
     ${summaryHTML(d,{interactive:true})}`;
   $('svBack').onclick=()=>{ST.saved=null;renderAcct()};
-  $('svPdf').onclick=()=>printSummary(d);
+  el.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{b.closest('details').open=false;printSummary(d,b.dataset.tpl)});
   $('svMail').onclick=()=>emailDialog({id:R.id});
   $('svFu').onchange=async e=>{try{const r=await api('/api/reports/update',{method:'POST',body:JSON.stringify({id:R.id,action:'followup',on:e.target.checked})});R.followup_at=r.followup_at;R.followup_sent_at=null;toast(e.target.checked?TR('We’ll email you on ','سنراسلك في ')+fmtDate(String(r.followup_at).slice(0,10)):TR('Follow-up switched off.','تم إيقاف المتابعة.'))}catch(x){toast(x.message)}};
   $('svDel').onclick=async()=>{const b=$('svDel');if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent=TR('Click again to delete','اضغط مجددًا للحذف');return}
@@ -3974,12 +4041,13 @@ function segShareChart(p,dl,list){
 }
 function profitCurve(p){
   const f=p.forecast;if(!f||f.mode!=='value')return '';
+  const gate=ST.marginSet?'':`<div class="mgate"><b>${TR('Add your profit margin to use this chart','أضف هامش ربحك لاستخدام هذا الرسم')}</b><span class="muted small">${TR('Profit depends on your margin. Without it, 45% is assumed and the curve may be wrong.','يعتمد الربح على هامشك. بدونه يُفترض 45٪ وقد يكون المنحنى غير دقيق.')}</span><span class="mgrow"><input type="number" min="5" max="95" placeholder="45" class="mgin" aria-label="${TR('Profit margin %','هامش الربح ٪')}"> % <button class="btn sm mgok" type="button">${TR('Apply','طبّق')}</button></span></div>`;
   const W=chartW(),H=240,ml=74,mr=16,mt=16,mb=40,iw=W-ml-mr,ih=H-mt-mb,pts=f.sc;
   const xs=pts.map(s=>s.s),ys=pts.map(s=>s.profit),x0=Math.min(...xs),x1=Math.max(...xs),lo=Math.min(...ys),hi=Math.max(...ys),pad=Math.max((hi-lo)*.35,Math.abs(hi)*.02,1),y0=lo-pad,y1=hi+pad;
   const X=v=>ml+(v-x0)/(x1-x0)*iw,Y=v=>mt+ih-(v-y0)/(y1-y0)*ih;
   const line=pts.map((s,i)=>`${i?'L':'M'}${X(s.s).toFixed(1)},${Y(s.profit).toFixed(1)}`).join(' ');
   const grid=[0,.25,.5,.75,1].map(t=>{const v=y0+t*(y1-y0);return `<line x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}" class="cg"/><text x="${ml-8}" y="${Y(v)+4}" class="ct" text-anchor="end">${money(v,0)}</text>`}).join('');
-  return `<div class="card chartc"><div class="chh"><div><b>${TR('Monthly contribution profit by budget','الربح الشهري حسب الميزانية')}</b><p class="muted small">${TR('Revenue × margin − spend, using the curve below. The highest point is the most profitable budget.','الإيراد × الهامش − الإنفاق، وفق المنحنى أدناه. أعلى نقطة هي الميزانية الأكثر ربحية.')}</p></div></div>
+  return `<div class="card chartc${ST.marginSet?'':' gated'}">${gate}<div class="chh"><div><b>${TR('Monthly contribution profit by budget','الربح الشهري حسب الميزانية')}</b><p class="muted small">${TR('Revenue × margin − spend, using the curve below. The highest point is the most profitable budget.','الإيراد × الهامش − الإنفاق، وفق المنحنى أدناه. أعلى نقطة هي الميزانية الأكثر ربحية.')}</p></div></div>
    <svg viewBox="0 0 ${W} ${H}" class="chsvg" role="img" aria-label="${TR('Profit by budget','الربح حسب الميزانية')}">${grid}<path d="${line}" fill="none" stroke="${pc(p.pk)}" stroke-width="2"/>
    ${pts.map(s=>`<circle cx="${X(s.s).toFixed(1)}" cy="${Y(s.profit).toFixed(1)}" r="${s.k===0?7:5}" fill="${s.k===0?'var(--ink)':pc(p.pk)}" class="cdot"${tipAttr({t:s.k===0?TR('Today','اليوم'):(s.k>0?'+':'')+Math.round(s.k*100)+'%',f:[TR(`Spend ${money(s.s,0)} a month`,`إنفاق ${money(s.s,0)} شهريًا`),TR(`Revenue ${money(s.y,0)} · ROAS ${x2(s.eff)}`,`إيراد ${money(s.y,0)} · ROAS ${x2(s.eff)}`)],r:TR(`Contribution profit ${money(s.profit,0)} a month.`,`ربح المساهمة ${money(s.profit,0)} شهريًا.`)})}/>`).join('')}
    ${pts.map(s=>`<text x="${X(s.s)}" y="${H-mb+18}" class="ct" text-anchor="middle">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'')+Math.round(s.k*100)+'%'}</text>`).join('')}</svg></div>`;
