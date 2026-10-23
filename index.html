@@ -710,6 +710,12 @@ html[dir=rtl] .wzsteps button{padding:5px 5px 5px 12px}
 td .pill[title]{cursor:help}
 .wznote{margin:0;font-size:13.5px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent,#0a6c86) 7%,transparent)}.wznote.warn{background:color-mix(in srgb,#d9822b 12%,transparent)}
 .fkpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px}.fkpi .card{padding:12px 14px;display:flex;flex-direction:column;gap:2px}.fkpi .num{font-size:20px;font-weight:700}
+.pill.tipped{cursor:help;outline:1px dashed transparent;text-decoration:underline dotted;text-underline-offset:3px}
+.pill.tipped:hover,.pill.tipped:focus-visible{outline-color:currentColor;outline-offset:2px}
+.tipbox{position:fixed;z-index:80;max-width:340px;width:max-content;background:var(--ink);color:var(--surface);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5;box-shadow:0 18px 40px -12px rgba(0,0,0,.45);pointer-events:none}
+.tipbox b{display:block;font-size:13.5px;margin-bottom:4px}.tipbox ul{margin:0 0 6px;padding-inline-start:1.1em;opacity:.85}.tipbox p{margin:0}
+.vhint{margin:8px 0 0}
+@media(max-width:640px){.tipbox{max-width:calc(100vw - 16px)}}
 </style>
 </head>
 <body>
@@ -1713,7 +1719,7 @@ function auditPlatform(pk,all,ctx){
         const drop=1-l7.ctr/bs.ctr,fu=hasReach&&bs.freq?l7.freq/bs.freq-1:0;
         if(drop>=.25){
           const sev=fu>=.2?'High':'Medium';
-          const camp_=camps.find(c=>c.name===camp);if(camp_&&camp_.verdict==='Hold')camp_.verdict='Watch';
+          const camp_=camps.find(c=>c.name===camp);if(camp_&&camp_.verdict==='Hold'){camp_.verdict='Watch';camp_.whyV='Watch';camp_.why=A(`Profitable today, but its ad “${ad}” is tiring: click-through rate fell ${pct(drop,0)} in the last 7 days${fu>0?` while frequency rose ${pct(fu,0)}`:''}. Results usually follow within 1–2 weeks, so refresh the creative before cutting budget.`,`مربحة حاليًا، لكن إعلانها «${ad}» يفقد فعاليته: انخفضت نسبة النقر ${pct(drop,0)} في آخر 7 أيام${fu>0?` بينما ارتفع التكرار ${pct(fu,0)}`:''}. تتبعها النتائج عادة خلال أسبوع أو أسبوعين، لذا جدّد الإعلان قبل خفض الميزانية.`)}
           push({sev,bucket:'stop',conf:sev==='High'?'High':'Medium',title:A(`Creative fatigue on ${ad}`,`إرهاق الإعلان: ${ad}`),
             ev:A(`Click-through rate <b>${pct(bs.ctr,2)} → ${pct(l7.ctr,2)}</b> (−${pct(drop,0)}) in the last 7 days${hasReach?` · frequency ${bs.freq.toFixed(2)} → <b>${l7.freq.toFixed(2)}</b>`:''} · ${money(l30.spend)} spent in 30 days`,`معدل النقر <b>${pct(bs.ctr,2)} ← ${pct(l7.ctr,2)}</b> (−${pct(drop,0)}) خلال آخر 7 أيام${hasReach?` · التكرار ${bs.freq.toFixed(2)} ← <b>${l7.freq.toFixed(2)}</b>`:''} · إنفاق ${money(l30.spend)} خلال 30 يومًا`),
             act:A(`Rotate ${ad} out of ${camp}. Launch 3–4 new versions of the same idea with fresh opening hooks, and keep the old ad on a small budget until a new one beats it.`,`أخرج ${ad} من ${camp}. أطلق 3–4 نسخ جديدة من الفكرة نفسها ببدايات مختلفة، وأبقِ الإعلان القديم بميزانية صغيرة حتى يتفوّق عليه إعلان جديد.`),
@@ -1773,7 +1779,7 @@ function auditPlatform(pk,all,ctx){
       const t7=agg(win(rows,0,6)).spend;
       for(const c of camps){
         if(t7&&c.l7&&c.l7.freq>=2&&c.l7.spend/t7>=.05){
-          if(c.verdict==='Hold')c.verdict='Watch';
+          if(c.verdict==='Hold'){c.verdict='Watch';c.whyV='Watch';c.why=A(`People see its ads ${c.l7.freq.toFixed(1)} times a week on average. Above about 2, the same audience starts ignoring the ads and costs rise, so widen the audience or add new creative before adding budget.`,`يرى الناس إعلاناتها ${c.l7.freq.toFixed(1)} مرات أسبوعيًا في المتوسط. فوق نحو 2 يبدأ الجمهور نفسه بتجاهل الإعلانات وترتفع التكلفة، لذا وسّع الجمهور أو أضف تصاميم جديدة قبل زيادة الميزانية.`)}
           push({sev:'Medium',bucket:'test',conf:'Medium',title:A(`${c.name} is saturating its audience`,`${c.name} تُشبع جمهورها`),
             ev:A(`Average daily frequency <b>${c.l7.freq.toFixed(2)}</b> in the last 7 days · ${effPlain(c)}`,`متوسط التكرار اليومي <b>${c.l7.freq.toFixed(2)}</b> خلال آخر 7 أيام · ${effPlain(c)}`),
             act:A(`Widen the audience or add new creative before raising its budget. Hold spend flat until frequency comes down.`,`وسّع الجمهور أو أضف تصاميم جديدة قبل رفع الميزانية. أبقِ الإنفاق ثابتًا حتى ينخفض التكرار.`),
@@ -2548,10 +2554,10 @@ function render(scroll){
   const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold',Learning:'Hold'};
   const mx=Math.max(...p.camps.map(c=>c.share),.01);
   let T=`<div class="tablewrap"><table class="wide"><thead><tr><th>Campaign</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${CPU(p)}</th>${V?'<th>Revenue</th><th>ROAS</th><th>'+TR('Profit per ','الربح لكل ')+money(100,0)+'</th>':'<th>Click-through</th>'}${p.camps.some(c=>c.lostb!=null)?'<th>IS lost (budget)</th>':''}${p.camps.some(c=>c.pacing!=null)?'<th>Budget used</th>':''}${p.camps.some(c=>c.store)?'<th>Delivered ROAS</th><th>Refused or returned</th>':''}<th>Verdict</th></tr></thead><tbody>`+
-    p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]}" title="${esc(vWhy(c,p,A))}">${VDL(c.verdict)}</span></td></tr>`).join('')+'</tbody></table></div>';
+    p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]} tipped"${tipAttr(vTip(c,p,A))}>${VDL(c.verdict)}</span></td></tr>`).join('')+'</tbody></table></div>';
   const dims=Object.entries(p.segs);
   if(dims.length)T+=`<div class="dims">${dims.map(([dl,list])=>`<div><h4>${DIM(dl)}</h4><div class="tablewrap"><table><thead><tr><th>${DIM(dl)}</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th></tr></thead><tbody>${list.slice(0,10).map(s=>`<tr><td class="lbl" style="min-width:140px">${esc(s.name)}</td><td>${money(s.spend)}</td><td>${pct(s.share,0)}</td><td>${cnt(s.conv)}</td><td>${V?x2(s.roas):money(s.cpa)}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
-  T+=`<details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, in line with the account, or under 5% of spend. Keep the budget steady.','مربحة عند هامشك، أو متوافقة مع الحساب، أو أقل من 5% من الإنفاق. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin, with at least 5% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك، مع 5% على الأقل من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('At least 5% of spend for weak or no results. Cut or pause it.','5% على الأقل من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Learning',TR('Live under 7 days, still in the platform’s learning phase. Not judged yet.','نشطة أقل من 7 أيام، ما زالت في مرحلة التعلّم لدى المنصة. لا تُقيَّم بعد.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul><p class="muted small">${TR('Hover over a verdict to see the reason for that campaign.','مرّر فوق الحكم لترى سببه لتلك الحملة.')}</p></details>`;
+  T+=`<p class="muted small vhint">ⓘ ${TR('Hover over or tap any verdict to see why it was given.','مرّر فوق أي حكم أو اضغط عليه لترى سببه.')}</p><details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, in line with the account, or under 5% of spend. Keep the budget steady.','مربحة عند هامشك، أو متوافقة مع الحساب، أو أقل من 5% من الإنفاق. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin, with at least 5% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك، مع 5% على الأقل من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('At least 5% of spend for weak or no results. Cut or pause it.','5% على الأقل من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Learning',TR('Live under 7 days, still in the platform’s learning phase. Not judged yet.','نشطة أقل من 7 أيام، ما زالت في مرحلة التعلّم لدى المنصة. لا تُقيَّم بعد.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul></details>`;
   $('tabpanel').innerHTML=T+platformExtras(p);
 
   // charts
@@ -2646,8 +2652,57 @@ function renderPlan(A){
     return `<div class="card col"><div><h3>${t}</h3><p class="muted small">${s}</p></div>${items.length?`<ul>${items.join('')}</ul>`:'<p class="muted small">Nothing urgent in this period.</p>'}</div>`}).join('');
 }
 const VDL=v=>TR(v,{Scale:'وسّع',Hold:'ثبّت',Watch:'راقب',Reduce:'خفّض',Cut:'أوقف','Other goal':'هدف آخر',Learning:'في مرحلة التعلّم'}[v]||v);
-function vWhy(c,p,A){if(c.why&&c.whyV===c.verdict)return c.why;const V=p.mode==='value';
-  return c.verdict==='Scale'?TR('Returns well above the account average with steady results, so it can take more budget.','عائدها أعلى بوضوح من متوسط الحساب ونتائجها مستقرة، لذا تحتمل ميزانية أكبر.'):c.verdict==='Cut'?TR('Takes a large share of spend for weak or no results. See the recommendations.','تأخذ حصة كبيرة من الإنفاق مقابل نتائج ضعيفة أو معدومة. راجع التوصيات.'):c.verdict==='Watch'?TR('Showing early warning signs such as rising costs or tiring creative. See the recommendations.','تظهر عليها إشارات تحذير مبكرة كارتفاع التكلفة أو إرهاق الإعلانات. راجع التوصيات.'):V?TR(`Profitable at your margin: ROAS ${x2(c.roas)} vs break-even ${x2(A.be)}. Keep the budget steady.`,`مربحة عند هامشك: ROAS ${x2(c.roas)} مقابل نقطة التعادل ${x2(A.be)}. أبقِ الميزانية ثابتة.`):TR('Results are in line with the account. Keep the budget steady.','نتائجها متوافقة مع الحساب. أبقِ الميزانية ثابتة.')}
+// Explanations shown when hovering or tapping a verdict: the campaign's own numbers, then the reasoning.
+function vTip(c,p,A){
+  const V=p.mode==='value',sh=p.P.short,a=p.acc,Us=UsL(p),f=[];
+  if(V)f.push(TR(`ROAS ${x2(c.roas)} · ${sh} average ${x2(a.roas)} · break-even ${x2(A.be)}`,`ROAS ${x2(c.roas)} · متوسط ${sh} ${x2(a.roas)} · نقطة التعادل ${x2(A.be)}`));
+  else f.push(TR(`${CPU(p)} ${money(c.cpa)} · ${sh} average ${money(a.cpa)}`,`${CPU(p)} ${money(c.cpa)} · متوسط ${sh} ${money(a.cpa)}`));
+  f.push(TR(`${pct(c.share)} of spend · ${pct(c.cshare)} of ${Us} (${cnt(c.conv)})`,`${pct(c.share)} من الإنفاق · ${pct(c.cshare)} من ${Us} (${cnt(c.conv)})`));
+  if(V)f.push(TR(`Profit per ${money(100,0)} spent: ${money(c.profit100,0)}`,`الربح لكل ${money(100,0)} إنفاق: ${money(c.profit100,0)}`));
+  if(p.daily&&c.live)f.push(TR(`${c.live} days with spend in this data`,`${c.live} يومًا من الإنفاق في هذه البيانات`));
+  let r;
+  if(c.why&&c.whyV===c.verdict)r=c.why;
+  else if(c.verdict==='Scale')r=V?TR(`Returns are ${pct(c.roas/a.roas-1,0)} above the ${sh} average and well above break-even, and have held steady over the last 14 days. It can take more budget: raise it about 20% every 3–4 days while ROAS stays above ${x2(A.be*1.1)}.`,`العائد أعلى من متوسط ${sh} بنسبة ${pct(c.roas/a.roas-1,0)} وأعلى بكثير من نقطة التعادل، وظل مستقرًا خلال آخر 14 يومًا. تحتمل ميزانية أكبر: ارفعها نحو 20% كل 3–4 أيام ما دام ROAS أعلى من ${x2(A.be*1.1)}.`)
+    :TR(`Costs ${pct(1-c.cpa/a.cpa,0)} less per result than the ${sh} average with steady results. Raise its budget about 20% every 3–4 days while the cost stays under ${money(a.cpa)}.`,`تكلفة النتيجة أقل من متوسط ${sh} بنسبة ${pct(1-c.cpa/a.cpa,0)} مع نتائج مستقرة. ارفع ميزانيتها نحو 20% كل 3–4 أيام ما دامت التكلفة أقل من ${money(a.cpa)}.`);
+  else if(c.verdict==='Cut')r=c.conv===0?TR(`No ${Us} after ${money(c.spend)} of spend, which is ${pct(c.share)} of ${sh} spend. Pause it, or check its conversion tracking before spending more.`,`لا توجد ${Us} بعد إنفاق ${money(c.spend)}، أي ${pct(c.share)} من إنفاق ${sh}. أوقفها، أو تحقّق من تتبّع التحويلات قبل إنفاق المزيد.`)
+    :TR(`Takes ${pct(c.share)} of spend but brings only ${pct(c.cshare)} of ${Us}${V?`, with ROAS ${x2(c.roas)} against ${x2(a.roas)} on average`:''}. Cutting its budget by about 40% and moving it to stronger campaigns should lift total returns.`,`تأخذ ${pct(c.share)} من الإنفاق لكنها تجلب ${pct(c.cshare)} فقط من ${Us}${V?`، مع ROAS ${x2(c.roas)} مقابل ${x2(a.roas)} في المتوسط`:''}. خفض ميزانيتها بنحو 40% ونقلها إلى حملات أقوى يرفع العائد الإجمالي.`);
+  else if(c.verdict==='Watch')r=TR('Showing early warning signs, such as rising costs or tiring creative. Keep the budget flat and check the recommendations.','تظهر عليها إشارات تحذير مبكرة، كارتفاع التكلفة أو إرهاق الإعلانات. أبقِ الميزانية ثابتة وراجع التوصيات.');
+  else r=V?(c.roas>=A.be?TR(`Profitable at your margin${Math.abs(c.roas/a.roas-1)<.2?' and close to the account average':c.roas>a.roas?', and above average, but not yet strong or steady enough to scale':', though below the account average'}. There’s no strong reason to move budget, so keep it steady and review it next week.`,`مربحة عند هامشك${Math.abs(c.roas/a.roas-1)<.2?' وقريبة من متوسط الحساب':c.roas>a.roas?'، وأعلى من المتوسط لكنها ليست قوية أو مستقرة بما يكفي للتوسّع بعد':'، لكنها أقل من متوسط الحساب'}. لا يوجد سبب قوي لنقل الميزانية، لذا أبقِها ثابتة وراجعها الأسبوع القادم.`):TR('Results are in line with the account. Keep the budget steady.','نتائجها متوافقة مع الحساب. أبقِ الميزانية ثابتة.'))
+    :TR(`Cost per result is in line with the ${sh} average. Keep the budget steady and review it next week.`,`تكلفة النتيجة متوافقة مع متوسط ${sh}. أبقِ الميزانية ثابتة وراجعها الأسبوع القادم.`);
+  return {t:VDL(c.verdict),f,r};
+}
+function cTip(c,p){
+  const V=p.mode==='value',sh=p.P.short,a=p.acc,Us=UsL(p),f=[];
+  f.push(V?TR(`ROAS ${x2(c.roas)} · ${sh} average ${x2(a.roas)}`,`ROAS ${x2(c.roas)} · متوسط ${sh} ${x2(a.roas)}`):TR(`${CPU(p)} ${money(c.cpa)} · average ${money(a.cpa)}`,`${CPU(p)} ${money(c.cpa)} · المتوسط ${money(a.cpa)}`));
+  f.push(TR(`${money(c.spend,0)} spend · ${cnt(c.conv)} ${Us} · click-through ${pct(c.ctr,2)}`,`إنفاق ${money(c.spend,0)} · ${cnt(c.conv)} ${Us} · نسبة النقر ${pct(c.ctr,2)}`));
+  if(p.daily&&c.live!=null)f.push(TR(`${c.live} days live`,`${c.live} أيام نشاط`));
+  const r=c.status==='Winning'?TR(`At least 20% better than the ${sh} average with ${cnt(c.conv)} ${Us}. Keep it running, and use its hook and format as the model for new versions.`,`أفضل من متوسط ${sh} بنسبة 20% على الأقل مع ${cnt(c.conv)} ${Us}. أبقِه يعمل، واستخدم بدايته وشكله نموذجًا لنسخ جديدة.`)
+   :c.status==='Tiring'?TR('Its click-through rate dropped sharply in the last 7 days compared with before. Results usually follow, so refresh it with a new hook or format soon.','انخفضت نسبة النقر فيه بشدة خلال آخر 7 أيام مقارنة بما قبلها. تتبعها النتائج عادة، لذا جدّده ببداية أو شكل جديد قريبًا.')
+   :c.status==='Underperforming'?(c.conv===0?TR(`No ${Us} after ${money(c.spend,0)} of spend. Pause it and let the budget flow to ads that convert.`,`لا توجد ${Us} بعد إنفاق ${money(c.spend,0)}. أوقفه ودع الميزانية تذهب إلى الإعلانات التي تحقق تحويلات.`):TR(`More than 30% worse than the ${sh} average. Pause or replace it, and move its budget to the best ads.`,`أسوأ من متوسط ${sh} بأكثر من 30%. أوقفه أو استبدله، وانقل ميزانيته إلى أفضل الإعلانات.`))
+   :c.status==='Learning'?(p.daily&&c.live<7?TR(`Live for only ${c.live} day${c.live===1?'':'s'}. Platforms need about 7 days to learn who to show it to, so it isn’t judged yet.`,`نشط ${c.live} أيام فقط. تحتاج المنصات نحو 7 أيام لتتعلّم لمن تعرضه، لذا لا يُقيَّم بعد.`):TR(`Has spent less than twice the average cost per result, too little to judge yet.`,`أنفق أقل من ضعف متوسط تكلفة النتيجة، وهذا قليل للحكم بعد.`))
+   :TR(`Close to the ${sh} average. Keep it running.`,`قريب من متوسط ${sh}. أبقِه يعمل.`);
+  const L={Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'};
+  return {t:TR(c.status,L[c.status]||c.status),f,r};
+}
+const tipAttr=o=>` tabindex="0" role="button" data-tip="${esc(JSON.stringify(o))}"`;
+function tipInit(){
+  const box=document.createElement('div');box.id='tipbox';box.className='tipbox';box.hidden=true;box.setAttribute('role','tooltip');document.body.appendChild(box);
+  let cur=null,pinned=false;
+  const hide=()=>{box.hidden=true;cur=null;pinned=false};
+  const show=el=>{let o;try{o=JSON.parse(el.dataset.tip)}catch(e){return}cur=el;
+    box.innerHTML=`<b>${esc(o.t)}</b>${o.f&&o.f.length?`<ul>${o.f.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<p>${esc(o.r)}</p>`;
+    box.dir=ST.lang==='ar'?'rtl':'ltr';box.hidden=false;
+    const r=el.getBoundingClientRect(),w=box.offsetWidth,h=box.offsetHeight;
+    box.style.left=Math.max(8,Math.min(innerWidth-w-8,r.left+r.width/2-w/2))+'px';
+    box.style.top=(r.top-h-10>8?r.top-h-10:r.bottom+10)+'px'};
+  document.addEventListener('mouseover',e=>{const el=e.target.closest('[data-tip]');if(el&&!pinned&&el!==cur)show(el)});
+  document.addEventListener('mouseout',e=>{const el=e.target.closest('[data-tip]');if(el&&!pinned&&!el.contains(e.relatedTarget))hide()});
+  document.addEventListener('click',e=>{const el=e.target.closest('[data-tip]');if(el){e.preventDefault();if(pinned&&cur===el)hide();else{show(el);pinned=true}}else if(!box.contains(e.target))hide()});
+  document.addEventListener('focusin',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(el)show(el)});
+  document.addEventListener('focusout',e=>{if(e.target.closest&&e.target.closest('[data-tip]')&&!pinned)hide()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
+  window.addEventListener('scroll',()=>{if(!box.hidden)hide()},{passive:true});
+}
 function platformExtras(p){
   const V=p.mode==='value';let h='';
   if(p.trend){
@@ -2659,7 +2714,7 @@ function platformExtras(p){
   }
   if(p.creatives&&p.creatives.length){
     const cls={Winning:'Scale',Tiring:'Watch',Underperforming:'Cut',Learning:'Hold',Steady:'Hold'};
-    const tbl=(list,kind)=>`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Ad','الإعلان')}</th><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th>${V?`<th>${TR('Revenue','الإيراد')}</th><th>ROAS</th>`:`<th>${CPU(p)}</th>`}<th>${UsL(p)}</th><th>${TR('Click-through','نسبة النقر')}</th>${p.daily?`<th>${TR('Days live','أيام النشاط')}</th>`:''}<th>${TR('Status','الحالة')}</th></tr></thead><tbody>${list.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td>${V?`<td>${money(c.value,0)}</td><td class="${kind==='best'?'pos':c.roas<p.be?'neg':''}">${x2(c.roas)}</td>`:`<td class="${kind==='best'?'pos':'neg'}">${money(c.cpa)}</td>`}<td>${cnt(c.conv)}</td><td>${pct(c.ctr,2)}</td>${p.daily?`<td>${c.live}</td>`:''}<td><span class="pill ${cls[c.status]}">${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div>`;
+    const tbl=(list,kind)=>`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Ad','الإعلان')}</th><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th>${V?`<th>${TR('Revenue','الإيراد')}</th><th>ROAS</th>`:`<th>${CPU(p)}</th>`}<th>${UsL(p)}</th><th>${TR('Click-through','نسبة النقر')}</th>${p.daily?`<th>${TR('Days live','أيام النشاط')}</th>`:''}<th>${TR('Status','الحالة')}</th></tr></thead><tbody>${list.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td>${V?`<td>${money(c.value,0)}</td><td class="${kind==='best'?'pos':c.roas<p.be?'neg':''}">${x2(c.roas)}</td>`:`<td class="${kind==='best'?'pos':'neg'}">${money(c.cpa)}</td>`}<td>${cnt(c.conv)}</td><td>${pct(c.ctr,2)}</td>${p.daily?`<td>${c.live}</td>`:''}<td><span class="pill ${cls[c.status]} tipped"${tipAttr(cTip(c,p))}>${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div>`;
     const per=p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):'';
     const B=p.crBest||[],W=p.crWorst||[];
     h+=`<div><h4 class="sub">${V?TR(`Best ${B.length} creatives by ROAS`,`أفضل ${B.length} إعلانات حسب ROAS`):TR(`Best ${B.length} creatives by ${CPU(p).toLowerCase()}`,`أفضل ${B.length} إعلانات حسب ${CPU(p)}`)}<span class="muted small" style="font-weight:400"> · ${V?TR('sorted by revenue','مرتبة حسب الإيراد'):TR('sorted by results','مرتبة حسب النتائج')}${per}</span></h4>
@@ -3414,7 +3469,7 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
   else if(vf){try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}openAcct(vf==='1'?{ok:true,t:TR('Email confirmed. You can run your free report now.','تم تأكيد بريدك الإلكتروني. يمكنك تشغيل تقريرك المجاني الآن.')}:{t:TR('That confirmation link has expired or was already used. Sign in and send a new one.','انتهت صلاحية رابط التأكيد أو استُخدم من قبل. سجّل الدخول واطلب رابطًا جديدًا.')})}
   else if(wantAcct)openAcct();
 })();
-renderRegionSel();syncAcctUI();feedbackWidget();if(ST.lang==='ar'){i18Doc();i18Apply(document.body)}if(CURRENCIES.includes(regionCur()))$('currency').value=regionCur();
+renderRegionSel();syncAcctUI();feedbackWidget();tipInit();if(ST.lang==='ar'){i18Doc();i18Apply(document.body)}if(CURRENCIES.includes(regionCur()))$('currency').value=regionCur();
 
 /* ================= guided audit: platforms → export steps → upload and check → review ================= */
 const WZ_PLATS=['meta','google','tiktok','snap','other'];
