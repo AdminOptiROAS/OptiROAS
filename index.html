@@ -716,6 +716,37 @@ td .pill[title]{cursor:help}
 .tipbox b{display:block;font-size:13.5px;margin-bottom:4px}.tipbox ul{margin:0 0 6px;padding-inline-start:1.1em;opacity:.85}.tipbox p{margin:0}
 .vhint{margin:8px 0 0}
 @media(max-width:640px){.tipbox{max-width:calc(100vw - 16px)}}
+
+.ofbar{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:flex-end;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--ink) 2.5%,var(--surface));margin:8px 0 10px}
+.fbchips{flex-basis:100%}
+.fb{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.fb input,.fb select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);min-width:0}
+.fb input[type=search]{width:170px}.fb input[type=number]{width:96px}.fbrow{display:flex;gap:4px}.fbrow select{width:auto}
+.fbck{flex-direction:row;align-items:center;gap:6px;font-size:13px;color:var(--ink);padding-bottom:6px;display:flex}
+.fbreset{font-size:13px;padding-bottom:7px}
+.fcount{margin:0 0 6px}
+.pkchip .sw{display:inline-block;width:9px;height:9px;border-radius:3px;margin-inline-end:5px;vertical-align:middle}
+.crsec{margin-top:18px}
+.chartc{padding:16px;margin-top:14px}
+.chh{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}.chh p{margin:2px 0 0}
+.lgd{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);align-items:center}.lgd span{display:flex;align-items:center;gap:6px}.lgd i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chsvg{width:100%;height:auto;display:block;overflow:visible}
+.chsvg .cg{stroke:var(--line);stroke-width:1}
+.chsvg .ct{fill:var(--muted);font-size:11px;font-family:inherit}
+.chsvg .cax{font-size:12px}
+.chsvg .cbe{stroke:var(--bad);stroke-width:1.5;stroke-dasharray:5 4}.chsvg .cbet{fill:var(--bad)}
+.chsvg .cav{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:2 3}.chsvg .cavt{fill:var(--muted)}
+.chsvg .cdot{stroke:var(--surface);stroke-width:2;cursor:pointer;outline:none}
+.chsvg .cdot:hover,.chsvg .cdot:focus{stroke:var(--ink)}
+.segc{margin:6px 0 10px;display:flex;flex-direction:column;gap:6px}
+.segr{display:grid;grid-template-columns:minmax(80px,140px) 1fr 64px;gap:10px;align-items:center;font-size:13px;cursor:help}
+.segn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.segb{display:flex;flex-direction:column;gap:2px}.segb i{display:block;height:7px;border-radius:0 4px 4px 0;min-width:2px}
+html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
+.segv{text-align:end;font-variant-numeric:tabular-nums;font-size:12.5px}
+.rf2{flex-basis:100%;display:flex;gap:10px 16px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.rfq{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink);min-width:200px}
+@media(max-width:640px){.fb input[type=search]{width:100%}.fb{flex:1 1 140px}.segr{grid-template-columns:90px 1fr 56px}}
 </style>
 </head>
 <body>
@@ -2525,7 +2556,17 @@ function render(scroll){
   $('filters').querySelectorAll('[data-grp]').forEach(b=>b.onclick=()=>{ST.groupBy=b.dataset.grp;render()});
   if($('clearPil'))$('clearPil').onclick=()=>{ST.pil=null;render()};
   ledgerSync(A);const LD=ledgerLoad();renderLedger(A);
-  const FF=A.F.filter(f=>(ST.filter==='all'||f.plat===ST.filter)&&(!ST.pil||f.pil===ST.pil));
+  ST.rf=ST.rf||{sev:'all',type:'all',q:'',hide:false};const RF=ST.rf,LDm=ledgerLoad();
+  const sevs=['High','Medium','Low','Opportunity'].filter(v=>A.F.some(f=>f.sev===v)),types=['stop','scale','test','fix'].filter(t=>A.F.some(f=>(f.bucket||'fix')===t));
+  $('filters').insertAdjacentHTML('beforeend',`<div class="rf2"><div class="pkchips" role="group" aria-label="${TR('Priority','الأولوية')}"><button type="button" class="pkchip" data-rs="all" aria-pressed="${RF.sev==='all'}">${TR('Any priority','أي أولوية')}</button>${sevs.map(v=>`<button type="button" class="pkchip" data-rs="${v}" aria-pressed="${RF.sev===v}">${TR(...(SEV_L[v]||[v,v]))} <span>${A.F.filter(f=>f.sev===v).length}</span></button>`).join('')}</div>
+    <div class="pkchips" role="group" aria-label="${TR('Action','الإجراء')}"><button type="button" class="pkchip" data-rt="all" aria-pressed="${RF.type==='all'}">${TR('Any action','أي إجراء')}</button>${types.map(t=>{const l=t[0].toUpperCase()+t.slice(1);return `<button type="button" class="pkchip" data-rt="${t}" aria-pressed="${RF.type===t}"><span class="ptag ${l}">${TAGL(l)}</span> <span>${A.F.filter(f=>(f.bucket||'fix')===t).length}</span></button>`}).join('')}</div>
+    <input type="search" id="rfQ" class="rfq" placeholder="${TR('Search recommendations','ابحث في التوصيات')}" value="${esc(RF.q)}"><label class="fbck"><input type="checkbox" id="rfHide"${RF.hide?' checked':''}> ${TR('Hide done','إخفاء المنفّذ')}</label></div>`);
+  $('filters').querySelectorAll('[data-rs]').forEach(b=>b.onclick=()=>{RF.sev=b.dataset.rs;render()});
+  $('filters').querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{RF.type=b.dataset.rt;render()});
+  $('rfHide').onchange=e=>{RF.hide=e.target.checked;render()};
+  $('rfQ').oninput=e=>{RF.q=e.target.value;clearTimeout(ST.rfT);ST.rfT=setTimeout(()=>{const pos=e.target.selectionStart;render();const n=$('rfQ');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(x){}}},250)};
+  const rq=RF.q.trim().toLowerCase();
+  const FF=A.F.filter(f=>(ST.filter==='all'||f.plat===ST.filter)&&(!ST.pil||f.pil===ST.pil)&&(RF.sev==='all'||f.sev===RF.sev)&&(RF.type==='all'||(f.bucket||'fix')===RF.type)&&(!RF.hide||!LDm[fkey(f)])&&(!rq||(String(f.title)+' '+String(f.act)).toLowerCase().includes(rq)));
   const fCard=(f,n)=>`<div class="f"><div class="rank">${String(n).padStart(2,'0')}</div>
     <div class="body"><div class="tl"><span class="pill ${f.sev}">${f.sev}</span>${ST.groupBy==='priority'?`<span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span>`:''}<span class="pbadge pl">${ST.groupBy==='priority'?'· ':''}${pilN(f.pil)}</span></div><h3>${esc(f.title)}</h3><p class="ev">${f.ev}</p><p class="act">${esc(f.act)}</p></div>
     <div class="impact">${impactHTML(f,A)}<small>${TR('Confidence: ','الثقة: ')}${CONF(f.conf)}</small>${ST.example?'':`<button type="button" class="done-btn" data-done="${A.F.indexOf(f)}" aria-pressed="${!!LD[fkey(f)]}">${LD[fkey(f)]?TR('✓ Done','✓ تم'):TR('Mark done','تم التنفيذ')}</button>`}</div></div>`;
@@ -2553,12 +2594,14 @@ function render(scroll){
   $('tabs').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;render()});
   const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold',Learning:'Hold'};
   const mx=Math.max(...p.camps.map(c=>c.share),.01);
-  let T=`<div class="tablewrap"><table class="wide"><thead><tr><th>Campaign</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${CPU(p)}</th>${V?'<th>Revenue</th><th>ROAS</th><th>'+TR('Profit per ','الربح لكل ')+money(100,0)+'</th>':'<th>Click-through</th>'}${p.camps.some(c=>c.lostb!=null)?'<th>IS lost (budget)</th>':''}${p.camps.some(c=>c.pacing!=null)?'<th>Budget used</th>':''}${p.camps.some(c=>c.store)?'<th>Delivered ROAS</th><th>Refused or returned</th>':''}<th>Verdict</th></tr></thead><tbody>`+
-    p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]} tipped"${tipAttr(vTip(c,p,A))}>${VDL(c.verdict)}</span></td></tr>`).join('')+'</tbody></table></div>';
-  const dims=Object.entries(p.segs);
-  if(dims.length)T+=`<div class="dims">${dims.map(([dl,list])=>`<div><h4>${DIM(dl)}</h4><div class="tablewrap"><table><thead><tr><th>${DIM(dl)}</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th></tr></thead><tbody>${list.slice(0,10).map(s=>`<tr><td class="lbl" style="min-width:140px">${esc(s.name)}</td><td>${money(s.spend)}</td><td>${pct(s.share,0)}</td><td>${cnt(s.conv)}</td><td>${V?x2(s.roas):money(s.cpa)}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
+  let T=campSection(p,A);
   T+=`<p class="muted small vhint">ⓘ ${TR('Hover over or tap any verdict to see why it was given.','مرّر فوق أي حكم أو اضغط عليه لترى سببه.')}</p><details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, in line with the account, or under 5% of spend. Keep the budget steady.','مربحة عند هامشك، أو متوافقة مع الحساب، أو أقل من 5% من الإنفاق. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin, with at least 5% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك، مع 5% على الأقل من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('At least 5% of spend for weak or no results. Cut or pause it.','5% على الأقل من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Learning',TR('Live under 7 days, still in the platform’s learning phase. Not judged yet.','نشطة أقل من 7 أيام، ما زالت في مرحلة التعلّم لدى المنصة. لا تُقيَّم بعد.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul></details>`;
+  const dims=Object.entries(p.segs);
+  if(dims.length)T+=`<div class="dims">${dims.map(([dl,list])=>`<div><h4>${DIM(dl)}</h4>${segShareChart(p,dl,list)}<div class="tablewrap"><table><thead><tr><th>${DIM(dl)}</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th></tr></thead><tbody>${list.slice(0,10).map(s=>`<tr><td class="lbl" style="min-width:140px">${esc(s.name)}</td><td>${money(s.spend)}</td><td>${pct(s.share,0)}</td><td>${cnt(s.conv)}</td><td>${V?x2(s.roas):money(s.cpa)}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
   $('tabpanel').innerHTML=T+platformExtras(p);
+  campFill(p,A);fbarWire('cfBar',cfGet(p.pk),{q:'',v:'all',min:'',op:'any',rv:'',sort:'spend',dir:'desc'},()=>campFill(p,A));
+  $('cfBar').querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{cfGet(p.pk).v=b.dataset.cv;$('cfBar').querySelectorAll('[data-cv]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));campFill(p,A)});
+  for(const k of ['best','worst'])if($('crBar-'+k)){crFill(p,k);fbarWire('crBar-'+k,crGet(p.pk,k),{n:15,sort:'value',dir:'desc',min:'',op:'any',rv:'',q:'',learn:false},()=>crFill(p,k))}
 
   // charts
   renderCharts(A);
@@ -2713,15 +2756,7 @@ function platformExtras(p){
       <p class="muted small" style="margin-top:8px">${V?TR('ROAS = click-through rate × conversion rate × order value ÷ CPM','ROAS = معدل النقر × معدل التحويل × قيمة الطلب ÷ CPM'):TR(CPU(p)+' = CPM ÷ (click-through rate × conversion rate)','التكلفة لكل '+UA(p.U)+' = CPM ÷ (معدل النقر × معدل التحويل)')}${TR(", so each lever's change shows where a rise or fall came from.",'، لذا يُظهر تغيّر كل عامل مصدر الارتفاع أو الانخفاض.')}</p></div>`;
   }
   if(p.creatives&&p.creatives.length){
-    const cls={Winning:'Scale',Tiring:'Watch',Underperforming:'Cut',Learning:'Hold',Steady:'Hold'};
-    const tbl=(list,kind)=>`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Ad','الإعلان')}</th><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th>${V?`<th>${TR('Revenue','الإيراد')}</th><th>ROAS</th>`:`<th>${CPU(p)}</th>`}<th>${UsL(p)}</th><th>${TR('Click-through','نسبة النقر')}</th>${p.daily?`<th>${TR('Days live','أيام النشاط')}</th>`:''}<th>${TR('Status','الحالة')}</th></tr></thead><tbody>${list.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td>${V?`<td>${money(c.value,0)}</td><td class="${kind==='best'?'pos':c.roas<p.be?'neg':''}">${x2(c.roas)}</td>`:`<td class="${kind==='best'?'pos':'neg'}">${money(c.cpa)}</td>`}<td>${cnt(c.conv)}</td><td>${pct(c.ctr,2)}</td>${p.daily?`<td>${c.live}</td>`:''}<td><span class="pill ${cls[c.status]} tipped"${tipAttr(cTip(c,p))}>${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div>`;
-    const per=p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):'';
-    const B=p.crBest||[],W=p.crWorst||[];
-    h+=`<div><h4 class="sub">${V?TR(`Best ${B.length} creatives by ROAS`,`أفضل ${B.length} إعلانات حسب ROAS`):TR(`Best ${B.length} creatives by ${CPU(p).toLowerCase()}`,`أفضل ${B.length} إعلانات حسب ${CPU(p)}`)}<span class="muted small" style="font-weight:400"> · ${V?TR('sorted by revenue','مرتبة حسب الإيراد'):TR('sorted by results','مرتبة حسب النتائج')}${per}</span></h4>
-      ${B.length?tbl(B,'best'):`<p class="muted small">${TR('No ad has at least 3 results and returns above the platform average yet.','لا يوجد إعلان لديه 3 نتائج على الأقل وعائد أعلى من متوسط المنصة بعد.')}</p>`}</div>
-      <div><h4 class="sub">${V?TR(`Weakest ${W.length} creatives by ROAS`,`أضعف ${W.length} إعلانات حسب ROAS`):TR(`Weakest ${W.length} creatives by ${CPU(p).toLowerCase()}`,`أضعف ${W.length} إعلانات حسب ${CPU(p)}`)}<span class="muted small" style="font-weight:400"> · ${V?TR('sorted by revenue','مرتبة حسب الإيراد'):TR('sorted by results','مرتبة حسب النتائج')}${per}</span></h4>
-      ${W.length?tbl(W,'worst'):`<p class="muted small">${TR('No ad with meaningful spend is below the platform average.','لا يوجد إعلان بإنفاق مؤثر أقل من متوسط المنصة.')}</p>`}
-      <p class="muted small">${TR(`Best: ads with at least 3 ${UsL(p)} and returns above the ${p.P.short} average, top 15 by ${V?'ROAS':'cost per result'}. Weakest: ads spending at least twice the average cost per result with returns below average.`,`الأفضل: إعلانات لديها 3 ${UsL(p)} على الأقل وعائد أعلى من متوسط ${p.P.short}، أعلى 15 حسب ${V?'ROAS':'تكلفة النتيجة'}. الأضعف: إعلانات أنفقت ضعف متوسط تكلفة النتيجة على الأقل بعائد أقل من المتوسط.`)}${p.crLearning?TR(` ${p.crLearning} ad${p.crLearning===1?'':'s'} live under 7 days ${p.crLearning===1?'is':'are'} left out while still in the learning phase.`,` استُبعد ${p.crLearning} من الإعلانات النشطة أقل من 7 أيام لأنها ما زالت في مرحلة التعلّم.`):''}</p></div>`;
+    h+=crSection(p,'best')+crSection(p,'worst')+crMapHTML(p)+(p.crLearning?`<p class="muted small">${TR(`${p.crLearning} ad${p.crLearning===1?'':'s'} live under 7 days ${p.crLearning===1?'is':'are'} hidden while still learning. Tick “Include ads still learning” to see ${p.crLearning===1?'it':'them'}.`,`أُخفي ${p.crLearning} من الإعلانات النشطة أقل من 7 أيام لأنها ما زالت في مرحلة التعلّم. فعّل «تضمين الإعلانات في مرحلة التعلّم» لعرضها.`)}</p>`:'');
   }
   if(p.funnel){
     const st=p.funnel.st,mx=st[0][1];
@@ -2738,7 +2773,7 @@ function platformExtras(p){
   }
   if(p.forecast){
     const f=p.forecast;
-    h+=`<div><h4 class="sub">Budget scenarios, per month</h4><div class="tablewrap"><table class="wide"><thead><tr><th>Budget change</th><th>Monthly spend</th><th>${V?TR('Revenue','الإيرادات'):UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th><th>${V?TR('Return on the spend added or cut','العائد على الإنفاق المضاف أو المُخفَّض'):TR(CPU(p)+' added or lost','التكلفة لكل '+UA(p.U)+' مضافة أو مفقودة')}</th>${V?`<th>${TR('Contribution profit','ربح المساهمة')}</th>`:''}</tr></thead><tbody>${f.sc.map(s=>`<tr${s.k===0?' class="cur"':''}><td class="lbl" style="min-width:120px">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'−')+Math.abs(s.k*100)+'%'}</td><td>${money(s.s,0)}</td><td>${V?money(s.y,0):cnt(s.y)}</td><td>${V?x2(s.eff):money(s.eff)}</td><td>${s.marg==null?'—':V?`<span class="${s.marg<p.be?'neg':'pos'}">${x2(s.marg)}</span>`:money(s.marg)}</td>${V?`<td class="${s.profit<0?'neg':'pos'}">${money(s.profit,0)}</td>`:''}</tr>`).join('')}</tbody></table></div>
+    h+=`<div><h4 class="sub">Budget scenarios, per month</h4>${profitCurve(p)}<div class="tablewrap"><table class="wide"><thead><tr><th>Budget change</th><th>Monthly spend</th><th>${V?TR('Revenue','الإيرادات'):UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th><th>${V?TR('Return on the spend added or cut','العائد على الإنفاق المضاف أو المُخفَّض'):TR(CPU(p)+' added or lost','التكلفة لكل '+UA(p.U)+' مضافة أو مفقودة')}</th>${V?`<th>${TR('Contribution profit','ربح المساهمة')}</th>`:''}</tr></thead><tbody>${f.sc.map(s=>`<tr${s.k===0?' class="cur"':''}><td class="lbl" style="min-width:120px">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'−')+Math.abs(s.k*100)+'%'}</td><td>${money(s.s,0)}</td><td>${V?money(s.y,0):cnt(s.y)}</td><td>${V?x2(s.eff):money(s.eff)}</td><td>${s.marg==null?'—':V?`<span class="${s.marg<p.be?'neg':'pos'}">${x2(s.marg)}</span>`:money(s.marg)}</td>${V?`<td class="${s.profit<0?'neg':'pos'}">${money(s.profit,0)}</td>`:''}</tr>`).join('')}</tbody></table></div>
       <p class="muted small" style="margin-top:8px">${LANG==='ar'?`يعتمد على منحنى تناقص العائد: كل زيادة 10% في الإنفاق تجلب نحو ${(Math.pow(1.1,f.b)*100-100).toFixed(1)}% ${V?'إيرادات':UsL(p)} إضافية. ${f.fitted?`مُعايَر على إنفاقك ونتائجك اليومية (المرونة ${f.b.toFixed(2)}).`:`افترضنا مرونة قدرها ${f.b.toFixed(2)} لأن الإنفاق اليومي تغيّر قليلًا جدًا لحسابها.`}${V&&f.opt?(p.acc.roas>=p.be?` يبلغ ربح المساهمة ذروته قرب ${money(Math.min(f.opt.s,f.S0*3),0)} شهريًا${f.opt.ratio>3?' أو أعلى':''}.`:' عند العائد الحالي يخسر كل مستوى ميزانية بعد تكلفة المنتج، لذا حسّن الكفاءة قبل التوسّع.'):''} اعتبر هذه الأرقام نقطة انطلاق للاختبار لا ضمانًا.`:`Uses a diminishing-returns curve: each 10% more spend brings about ${(Math.pow(1.1,f.b)*100-100).toFixed(1)}% more ${V?'revenue':UsL(p)}. ${f.fitted?`Fitted to your daily spend and results (elasticity ${f.b.toFixed(2)}).`:`Elasticity of ${f.b.toFixed(2)} is assumed, because daily spend varied too little to fit one.`}${V&&f.opt?(p.acc.roas>=p.be?` Contribution profit peaks near ${money(Math.min(f.opt.s,f.S0*3),0)} a month${f.opt.ratio>3?' or higher':''}.`:' At current returns every budget level loses money after product costs, so fix efficiency before scaling.'):''} Treat these as a starting point for tests, not a guarantee.`}</p></div>`;
   }
   return h;
@@ -3837,6 +3872,117 @@ function feedbackWidget(){
       $('fbX').onclick=()=>draw(false);setTimeout(()=>{if($('fbX'))draw(false)},4000)};
   };
   draw(false);ST.fbRedraw=()=>{if(!w.querySelector('.fbpanel'))draw(false)};
+}
+
+
+/* ================= report filters and charts ================= */
+const VCOL={Scale:'var(--good)',Hold:'#7d8b96',Watch:'var(--warn)',Reduce:'#d9822b',Cut:'var(--bad)',Learning:'#b3bec7','Other goal':'#cfd7dd'};
+const CCOL={Winning:'var(--good)',Steady:'#7d8b96',Tiring:'var(--warn)',Underperforming:'var(--bad)',Learning:'#b3bec7'};
+const MET={value:c=>c.value||0,roas:c=>c.roas||0,spend:c=>c.spend||0,conv:c=>c.conv||0,ctr:c=>c.ctr||0,cpa:c=>isFinite(c.cpa)?c.cpa:Infinity,profit:c=>c.profit100||0,share:c=>c.share||0,live:c=>c.live||0};
+function cfGet(pk){ST.cf=ST.cf||{};return ST.cf[pk]||(ST.cf[pk]={q:'',v:'all',min:'',op:'any',rv:'',sort:'spend',dir:'desc'})}
+function crGet(pk,kind){ST.crf=ST.crf||{};const k=pk+':'+kind;return ST.crf[k]||(ST.crf[k]={n:15,sort:'value',dir:'desc',min:'',op:'any',rv:'',q:'',learn:false})}
+// Shared filter bar: search, min spend, ROAS (or cost) greater/less than, sort and order, optional count.
+function fbar(id,s,{sorts,count,V,learn,extra=''}){
+  const effL=V?'ROAS':TR('Cost per result','تكلفة النتيجة');
+  return `<div class="ofbar" id="${id}">${extra}
+    <label class="fb"><span>${TR('Search','بحث')}</span><input type="search" data-k="q" value="${esc(s.q)}" placeholder="${TR('Name contains…','الاسم يحتوي…')}"></label>
+    ${count?`<label class="fb"><span>${TR('Show','عرض')}</span><select data-k="n">${[5,10,15,25,50,0].map(n=>`<option value="${n}"${+s.n===n?' selected':''}>${n||TR('All','الكل')}</option>`).join('')}</select></label>`:''}
+    <label class="fb"><span>${TR('Sort by','الترتيب حسب')}</span><select data-k="sort">${sorts.map(([k,l])=>`<option value="${k}"${s.sort===k?' selected':''}>${l}</option>`).join('')}</select></label>
+    <label class="fb"><span>${TR('Order','الاتجاه')}</span><select data-k="dir"><option value="desc"${s.dir==='desc'?' selected':''}>${TR('Highest first','الأعلى أولًا')}</option><option value="asc"${s.dir==='asc'?' selected':''}>${TR('Lowest first','الأدنى أولًا')}</option></select></label>
+    <label class="fb"><span>${TR('Min. spend','أدنى إنفاق')}</span><input type="number" min="0" step="any" data-k="min" value="${esc(s.min)}" placeholder="0"></label>
+    <label class="fb"><span>${effL}</span><span class="fbrow"><select data-k="op"><option value="any"${s.op==='any'?' selected':''}>${TR('Any','أي قيمة')}</option><option value="gt"${s.op==='gt'?' selected':''}>&gt;</option><option value="lt"${s.op==='lt'?' selected':''}>&lt;</option></select><input type="number" min="0" step="any" data-k="rv" value="${esc(s.rv)}" placeholder="${V?'2.0':'50'}"${s.op==='any'?' disabled':''}></span></label>
+    ${learn?`<label class="fb fbck"><input type="checkbox" data-k="learn"${s.learn?' checked':''}> <span>${TR('Include ads still learning','تضمين الإعلانات في مرحلة التعلّم')}</span></label>`:''}
+    <button class="linkbtn fbreset" type="button" data-reset>${TR('Reset','إعادة ضبط')}</button></div>`;
+}
+function fbarWire(id,s,defaults,onChange){
+  const el=$(id);if(!el)return;
+  el.querySelectorAll('[data-k]').forEach(i=>{const ev=i.type==='search'||i.type==='number'?'input':'change';
+    i.addEventListener(ev,()=>{s[i.dataset.k]=i.type==='checkbox'?i.checked:i.value;if(i.dataset.k==='op'){const r=el.querySelector('[data-k="rv"]');r.disabled=i.value==='any';if(i.value!=='any')r.focus()}onChange()})});
+  el.querySelector('[data-reset]').onclick=()=>{Object.assign(s,defaults);el.querySelectorAll('[data-k]').forEach(i=>{if(i.type==='checkbox')i.checked=!!s[i.dataset.k];else i.value=s[i.dataset.k];if(i.dataset.k==='rv')i.disabled=s.op==='any'});onChange()};
+}
+function applyF(list,s,V){
+  const q=String(s.q||'').trim().toLowerCase(),min=parseFloat(s.min)||0,rv=parseFloat(s.rv);
+  let L=list.filter(c=>(!q||String(c.name).toLowerCase().includes(q)||String(c.camp||'').toLowerCase().includes(q))&&c.spend>=min);
+  if(s.op!=='any'&&isFinite(rv))L=L.filter(c=>{const e=V?c.roas:c.cpa;return s.op==='gt'?e>rv:e<rv});
+  const m=MET[s.sort]||MET.spend,d=s.dir==='asc'?1:-1;
+  return L.sort((a,b)=>{const x=m(a),y=m(b);return x===y?b.spend-a.spend:(x>y?d:-d)});
+}
+/* ---- campaign section: filters, table, map ---- */
+function campSection(p,A){
+  const V=p.mode==='value',s=cfGet(p.pk),vs=[...new Set(p.camps.map(c=>c.verdict))];
+  const sorts=[['spend',TR('Spend','الإنفاق')],['value',TR('Revenue','الإيراد')],['roas','ROAS'],['conv',UsL(p)],['profit',TR('Profit per 100','الربح لكل 100')],['cpa',CPU(p)],['live',TR('Days live','أيام النشاط')]].filter(([k])=>V||!['value','roas','profit'].includes(k));
+  const chips=`<div class="pkchips fbchips" role="group" aria-label="${TR('Verdict','الحكم')}">${['all',...vs].map(v=>`<button type="button" class="pkchip" data-cv="${esc(v)}" aria-pressed="${s.v===v}">${v==='all'?TR('All','الكل'):`<i class="sw" style="background:${VCOL[v]}"></i>${VDL(v)}`} <span>${v==='all'?p.camps.length:p.camps.filter(c=>c.verdict===v).length}</span></button>`).join('')}</div>`;
+  return fbar('cfBar',s,{sorts,V,extra:chips})+`<div id="campWrap"></div><div id="campMap"></div>`;
+}
+function campFill(p,A){
+  const V=p.mode==='value',s=cfGet(p.pk),vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold',Learning:'Hold'};
+  const L=applyF(p.camps.filter(c=>s.v==='all'||c.verdict===s.v),s,V),mx=Math.max(...p.camps.map(c=>c.share),.01);
+  const hasLost=p.camps.some(c=>c.lostb!=null),hasPace=p.camps.some(c=>c.pacing!=null),hasStore=p.camps.some(c=>c.store);
+  $('campWrap').innerHTML=`<p class="muted small fcount">${TR(`Showing ${L.length} of ${p.camps.length} campaigns`,`عرض ${L.length} من ${p.camps.length} حملة`)}</p><div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th><th>${TR('Share','الحصة')}</th><th>${UsL(p)}</th><th>${CPU(p)}</th>${V?`<th>${TR('Revenue','الإيرادات')}</th><th>ROAS</th><th>${TR('Profit per ','الربح لكل ')+money(100,0)}</th>`:`<th>${TR('Click-through','نسبة النقر')}</th>`}${hasLost?'<th>IS lost (budget)</th>':''}${hasPace?'<th>Budget used</th>':''}${hasStore?'<th>Delivered ROAS</th><th>Refused or returned</th>':''}<th>${TR('Verdict','الحكم')}</th></tr></thead><tbody>`+
+    (L.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${hasLost?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${hasPace?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${hasStore?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]} tipped"${tipAttr(vTip(c,p,A))}>${VDL(c.verdict)}</span></td></tr>`).join('')||`<tr><td colspan="12" class="muted">${TR('No campaigns match these filters.','لا توجد حملات تطابق هذه المرشحات.')}</td></tr>`)+`</tbody></table></div>`;
+  $('campMap').innerHTML=L.length>=2?scatterChart(L,{p,A,V,title:TR('Campaign map','خريطة الحملات'),sub:V?TR('Each dot is a campaign: further right spends more, higher returns more. Above the red line is profitable at your margin.','كل نقطة حملة: كلما اتجهت يمينًا زاد الإنفاق، وكلما ارتفعت زاد العائد. ما فوق الخط الأحمر مربح عند هامشك.'):TR('Each dot is a campaign: further right spends more, lower costs less per result.','كل نقطة حملة: كلما اتجهت يمينًا زاد الإنفاق، وكلما انخفضت قلّت تكلفة النتيجة.'),col:c=>VCOL[c.verdict],lab:c=>VDL(c.verdict),tip:c=>vTip(c,p,A),legend:[...new Set(L.map(c=>c.verdict))].map(v=>[VDL(v),VCOL[v]])}):'';
+  if(ST.lang==='ar')i18Apply($('campWrap'));
+}
+/* ---- creative sections ---- */
+function crPools(p){
+  const V=p.mode==='value',a=p.acc,avg=V?a.roas:a.cpa,all=p.creatives||[];
+  const judged=s=>all.filter(c=>s.learn||!(p.daily&&c.live<7));
+  return {best:s=>judged(s).filter(c=>c.conv>=3&&(V?c.roas>=avg:c.cpa<=avg)),worst:s=>judged(s).filter(c=>c.spend>0&&(V?c.roas<avg:!(c.cpa<=avg)))};
+}
+function crSection(p,kind){
+  const V=p.mode==='value',s=crGet(p.pk,kind);
+  const sorts=[['value',TR('Revenue','الإيراد')],['roas','ROAS'],['spend',TR('Spend','الإنفاق')],['conv',UsL(p)],['ctr',TR('Click-through','نسبة النقر')],['cpa',CPU(p)],['live',TR('Days live','أيام النشاط')]].filter(([k])=>V||!['value','roas'].includes(k));
+  if(!V&&['value','roas'].includes(s.sort))s.sort='conv';
+  return `<div class="crsec"><h4 class="sub">${kind==='best'?TR('Top creatives','أفضل الإعلانات'):TR('Weakest creatives','أضعف الإعلانات')}<span class="muted small" style="font-weight:400"> · ${kind==='best'?(V?TR(`ROAS at or above the ${p.P.short} average, at least 3 ${UsL(p)}`,`ROAS عند متوسط ${p.P.short} أو أعلى، 3 ${UsL(p)} على الأقل`):TR('cost per result at or below average, at least 3 results','تكلفة النتيجة عند المتوسط أو أقل، 3 نتائج على الأقل')):(V?TR(`ROAS below the ${p.P.short} average`,`ROAS أقل من متوسط ${p.P.short}`):TR('cost per result above average','تكلفة النتيجة أعلى من المتوسط'))}${p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):''}</span></h4>
+    ${fbar('crBar-'+kind,s,{sorts,count:true,V,learn:p.daily})}<div id="crWrap-${kind}"></div></div>`;
+}
+function crFill(p,kind){
+  const V=p.mode==='value',s=crGet(p.pk,kind),pool=crPools(p)[kind](s),L=applyF(pool,s,V),n=+s.n,shown=n?L.slice(0,n):L;
+  const cls={Winning:'Scale',Tiring:'Watch',Underperforming:'Cut',Learning:'Hold',Steady:'Hold'};
+  const el=$('crWrap-'+kind);if(!el)return;
+  el.innerHTML=`<p class="muted small fcount">${TR(`Showing ${shown.length} of ${L.length} matching (${pool.length} in this group)`,`عرض ${shown.length} من ${L.length} مطابقة (${pool.length} في هذه المجموعة)`)}</p>`+(shown.length?`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Ad','الإعلان')}</th><th>${TR('Campaign','الحملة')}</th><th>${TR('Spend','الإنفاق')}</th>${V?`<th>${TR('Revenue','الإيراد')}</th><th>ROAS</th>`:`<th>${CPU(p)}</th>`}<th>${UsL(p)}</th><th>${TR('Click-through','نسبة النقر')}</th>${p.daily?`<th>${TR('Days live','أيام النشاط')}</th>`:''}<th>${TR('Status','الحالة')}</th></tr></thead><tbody>${shown.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td class="lbl" style="min-width:160px;color:var(--muted)">${esc(c.camp)}</td><td>${money(c.spend,0)}</td>${V?`<td>${money(c.value,0)}</td><td class="${kind==='best'?'pos':c.roas<p.be?'neg':''}">${x2(c.roas)}</td>`:`<td class="${kind==='best'?'pos':'neg'}">${money(c.cpa)}</td>`}<td>${cnt(c.conv)}</td><td>${pct(c.ctr,2)}</td>${p.daily?`<td>${c.live}</td>`:''}<td><span class="pill ${cls[c.status]} tipped"${tipAttr(cTip(c,p))}>${TR(c.status,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[c.status]||c.status)}</span></td></tr>`).join('')}</tbody></table></div>`:`<p class="muted small">${TR('No ads match these filters.','لا توجد إعلانات تطابق هذه المرشحات.')}</p>`);
+  if(ST.lang==='ar')i18Apply(el);
+}
+function crMapHTML(p){
+  const all=(p.creatives||[]).filter(c=>c.spend>0);if(all.length<3)return '';const V=p.mode==='value';
+  const st=[...new Set(all.map(c=>c.status))];
+  return scatterChart(all,{p,V,title:TR('Creative map','خريطة الإعلانات'),sub:TR('Each dot is an ad, coloured by status. Hover or tap a dot for its numbers.','كل نقطة إعلان، ملوّنة حسب الحالة. مرّر أو اضغط على نقطة لرؤية أرقامها.'),col:c=>CCOL[c.status],lab:c=>c.status,tip:c=>cTip(c,p),legend:st.map(v=>[TR(v,{Winning:'رابح',Tiring:'يفقد فعاليته',Underperforming:'ضعيف الأداء',Learning:'في مرحلة التعلّم',Steady:'مستقر'}[v]||v),CCOL[v]])});
+}
+/* ---- charts (inline SVG, one axis each) ---- */
+const chartW=()=>Math.round(Math.max(300,Math.min(1080,(document.documentElement.clientWidth||1000)-(innerWidth<700?64:110))));
+function scatterChart(L,{p,A,V,title,sub,col,tip,legend}){
+  const W=chartW(),H=Math.round(Math.min(340,Math.max(240,W*.42))),ml=56,mr=16,mt=14,mb=40,iw=W-ml-mr,ih=H-mt-mb;
+  const be=p.be,avg=V?p.acc.roas:p.acc.cpa,ys=L.map(c=>V?c.roas:(isFinite(c.cpa)?c.cpa:0));
+  const xm=niceMax(Math.max(...L.map(c=>c.spend))*1.05),ym=niceMax(Math.max(...ys,V?be*1.3:avg*1.3,0.01)*1.08);
+  const X=v=>ml+v/xm*iw,Y=v=>mt+ih-Math.min(v,ym)/ym*ih,ticks=n=>[...Array(n+1)].map((_,i)=>i/n);
+  const nx=W<520?2:4,kf=v=>{const a=Math.abs(v);return a>=1e6?(v/1e6).toFixed(a>=1e7?0:1).replace(/\.0$/,'')+'M':a>=1e3?(v/1e3).toFixed(a>=1e4?0:1).replace(/\.0$/,'')+'K':Math.round(v)+''},nf=v=>Number.isInteger(+v.toFixed(2))?String(Math.round(v)):v.toFixed(1);
+  const grid=ticks(4).map(t=>`<line x1="${ml}" x2="${W-mr}" y1="${Y(t*ym)}" y2="${Y(t*ym)}" class="cg"/><text x="${ml-8}" y="${Y(t*ym)+4}" class="ct" text-anchor="end">${V?nf(t*ym)+'×':kf(t*ym)}</text>`).join('')
+    +ticks(nx).map(t=>`<text x="${X(t*xm)}" y="${H-mb+18}" class="ct" text-anchor="${t===0?'start':t===1?'end':'middle'}">${kf(t*xm)}</text>`).join('');
+  const ref=(v,cls,l)=>v>0&&v<ym?`<line x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}" class="${cls}"/><text x="${W-mr-4}" y="${Y(v)-5}" class="ct ${cls}t" text-anchor="end">${l}</text>`:'';
+  const dots=[...L].sort((a,b)=>b.spend-a.spend).map(c=>{const y=V?c.roas:(isFinite(c.cpa)?c.cpa:0);return `<circle cx="${X(c.spend).toFixed(1)}" cy="${Y(y).toFixed(1)}" r="6.5" fill="${col(c)}" class="cdot"${tipAttr(tip(c))}><title>${esc(c.name)}</title></circle>`}).join('');
+  return `<div class="card chartc"><div class="chh"><div><b>${title}</b><p class="muted small">${sub}</p></div><div class="lgd">${legend.map(([l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join('')}</div></div>
+    <svg viewBox="0 0 ${W} ${H}" class="chsvg" role="img" aria-label="${esc(title)}">${grid}${V?ref(be,'cbe',TR(`break-even ${x2(be)}`,`نقطة التعادل ${x2(be)}`)):''}${ref(avg,'cav',V?TR(`average ${x2(avg)}`,`المتوسط ${x2(avg)}`):TR(`average ${money(avg)}`,`المتوسط ${money(avg)}`))}
+    <text x="${ml+iw/2}" y="${H-4}" class="ct cax" text-anchor="middle">${TR('Spend','الإنفاق')} (${CUR})</text><text x="14" y="${mt+ih/2}" class="ct cax" text-anchor="middle" transform="rotate(-90 14 ${mt+ih/2})">${V?'ROAS':CPU(p)}</text>${dots}</svg></div>`;
+}
+function segShareChart(p,dl,list){
+  const V=p.mode==='value',tv=list.reduce((t,s)=>t+(V?s.value:s.conv),0),ts=list.reduce((t,s)=>t+s.spend,0);if(!tv||!ts)return '';
+  const top=list.slice(0,8),rows=top.map(s=>({n:s.name,a:s.spend/ts,b:(V?s.value:s.conv)/tv,s}));
+  const mx=Math.max(...rows.flatMap(r=>[r.a,r.b]),.01);
+  return `<div class="segc"><div class="lgd"><span><i style="background:#9aa7b1"></i>${TR('Share of spend','حصة الإنفاق')}</span><span><i style="background:${pc(p.pk)}"></i>${V?TR('Share of revenue','حصة الإيراد'):TR('Share of results','حصة النتائج')}</span></div>
+   ${rows.map(r=>{const gap=r.b-r.a;return `<div class="segr"${tipAttr({t:r.n,f:[TR(`${pct(r.a,1)} of spend · ${pct(r.b,1)} of ${V?'revenue':'results'}`,`${pct(r.a,1)} من الإنفاق · ${pct(r.b,1)} من ${V?'الإيراد':'النتائج'}`),V?`ROAS ${x2(r.s.roas)}`:`${CPU(p)} ${money(r.s.cpa)}`],r:Math.abs(gap)<.02?TR('Gets about as much return as it costs.','يحقق عائدًا يوازي تكلفته تقريبًا.'):gap>0?TR('Returns more than its share of spend: room to give it more budget.','يعيد أكثر من حصته من الإنفاق: مجال لمنحه ميزانية أكبر.'):TR('Costs more than it returns: consider lowering bids or excluding it.','يكلّف أكثر مما يعيد: فكّر في خفض المزايدات أو استبعاده.')})}><span class="segn">${esc(r.n)}</span><span class="segb"><i style="width:${(r.a/mx*100).toFixed(1)}%;background:#9aa7b1"></i><i style="width:${(r.b/mx*100).toFixed(1)}%;background:${pc(p.pk)}"></i></span><span class="segv ${gap<-.02?'neg':gap>.02?'pos':''}">${gap>=0?'+':''}${(gap*100).toFixed(1)} pt</span></div>`}).join('')}
+   <p class="muted small">${TR('The number on the right is share of '+(V?'revenue':'results')+' minus share of spend. Negative means that segment costs more than it returns.','الرقم على اليمين هو حصة '+(V?'الإيراد':'النتائج')+' ناقص حصة الإنفاق. القيمة السالبة تعني أن هذه الفئة تكلّف أكثر مما تعيد.')}</p></div>`;
+}
+function profitCurve(p){
+  const f=p.forecast;if(!f||f.mode!=='value')return '';
+  const W=chartW(),H=240,ml=74,mr=16,mt=16,mb=40,iw=W-ml-mr,ih=H-mt-mb,pts=f.sc;
+  const xs=pts.map(s=>s.s),ys=pts.map(s=>s.profit),x0=Math.min(...xs),x1=Math.max(...xs),lo=Math.min(...ys),hi=Math.max(...ys),pad=Math.max((hi-lo)*.35,Math.abs(hi)*.02,1),y0=lo-pad,y1=hi+pad;
+  const X=v=>ml+(v-x0)/(x1-x0)*iw,Y=v=>mt+ih-(v-y0)/(y1-y0)*ih;
+  const line=pts.map((s,i)=>`${i?'L':'M'}${X(s.s).toFixed(1)},${Y(s.profit).toFixed(1)}`).join(' ');
+  const grid=[0,.25,.5,.75,1].map(t=>{const v=y0+t*(y1-y0);return `<line x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}" class="cg"/><text x="${ml-8}" y="${Y(v)+4}" class="ct" text-anchor="end">${money(v,0)}</text>`}).join('');
+  return `<div class="card chartc"><div class="chh"><div><b>${TR('Monthly contribution profit by budget','الربح الشهري حسب الميزانية')}</b><p class="muted small">${TR('Revenue × margin − spend, using the curve below. The highest point is the most profitable budget.','الإيراد × الهامش − الإنفاق، وفق المنحنى أدناه. أعلى نقطة هي الميزانية الأكثر ربحية.')}</p></div></div>
+   <svg viewBox="0 0 ${W} ${H}" class="chsvg" role="img" aria-label="${TR('Profit by budget','الربح حسب الميزانية')}">${grid}<path d="${line}" fill="none" stroke="${pc(p.pk)}" stroke-width="2"/>
+   ${pts.map(s=>`<circle cx="${X(s.s).toFixed(1)}" cy="${Y(s.profit).toFixed(1)}" r="${s.k===0?7:5}" fill="${s.k===0?'var(--ink)':pc(p.pk)}" class="cdot"${tipAttr({t:s.k===0?TR('Today','اليوم'):(s.k>0?'+':'')+Math.round(s.k*100)+'%',f:[TR(`Spend ${money(s.s,0)} a month`,`إنفاق ${money(s.s,0)} شهريًا`),TR(`Revenue ${money(s.y,0)} · ROAS ${x2(s.eff)}`,`إيراد ${money(s.y,0)} · ROAS ${x2(s.eff)}`)],r:TR(`Contribution profit ${money(s.profit,0)} a month.`,`ربح المساهمة ${money(s.profit,0)} شهريًا.`)})}/>`).join('')}
+   ${pts.map(s=>`<text x="${X(s.s)}" y="${H-mb+18}" class="ct" text-anchor="middle">${s.k===0?TR('Today','اليوم'):(s.k>0?'+':'')+Math.round(s.k*100)+'%'}</text>`).join('')}</svg></div>`;
 }
 
 /* ================= feature pages ================= */
