@@ -705,6 +705,10 @@ html[dir=rtl] .wzsteps button{padding:5px 5px 5px 12px}
 .fbpanel .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 @media(max-width:820px){.fbw{bottom:72px;inset-inline-end:12px}.fbbtn span{display:none}.fbbtn{padding:12px}}
 @media print{.fbw{display:none}}
+.pill.Reduce{background:color-mix(in srgb,#d9822b 16%,transparent);color:#9a4f12}
+.vlegend{margin-top:12px;font-size:14px}.vlegend summary{cursor:pointer;color:var(--muted)}.vlegend ul{list-style:none;padding:0;margin:10px 0;display:flex;flex-direction:column;gap:8px}.vlegend li{display:flex;gap:10px;align-items:baseline}.vlegend .pill{min-width:84px;text-align:center}
+td .pill[title]{cursor:help}
+.wznote{margin:0;font-size:13.5px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--accent,#0a6c86) 7%,transparent)}.wznote.warn{background:color-mix(in srgb,#d9822b 12%,transparent)}
 </style>
 </head>
 <body>
@@ -1451,7 +1455,7 @@ function detectPlatform(name,header,pre){
   const f=String(name).toLowerCase(),H=header.map(n1),has=s=>H.some(h=>h.includes(s)),eq=s=>H.includes(s);
   const byName=[['meta',/(^|[^a-z])(meta|facebook|fb|instagram)([^a-z]|$)/],['google',/google|adwords/],['tiktok',/tik ?tok/],['snap',/snapchat|(^|[^a-z])snap([^a-z]|$)/],['linkedin',/linkedin/],['microsoft',/microsoft|bing/],['pinterest',/pinterest/],['x',/twitter|(^|[^a-z])x[-_ ]ads/]];
   for(const [k,re] of byName)if(re.test(f))return k;
-  if(has('ad squad')||has('swipe')||has('paid impressions')||has('ecpsu'))return 'snap';
+  if(has('ad squad')||has('swipe')||has('paid impressions')||has('ecpsu')||has('story opens')||has('conversion purchases')||has('paid ecpm')||has('attachment')||H.some(h=>/(^|[^a-z])snap/.test(h)))return 'snap';
   if(has('amount spent')||has('reporting starts')||has('ad set')||has('result indicator')||has('link clicks'))return 'meta';
   if(has('complete payment')||has('clicks destination')||has('video views at 100')||has('by day'))return 'tiktok';
   if(has('impr.')||has('conv. value')||has('cost / conv')||has('search impr')||has('campaign type')||has('interaction rate')||/campaign report|search terms? report|keyword report|ad group report/i.test(pre))
@@ -1633,6 +1637,26 @@ function auditPlatform(pk,all,ctx){
       }
     }
 
+    /* 1b. campaigns too small for the "cut" rule but losing money at this margin, and non-sales campaigns */
+    const GOAL=/engag|awareness|reach|video ?view|thruplay|traffic|follow|brand ?lift|page ?like|profile ?visit|تفاعل|وعي|زيارات/i;
+    for(const c of camps)if(c.verdict==='Hold'&&GOAL.test(c.name)&&c.conv<=1){c.verdict='Other goal';c.why=A('Named as an engagement, awareness or traffic campaign, so it isn’t judged on sales.','يبدو من اسمها أنها حملة تفاعل أو وعي أو زيارات، لذا لا تُقيَّم على المبيعات.')}
+    if(mode==='value'){
+      const below=camps.filter(c=>c.verdict==='Hold'&&c.spend>0&&c.roas<be);
+      const enough=c=>c.conv>=5||c.spend>=3*cpa;
+      const red=below.filter(enough),early=below.filter(c=>!enough(c));
+      red.forEach(c=>{c.verdict='Reduce';c.why=A(`ROAS ${x2(c.roas)} is below break-even ${x2(be)} at your ${Math.round(margin*100)}% margin, so it loses about ${money((1-c.roas*margin)*100,0)} per ${money(100,0)} spent. Too small to move the account on its own.`,`ROAS ${x2(c.roas)} أقل من نقطة التعادل ${x2(be)} عند هامش ${Math.round(margin*100)}%، أي خسارة نحو ${money((1-c.roas*margin)*100,0)} لكل ${money(100,0)} إنفاق. صغيرة جدًا لتؤثر في الحساب وحدها.`)});
+      early.forEach(c=>{c.verdict='Watch';c.why=A(`Below break-even so far, but only ${cnt(c.conv)} ${c.conv===1?U:Us}, too few to judge. Check again after a few more days of spend.`,`أقل من نقطة التعادل حتى الآن، لكن ${cnt(c.conv)} فقط من ${Usa}، وهذا قليل للحكم. راجعها بعد أيام أخرى من الإنفاق.`)});
+      if(red.length){
+        const loss=red.reduce((t,c)=>t+Math.max(0,(1-c.roas*margin)*c.spend),0)*mo,sp=red.reduce((t,c)=>t+c.spend,0);
+        const best=camps.filter(c=>c.verdict!=='Reduce'&&c.verdict!=='Cut'&&c.roas>=be&&c.share>=.03).sort((x,y)=>y.roas-x.roas)[0];
+        push({sev:loss>=.02*acc.spend*mo?'Medium':'Low',bucket:'stop',conf:red.some(c=>c.conv>=10)?'High':'Medium',
+          title:red.length===1?A(`${red[0].name} is losing money at your margin`,`${red[0].name} تخسر عند هامشك`):A(`${red.length} smaller ${P.short} campaigns are losing money at your margin`,`${red.length} حملات أصغر على ${P.short} تخسر عند هامشك`),
+          ev:red.slice(0,6).map(c=>`<b>${esc(c.name)}</b> ${x2(c.roas)} · ${money(c.spend)}`).join(', ')+A(` · break-even is ${x2(be)} at a ${Math.round(margin*100)}% margin`,` · نقطة التعادل ${x2(be)} عند هامش ${Math.round(margin*100)}%`),
+          act:A(`Halve their budgets or pause them, unless one has another job such as testing a new market or retargeting${best?`, and move the spend to ${best.name} (${x2(best.roas)})`:''}. Each is under 10% of spend, so they don’t drag the account down much, but together they cost about ${money(loss,0)} of profit a month.`,`خفّض ميزانياتها إلى النصف أو أوقفها، ما لم يكن لإحداها دور آخر كاختبار سوق جديد أو إعادة الاستهداف${best?`، وانقل الإنفاق إلى ${best.name} (${x2(best.roas)})`:''}. كل منها أقل من 10% من الإنفاق، لذا لا تؤثر كثيرًا في الحساب، لكنها معًا تكلّف نحو ${money(loss,0)} من الربح شهريًا.`),
+          sst:A(`${P.short}: halve or pause ${red.length===1?red[0].name:red.length+' loss-making campaigns'}`,`${P.short}: خفّض أو أوقف ${red.length===1?red[0].name:red.length+' حملات خاسرة'}`),impact:loss,kind:'loss',waste:sp*mo*.5});
+      }
+    }
+    for(const c of camps)if(c.why)c.whyV=c.verdict;
     PIL=2;
     /* 2. entities with spend and zero conversions */
     const lvls=[['searchterm','search term',kwRows,A('Add them as negative keywords (exact or phrase match) so these searches stop triggering your ads.','أضفها ككلمات سلبية (مطابقة تامة أو عبارة) حتى تتوقف هذه العمليات البحثية عن عرض إعلاناتك.'),A('Add it as a negative keyword (exact or phrase match) so this search stops triggering your ads.','أضفها ككلمة سلبية (مطابقة تامة أو عبارة) حتى يتوقف هذا البحث عن عرض إعلاناتك.')],
@@ -2387,7 +2411,7 @@ async function addFiles(list){
   for(const file of list){
     if(ST.files.some(f=>f.name===file.name&&f.size===file.size))continue;
     const id=seq();
-    try{const buf=await file.arrayBuffer();const f=await ingestFile(file.name,buf);Object.assign(f,{id,size:file.size});ST.files.push(f)}
+    try{const buf=await file.arrayBuffer();const f=await ingestFile(file.name,buf);Object.assign(f,{id,size:file.size});const o=ST.platOver&&ST.platOver[file.name+'|'+file.size];if(o&&f.kind!=='orders')f.plat=o;ST.files.push(f)}
     catch(e){ST.files.push({id,name:file.name,size:file.size,err:e.message||'This file could not be read.'})}
   }
   if(!ST.userCur){const c=[...new Set(ST.files.filter(f=>!f.err&&f.cur).map(f=>f.cur))];if(c.length===1)$('currency').value=c[0]}
@@ -2506,12 +2530,13 @@ function render(scroll){
   if(!ST.tab||!A.plats.some(p=>p.pk===ST.tab))ST.tab=A.plats[0].pk;
   $('tabs').innerHTML=A.plats.map(p=>`<button class="tab" role="tab" type="button" data-t="${p.pk}" aria-selected="${ST.tab===p.pk}">${dot(p.pk)}${p.P.short}</button>`).join('');
   $('tabs').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;render()});
-  const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold'};
+  const p=A.plats.find(p=>p.pk===ST.tab),V=p.mode==='value',vp={Cut:'Cut',Scale:'Scale',Watch:'Watch',Hold:'Hold',Reduce:'Reduce','Other goal':'Hold'};
   const mx=Math.max(...p.camps.map(c=>c.share),.01);
   let T=`<div class="tablewrap"><table class="wide"><thead><tr><th>Campaign</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${CPU(p)}</th>${V?'<th>Revenue</th><th>ROAS</th><th>'+TR('Profit per ','الربح لكل ')+money(100,0)+'</th>':'<th>Click-through</th>'}${p.camps.some(c=>c.lostb!=null)?'<th>IS lost (budget)</th>':''}${p.camps.some(c=>c.pacing!=null)?'<th>Budget used</th>':''}${p.camps.some(c=>c.store)?'<th>Delivered ROAS</th><th>Refused or returned</th>':''}<th>Verdict</th></tr></thead><tbody>`+
-    p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]}">${c.verdict}</span></td></tr>`).join('')+'</tbody></table></div>';
+    p.camps.map(c=>`<tr><td class="lbl">${esc(c.name)}</td><td>${moneyExact(c.spend)}</td><td>${pct(c.share)}<span class="bar" style="width:${Math.round(c.share/mx*48)}px;background:${pc(p.pk)}"></span></td><td>${cnt(c.conv)}</td><td>${money(c.cpa)}</td>${V?`<td>${money(c.value,0)}</td><td>${x2(c.roas)}</td><td class="${c.profit100<0?'neg':'pos'}">${money(c.profit100,0)}</td>`:`<td>${pct(c.ctr,2)}</td>`}${p.camps.some(c=>c.lostb!=null)?`<td>${c.lostb==null?'—':pct(c.lostb,0)}</td>`:''}${p.camps.some(c=>c.pacing!=null)?`<td class="${c.pacing!=null&&c.pacing<.7?'neg':''}">${c.pacing==null?'—':pct(c.pacing,0)}</td>`:''}${p.camps.some(c=>c.store)?(c.store?`<td class="${c.store.droas<A.be?'neg':'pos'}">${x2(c.store.droas)}</td><td class="${c.store.fail>=.25?'neg':''}">${pct(c.store.fail,0)} <span class="muted">${TR('of','من')} ${fmtInt(c.store.n)}</span></td>`:'<td class="muted">—</td><td class="muted">—</td>'):''}<td><span class="pill ${vp[c.verdict]}" title="${esc(vWhy(c,p,A))}">${VDL(c.verdict)}</span></td></tr>`).join('')+'</tbody></table></div>';
   const dims=Object.entries(p.segs);
   if(dims.length)T+=`<div class="dims">${dims.map(([dl,list])=>`<div><h4>${DIM(dl)}</h4><div class="tablewrap"><table><thead><tr><th>${DIM(dl)}</th><th>Spend</th><th>Share</th><th>${UsL(p)}</th><th>${V?'ROAS':CPU(p)}</th></tr></thead><tbody>${list.slice(0,10).map(s=>`<tr><td class="lbl" style="min-width:140px">${esc(s.name)}</td><td>${money(s.spend)}</td><td>${pct(s.share,0)}</td><td>${cnt(s.conv)}</td><td>${V?x2(s.roas):money(s.cpa)}</td></tr>`).join('')}</tbody></table></div></div>`).join('')}</div>`;
+  T+=`<details class="vlegend"><summary>${TR('What the verdicts mean','ماذا تعني الأحكام')}</summary><ul>${[['Scale',TR('Returns well above the account average with steady results. Give it more budget.','عائد أعلى بوضوح من متوسط الحساب ونتائج مستقرة. امنحها ميزانية أكبر.')],['Hold',TR('Profitable at your margin, or in line with the account. Keep the budget steady.','مربحة عند هامشك أو متوافقة مع الحساب. أبقِ الميزانية ثابتة.')],['Watch',TR('Early warning signs, or below break-even with too few results to judge yet.','إشارات تحذير مبكرة، أو أقل من نقطة التعادل مع نتائج قليلة جدًا للحكم.')],['Reduce',TR('Below break-even at your margin but under 10% of spend. Halve the budget or pause it.','أقل من نقطة التعادل عند هامشك لكن أقل من 10% من الإنفاق. خفّض الميزانية إلى النصف أو أوقفها.')],['Cut',TR('A large share of spend for weak or no results. Cut or pause it.','حصة كبيرة من الإنفاق مقابل نتائج ضعيفة أو معدومة. خفّضها أو أوقفها.')],['Other goal',TR('An engagement, awareness or traffic campaign, not judged on sales.','حملة تفاعل أو وعي أو زيارات، لا تُقيَّم على المبيعات.')]].map(([v,t])=>`<li><span class="pill ${vp[v]}">${VDL(v)}</span> ${t}</li>`).join('')}</ul><p class="muted small">${TR('Hover over a verdict to see the reason for that campaign.','مرّر فوق الحكم لترى سببه لتلك الحملة.')}</p></details>`;
   $('tabpanel').innerHTML=T+platformExtras(p);
 
   // charts
@@ -2605,6 +2630,9 @@ function renderPlan(A){
     if(k==='quarter')std.forEach(([g,x])=>items.push(`<li><span class="ptag Build">${TAGL(g)}</span><span>${esc(x)}</span></li>`));
     return `<div class="card col"><div><h3>${t}</h3><p class="muted small">${s}</p></div>${items.length?`<ul>${items.join('')}</ul>`:'<p class="muted small">Nothing urgent in this period.</p>'}</div>`}).join('');
 }
+const VDL=v=>TR(v,{Scale:'وسّع',Hold:'ثبّت',Watch:'راقب',Reduce:'خفّض',Cut:'أوقف','Other goal':'هدف آخر'}[v]||v);
+function vWhy(c,p,A){if(c.why&&c.whyV===c.verdict)return c.why;const V=p.mode==='value';
+  return c.verdict==='Scale'?TR('Returns well above the account average with steady results, so it can take more budget.','عائدها أعلى بوضوح من متوسط الحساب ونتائجها مستقرة، لذا تحتمل ميزانية أكبر.'):c.verdict==='Cut'?TR('Takes a large share of spend for weak or no results. See the recommendations.','تأخذ حصة كبيرة من الإنفاق مقابل نتائج ضعيفة أو معدومة. راجع التوصيات.'):c.verdict==='Watch'?TR('Showing early warning signs such as rising costs or tiring creative. See the recommendations.','تظهر عليها إشارات تحذير مبكرة كارتفاع التكلفة أو إرهاق الإعلانات. راجع التوصيات.'):V?TR(`Profitable at your margin: ROAS ${x2(c.roas)} vs break-even ${x2(A.be)}. Keep the budget steady.`,`مربحة عند هامشك: ROAS ${x2(c.roas)} مقابل نقطة التعادل ${x2(A.be)}. أبقِ الميزانية ثابتة.`):TR('Results are in line with the account. Keep the budget steady.','نتائجها متوافقة مع الحساب. أبقِ الميزانية ثابتة.')}
 function platformExtras(p){
   const V=p.mode==='value';let h='';
   if(p.trend){
@@ -3374,14 +3402,14 @@ const WZ_GUIDE={
   meta:{where:TR=>TR('Meta Ads Manager','مدير إعلانات Meta'),url:'https://adsmanager.facebook.com/',
     steps:TR=>[TR('Open Ads Manager and go to the <b>Ads</b> tab (not Campaigns), so every ad is a row.','افتح مدير الإعلانات وانتقل إلى تبويب <b>الإعلانات</b> (وليس الحملات)، ليكون كل إعلان صفًا مستقلًا.'),
       TR('Set the date range to the <b>last 30, 60 or 90 days</b>. Use the same dates for every platform.','اضبط الفترة على <b>آخر 30 أو 60 أو 90 يومًا</b>. استخدم التواريخ نفسها لكل المنصات.'),
-      TR('Click <b>Breakdown → By time → Day</b>. This unlocks the trend and fatigue checks.','اضغط <b>التقسيم ← حسب الوقت ← اليوم</b>. يتيح ذلك فحوصات الاتجاه وإرهاق الإعلانات.'),
+      TR('Click <b>Breakdown → By time → Day</b>, then add <b>By delivery → Placement and device</b> (or Age and gender). Meta allows one time and one delivery breakdown together.','اضغط <b>التقسيم ← حسب الوقت ← اليوم</b>، ثم أضف <b>حسب التسليم ← الموضع والجهاز</b> (أو العمر والجنس). يسمح Meta بتقسيم زمني واحد وتقسيم تسليم واحد معًا.'),
       TR('Click <b>Columns → Customise columns</b> and tick the columns listed below.','اضغط <b>الأعمدة ← تخصيص الأعمدة</b> وحدد الأعمدة المذكورة أدناه.'),
       TR('Click <b>Reports → Export table data</b> and choose .csv or .xlsx.','اضغط <b>التقارير ← تصدير بيانات الجدول</b> واختر ‎.csv أو ‎.xlsx.')],
     cols:['Day','Campaign name','Ad set name','Ad name','Amount spent','Impressions','Reach','Link clicks','Results / Purchases','Purchases conversion value'],
     tip:TR=>TR('Lead or WhatsApp campaigns don’t need a value column. OptiROAS judges them by cost per result.','حملات العملاء المحتملين أو واتساب لا تحتاج إلى عمود قيمة. يقيّمها OptiROAS بتكلفة النتيجة.')},
   google:{where:TR=>TR('Google Ads','Google Ads'),url:'https://ads.google.com/',
     steps:TR=>[TR('Open <b>Campaigns</b> in Google Ads and set the same date range.','افتح <b>الحملات</b> في Google Ads واضبط الفترة نفسها.'),
-      TR('Click <b>Segment → Time → Day</b>.','اضغط <b>التقسيم ← الوقت ← اليوم</b>.'),
+      TR('Click <b>Segment → Time → Day</b>. For more detail, build the same report in <b>Reports → Report editor</b> and add Device as a second segment.','اضغط <b>التقسيم ← الوقت ← اليوم</b>. لمزيد من التفاصيل، أنشئ التقرير نفسه في <b>التقارير ← محرر التقارير</b> وأضف الجهاز كتقسيم ثانٍ.'),
       TR('Click <b>Columns</b> and make sure the columns below are shown. Add <b>Search lost IS (budget)</b> for the scale check.','اضغط <b>الأعمدة</b> وتأكد من ظهور الأعمدة أدناه. أضف <b>نسبة الظهور المفقودة في البحث (الميزانية)</b> لفحص التوسّع.'),
       TR('Click the <b>download</b> icon and choose .csv or Excel.','اضغط أيقونة <b>التنزيل</b> واختر ‎.csv أو Excel.'),
       TR('For keyword waste, also download <b>Insights and reports → Search terms</b> for the same dates and upload both files.','لفحص هدر الكلمات المفتاحية، نزّل أيضًا <b>الرؤى والتقارير ← عبارات البحث</b> للفترة نفسها وارفع الملفين.')],
@@ -3389,14 +3417,14 @@ const WZ_GUIDE={
     tip:TR=>TR('Performance Max and Search campaigns can be in the same file.','يمكن أن تكون حملات Performance Max والبحث في الملف نفسه.')},
   tiktok:{where:TR=>TR('TikTok Ads Manager','مدير إعلانات TikTok'),url:'https://ads.tiktok.com/',
     steps:TR=>[TR('In TikTok Ads Manager open <b>Campaign</b>, then switch to the <b>Ad</b> level.','في مدير إعلانات TikTok افتح <b>الحملة</b>، ثم انتقل إلى مستوى <b>الإعلان</b>.'),
-      TR('Set the same date range and choose a breakdown by <b>Day</b>.','اضبط الفترة نفسها واختر التقسيم حسب <b>اليوم</b>.'),
+      TR('Set the same date range and choose a breakdown by <b>Day</b>. In a custom report you can also add Placement, Age or Gender.','اضبط الفترة نفسها واختر التقسيم حسب <b>اليوم</b>. في التقرير المخصص يمكنك أيضًا إضافة الموضع أو العمر أو الجنس.'),
       TR('Open <b>Custom columns</b> and tick the columns below.','افتح <b>الأعمدة المخصصة</b> وحدد الأعمدة أدناه.'),
       TR('Click <b>Export</b> and choose CSV or Excel.','اضغط <b>تصدير</b> واختر CSV أو Excel.')],
     cols:['By Day','Campaign name','Ad group name','Ad name','Cost','Impressions','Clicks (destination)','Conversions','Complete payment','Total complete payment value'],
     tip:TR=>TR('If you sell online, the payment value column is what unlocks ROAS checks.','إذا كنت تبيع عبر الإنترنت، فعمود قيمة الدفع هو ما يتيح فحوصات ROAS.')},
   snap:{where:TR=>TR('Snapchat Ads Manager','مدير إعلانات Snapchat'),url:'https://ads.snapchat.com/',
     steps:TR=>[TR('In Ads Manager go to <b>Manage ads</b> and open the <b>Ads</b> tab.','في مدير الإعلانات انتقل إلى <b>إدارة الإعلانات</b> وافتح تبويب <b>الإعلانات</b>.'),
-      TR('Set the same date range and break down by <b>Day</b>.','اضبط الفترة نفسها وقسّم حسب <b>اليوم</b>.'),
+      TR('Set the same date range and break down by <b>Day</b>. If offered, also add Age, Gender or Device.','اضبط الفترة نفسها وقسّم حسب <b>اليوم</b>. وإن توفّر، أضف أيضًا العمر أو الجنس أو الجهاز.'),
       TR('Add the columns below with <b>Customise columns</b>.','أضف الأعمدة أدناه عبر <b>تخصيص الأعمدة</b>.'),
       TR('Click <b>Export</b> and choose CSV.','اضغط <b>تصدير</b> واختر CSV.')],
     cols:['Date','Campaign name','Ad squad name','Ad name','Spend','Paid impressions','Swipe ups','Purchases','Purchases value'],
@@ -3434,8 +3462,13 @@ async function wzFromFiles(list){
   for(const file of list){
     if(W.items.some(x=>x.file.name===file.name&&x.file.size===file.size))continue;
     const it={id:seq(),file,rec:null,err:null,plat:null};W.items.push(it);
-    try{it.rec=await ingestFile(file.name,await file.arrayBuffer());it.plat=it.rec.kind==='orders'?'orders':it.rec.plat}catch(e){it.err=e.message||TR('This file could not be read.','تعذّرت قراءة هذا الملف.')}
-    if(it.plat&&it.plat!=='orders')W.plats.add(WZ_PLATS.includes(it.plat)?it.plat:'other');if(it.plat==='orders')W.orders=true;
+    try{it.rec=await ingestFile(file.name,await file.arrayBuffer());it.plat=it.rec.kind==='orders'?'orders':it.rec.plat;
+      if(it.plat!=='orders'){const byName=detectPlatform(file.name,[],'')!=='other',chosen=[...W.plats].filter(k=>k!=='other');
+        if(!byName&&chosen.length&&!chosen.includes(it.plat)){
+          if(chosen.length===1){it.auto={from:it.plat,to:chosen[0]};it.plat=chosen[0];it.rec.plat=chosen[0]}
+          else it.odd=true}}
+    }catch(e){it.err=e.message||TR('This file could not be read.','تعذّرت قراءة هذا الملف.')}
+    if(it.plat&&it.plat!=='orders'&&!it.odd)W.plats.add(WZ_PLATS.includes(it.plat)?it.plat:'other');if(it.plat==='orders')W.orders=true;
   }
   W.step=3;if(ST.page==='start')renderWizard();else go('start');
 }
@@ -3490,6 +3523,7 @@ function renderWizard(){
     const tabs=[...W.plats,...(W.orders?['orders']:[])];if(!tabs.includes(W.tab))W.tab=tabs[0];
     const g=WZ_GUIDE[W.tab];
     body=`<div class="wztabs" role="tablist">${tabs.map(k=>`<button type="button" role="tab" data-wzt="${k}" aria-selected="${k===W.tab}">${WZ_DOT(k)}${WZ_NAME(k)}</button>`).join('')}</div>
+      <div class="wzmsg info"><span><b>${TR('For the most detailed audit:','لأدق تدقيق:')}</b> ${TR('always break the report down <b>by day</b>, and add the richest extra breakdown the platform allows, such as <b>placement and device</b> or <b>age and gender</b>. Day-by-day data unlocks trend, fatigue and pacing checks; breakdowns show where money is wasted. Upload <b>one file per platform</b>: the same spend in two files with different breakdowns would be counted twice.','قسّم التقرير دائمًا <b>حسب اليوم</b>، وأضف أغنى تقسيم إضافي تتيحه المنصة، مثل <b>الموضع والجهاز</b> أو <b>العمر والجنس</b>. البيانات اليومية تتيح فحوصات الاتجاه وإرهاق الإعلانات ووتيرة الإنفاق؛ والتقسيمات تكشف أين يُهدر المال. ارفع <b>ملفًا واحدًا لكل منصة</b>: الإنفاق نفسه في ملفين بتقسيمات مختلفة سيُحسب مرتين.')}</span></div>
       <div class="wzguide card"><div class="wzgl"><h3>${TR('In','في')} ${g.where(TR)}</h3><ol class="wzol">${g.steps(TR).map(s=>`<li>${s}</li>`).join('')}</ol>
         ${g.url?`<a class="btn quiet sm" href="${g.url}" target="_blank" rel="noopener">${TR('Open','افتح')} ${g.where(TR)} ↗</a>`:''}</div>
         <div class="wzgr"><span class="eyebrow">${TR('Columns to include','الأعمدة المطلوبة')}</span><ul class="wzcols">${g.cols.map(c=>`<li><code class="notr">${c}</code></li>`).join('')}</ul><p class="wztip">${g.tip(TR)}</p></div></div>
@@ -3506,6 +3540,7 @@ function renderWizard(){
         const meta=it.err?'':f.kind==='orders'?`${fmtInt(f.orders.length)} ${TR('orders','طلب')} · ${wzRange(f.first,f.last)}`:`${fmtInt(f.rows.length)} ${TR('rows','صف')} · ${wzRange(f.first,f.last)} · ${f.cur||TR('currency not stated','العملة غير محددة')}${f.isDetail?TR(' · search terms',' · عبارات البحث'):''}`;
         return `<div class="wzfile ${c.st}"><div class="wzfh"><div class="wzfn">${WZ_DOT(it.plat||'other')}<div><b class="notr">${esc(it.file.name)}</b><span class="muted small">${meta}</span></div></div>
           <div class="wzfa"><span class="pill ${stl[1]}">${stl[0]}</span>${!it.err&&it.plat!=='orders'?`<select data-wzpl="${it.id}" aria-label="${TR('Platform','المنصة')}">${PORDER.map(k=>`<option value="${k}"${k===it.plat?' selected':''}>${PLATS[k].name}</option>`).join('')}</select>`:''}<button class="x" type="button" data-wzrm="${it.id}" aria-label="${TR('Remove','إزالة')}">×</button></div></div>
+          ${it.auto?`<p class="wznote">${TR(`Set to ${PLATS[it.auto.to].name} from your choice in step 1. The columns looked like ${PLATS[it.auto.from].name}; change it above if that’s wrong.`,`ضُبط على ${PLATS[it.auto.to].name} بناءً على اختيارك في الخطوة 1. بدت الأعمدة كأنها ${PLATS[it.auto.from].name}؛ غيّرها أعلاه إذا كان ذلك خطأ.`)}</p>`:it.odd?`<p class="wznote warn">${TR(`Detected as ${PLATS[it.plat].name}, which you didn’t choose in step 1. Check the platform above.`,`اكتُشف كـ ${PLATS[it.plat].name}، وهي منصة لم تخترها في الخطوة 1. تحقّق من المنصة أعلاه.`)}</p>`:''}
           ${c.msg?`<p class="ferr" style="margin:0">${esc(c.msg)}${it.err&&/spend/i.test(c.msg)?TR(' Check that you exported the report table, not a chart or summary, and that it includes a Spend, Cost or Amount spent column.',' تأكد أنك صدّرت جدول التقرير وليس رسمًا بيانيًا أو ملخصًا، وأنه يتضمن عمود الإنفاق أو التكلفة.'):''}</p>`:''}
           ${c.found.length?`<div class="wzchips">${c.found.map(m=>`<span class="ok">✓ ${m.lab}</span>`).join('')}${c.miss.map(m=>`<span class="no">✕ ${m.lab}</span>`).join('')}</div>`:''}
           ${c.miss.length?`<details class="wzmiss"${c.st==='warn'?' open':''}><summary>${TR(`${c.miss.length} check${c.miss.length===1?'':'s'} can’t run without missing columns`,`${c.miss.length} من الفحوصات لا يمكن تشغيلها دون الأعمدة الناقصة`)}</summary><ul>${c.miss.map(m=>`<li><b>${m.lab}:</b> ${m.eff}</li>`).join('')}</ul><button class="linkbtn" type="button" data-wzhelp="${WZ_PLATS.includes(it.plat)?it.plat:'other'}">${TR('How to include these columns','كيف تضيف هذه الأعمدة')}</button></details>`:''}
@@ -3548,16 +3583,15 @@ function renderWizard(){
     ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('over')}));
     d.addEventListener('drop',e=>{e.stopPropagation();if(e.dataTransfer.files.length)wzFromFiles([...e.dataTransfer.files])})}
   el.querySelectorAll('[data-wzrm]').forEach(b=>b.onclick=()=>{W.items=W.items.filter(it=>it.id!==b.dataset.wzrm);renderWizard()});
-  el.querySelectorAll('[data-wzpl]').forEach(s=>s.onchange=()=>{const it=W.items.find(x=>x.id===s.dataset.wzpl);it.plat=s.value;it.rec.plat=s.value;W.plats.add(WZ_PLATS.includes(s.value)?s.value:'other');renderWizard()});
+  el.querySelectorAll('[data-wzpl]').forEach(s=>s.onchange=()=>{const it=W.items.find(x=>x.id===s.dataset.wzpl);it.plat=s.value;it.rec.plat=s.value;it.auto=null;it.odd=false;W.plats.add(WZ_PLATS.includes(s.value)?s.value:'other');renderWizard()});
   if($('wzCur'))$('wzCur').onchange=e=>{W.cur=e.target.value};
   if($('wzGen'))$('wzGen').onclick=async()=>{
     W.margin=+$('wzMargin').value||45;W.rev=$('wzRev').value;W.cur=$('wzCur').value;if($('wzDays'))W.days=+$('wzDays').value||30;
     $('margin').value=W.margin;$('revenue').value=W.rev||'';$('currency').value=W.cur;ST.userCur=true;if(W.days)$('days').value=W.days;
-    const files=usable.map(it=>it.file),over=new Map(usable.filter(it=>it.rec&&it.rec.detectedPlat&&it.plat!==it.rec.detectedPlat&&it.plat!=='orders').map(it=>[it.file.name,it.plat]));
+    const files=usable.map(it=>it.file);ST.platOver={};usable.filter(it=>it.plat&&it.plat!=='orders').forEach(it=>ST.platOver[it.file.name+'|'+it.file.size]=it.plat);
     ST.files=[];ST.example=false;ST.claimed=false;$('wzGen').disabled=true;
     await addFiles(files);
     if(ST.page!=='audit'){$('wzGen')&&($('wzGen').disabled=false);return}
-    if(over.size){ST.files.forEach(f=>{if(over.has(f.name))f.plat=over.get(f.name)});render()}
     ST.wz={step:1,plats:new Set(),orders:false,items:[],tab:null};
   };
   if(ST.lang==='ar')i18Apply(el);
