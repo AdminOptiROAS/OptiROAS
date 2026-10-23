@@ -1,6 +1,7 @@
 import { currentUser, sql, json, body } from '../_lib/core.js';
 import { cleanSummary, summaryEmail } from '../_lib/report.js';
 import { sendMail, mailOn } from '../_lib/mail.js';
+import { takeDownload } from '../usage/download.js';
 
 // Emails a report summary to the signed-in user's own address. Either a saved report (id) or a summary sent
 // just for this email (data), which is used to build the message and not stored.
@@ -11,6 +12,8 @@ export default async function handler(req, res) {
   if (!mailOn()) return json(res, 503, { error: 'Email isn’t switched on yet. Download the PDF instead for now.', code: 'nomail' });
   const sent = (await sql`select count(*)::int as n from api_log where user_id=${user.id} and endpoint='report:email' and at>now()-interval '1 day'`)[0].n;
   if (sent >= 10) return json(res, 429, { error: 'You’ve emailed 10 reports today. Try again tomorrow.' });
+  const t = await takeDownload(user, 'summary');
+  if (!t.ok) return json(res, 402, { error: 'dl_limit', code: 'dl_limit', kind: 'summary', usage: t.usage });
   const b = body(req);
   let d, id = null;
   if (b.id) {

@@ -14,5 +14,7 @@ export const verified = u => !!u.email_verified_at || !mailOn() || list('ALLOWED
 export async function usageFor(u) {
   const plan = u.plan || 'free', unlimited = plan !== 'free' || isAdmin(u);
   const used = (await sql`select count(distinct coalesce(fp, id::text))::int as n from usage_reports where user_id=${u.id} and month=${monthKey()}`)[0].n;
-  return { plan, unlimited, used, limit: unlimited ? null : freeLimit(), resets: nextReset(), verified: verified(u) };
+  const dl = await sql`select kind, count(*)::int as n from usage_downloads where user_id=${u.id} and month=${monthKey()} group by kind`;
+  const downloads = { plan: 0, summary: 0 }; for (const r of dl) downloads[r.kind] = r.n;
+  return { plan, unlimited, used, limit: unlimited ? null : freeLimit(), resets: nextReset(), verified: verified(u), downloads, dlLimit: unlimited ? null : 1 };
 }

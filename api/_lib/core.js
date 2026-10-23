@@ -67,6 +67,9 @@ export function ensureSchema() {
       id bigserial primary key, user_id uuid not null references users(id) on delete cascade,
       month text not null, fp text, at timestamptz not null default now())`;
     await sql`create index if not exists usage_reports_user_month on usage_reports(user_id, month)`;
+    await sql`create table if not exists usage_downloads(
+      id bigserial primary key, user_id uuid not null references users(id) on delete cascade,
+      month text not null, kind text not null, at timestamptz not null default now())`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
