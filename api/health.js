@@ -11,5 +11,6 @@ export default async function handler(req, res) {
     calls = (await sql`select count(*) filter (where ok)::int as ok, count(*)::int as total from api_log where at > now() - interval '15 days'`)[0];
   } catch (e) { db = 'error: ' + String(e.message).slice(0, 120); }
   const googleMissing = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'].filter(k => !process.env[k]);
-  return json(res, missing.length || db !== 'ok' ? 500 : 200, { ok: !missing.length && db === 'ok', missing, googleMissing, db, users, metaCallsLast15Days: calls, graph: process.env.META_GRAPH_VERSION || null });
+  const snapMissing = ['SNAP_CLIENT_ID', 'SNAP_CLIENT_SECRET', 'SNAP_REDIRECT_URI'].filter(k => !process.env[k]);
+  return json(res, missing.length || db !== 'ok' ? 500 : 200, { ok: !missing.length && db === 'ok', missing, googleMissing, snapMissing, db, users, metaCallsLast15Days: calls, graph: process.env.META_GRAPH_VERSION || null });
 }

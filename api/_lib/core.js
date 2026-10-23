@@ -32,6 +32,14 @@ export function ensureSchema() {
       user_id uuid not null references users(id) on delete cascade,
       customer_id text not null, name text, currency text, timezone text, login_customer_id text,
       primary key(user_id, customer_id))`;
+    await sql`create table if not exists snap_connections(
+      user_id uuid primary key references users(id) on delete cascade,
+      snap_email text, snap_name text, token_enc text not null,
+      connected_at timestamptz not null default now(), updated_at timestamptz not null default now())`;
+    await sql`create table if not exists snap_ad_accounts(
+      user_id uuid not null references users(id) on delete cascade,
+      account_id text not null, name text, org_name text, currency text, timezone text,
+      primary key(user_id, account_id))`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
