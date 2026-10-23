@@ -40,6 +40,16 @@ export function ensureSchema() {
       user_id uuid not null references users(id) on delete cascade,
       account_id text not null, name text, org_name text, currency text, timezone text,
       primary key(user_id, account_id))`;
+    await sql`alter table users add column if not exists plan text not null default 'free'`;
+    await sql`alter table users add column if not exists stripe_customer_id text`;
+    await sql`alter table users add column if not exists email_verified_at timestamptz`;
+    await sql`create table if not exists user_tokens(
+      token_hash text primary key, user_id uuid not null references users(id) on delete cascade,
+      kind text not null, expires_at timestamptz not null, used_at timestamptz, created_at timestamptz not null default now())`;
+    await sql`create table if not exists usage_reports(
+      id bigserial primary key, user_id uuid not null references users(id) on delete cascade,
+      month text not null, fp text, at timestamptz not null default now())`;
+    await sql`create index if not exists usage_reports_user_month on usage_reports(user_id, month)`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
@@ -87,7 +97,7 @@ export function checkPassword(pw, stored) {
 
 /* ---------- sessions ---------- */
 const SESSION_DAYS = 30;
-const sha = t => crypto.createHash('sha256').update(t).digest('hex');
+export const sha = t => crypto.createHash('sha256').update(t).digest('hex');
 export async function startSession(res, userId) {
   const token = crypto.randomBytes(32).toString('base64url');
   await sql`insert into sessions(token_hash,user_id,expires_at) values(${sha(token)},${userId},now()+${SESSION_DAYS + ' days'}::interval)`;
@@ -96,7 +106,7 @@ export async function startSession(res, userId) {
 export async function currentUser(req) {
   const t = cookies(req).or_session; if (!t) return null;
   await ensureSchema();
-  const r = await sql`select u.id,u.email,u.name from sessions s join users u on u.id=s.user_id
+  const r = await sql`select u.id,u.email,u.name,u.plan,u.email_verified_at from sessions s join users u on u.id=s.user_id
     where s.token_hash=${sha(t)} and s.expires_at>now()`;
   return r[0] || null;
 }
