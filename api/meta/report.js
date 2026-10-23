@@ -1,4 +1,5 @@
 import { currentUser, sql, json, metaToken, graph, appSecretProof } from '../_lib/core.js';
+import { idsParam } from '../_lib/camps.js';
 
 // Pulls daily ad-level insights for one connected ad account and returns them as a CSV in the
 // same layout as a Meta Ads Manager export, so the browser's audit engine reads it unchanged.
@@ -26,12 +27,13 @@ export default async function handler(req, res) {
   const token = await metaToken(user.id);
   if (!token) return json(res, 409, { error: 'Connect Meta first.' });
   const until = new Date(Date.now() - 864e5), since = new Date(until.getTime() - (days - 1) * 864e5);
-  const rows = [];
+  const rows = [], ids = idsParam(q);
   try {
     let page = await graph(`/${account}/insights`, {
       level: 'ad', time_increment: 1, limit: 500,
       time_range: { since: iso(since), until: iso(until) },
       fields: 'date_start,campaign_name,adset_name,ad_name,spend,impressions,reach,inline_link_clicks,actions,action_values,account_currency',
+      ...(ids.length ? { filtering: [{ field: 'campaign.id', operator: 'IN', value: ids }] } : {}),
       access_token: token, appsecret_proof: appSecretProof(token)
     }, { userId: user.id });
     for (let i = 0; page && i < 60; i++) {

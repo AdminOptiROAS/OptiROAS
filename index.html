@@ -568,6 +568,41 @@ html[dir=rtl] #profMenu{right:auto;left:0}
 .pdots{display:flex;gap:6px}
 .steps2{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--muted)}
 html[dir=rtl] .steps2{padding-left:0;padding-right:1.2em}
+.asearch{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--surface);color:var(--ink)}
+.pksteps{display:flex;gap:6px;list-style:none;padding:0;margin:10px 0 0;flex-wrap:wrap;font-size:13px}
+.pksteps li{padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pksteps li.done{color:var(--good,#1f8a4c);border-color:color-mix(in srgb,var(--good,#1f8a4c) 40%,var(--line))}
+.pksteps li.done::before{content:'✓ '}
+.pksteps li.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.pkbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.pkbar select,.pkbar input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--surface);color:var(--ink)}
+.pkbar input{flex:1;min-width:160px}
+.pkchips{display:flex;gap:6px;flex-wrap:wrap}
+.pkchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.pkchip span{color:var(--muted);margin-inline-start:2px}
+.pkchip[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.pkchip[aria-pressed=true] span{color:inherit;opacity:.75}
+.pklist{border:1px solid var(--line);border-radius:10px;max-height:440px;overflow:auto}
+.pkrow{display:grid;grid-template-columns:28px minmax(0,1fr) 110px 110px 110px;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);font-size:14px;cursor:pointer}
+.pkrow:first-child{border-top:0}
+.pkh{position:sticky;top:0;background:var(--surface);font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;cursor:default;z-index:1}
+.pkrow:not(.pkh):hover{background:color-mix(in srgb,var(--ink) 4%,transparent)}
+.pkn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkrow .r{text-align:end}
+.pkck input{width:16px;height:16px}
+.pkfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;bottom:0;background:var(--surface);padding:12px 0;border-top:1px solid var(--line)}
+.pkbtns{display:flex;gap:8px;flex-wrap:wrap}
+.pkload{display:flex;gap:10px;align-items:center;color:var(--muted);padding:20px 0}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--ink);border-radius:50%;animation:spn 0.8s linear infinite}
+@keyframes spn{to{transform:rotate(360deg)}}
+html[lang=ar] .pkh{letter-spacing:0;text-transform:none}
+@media(max-width:640px){.pkrow{grid-template-columns:24px minmax(0,1fr) 84px 92px}.pkimp{display:none}}
+#acctView.picking .authside{display:none}
+#acctView.picking .authwrap{grid-template-columns:minmax(0,1fr);max-width:960px}
+#acctView.picking .auth{max-width:none}
+@media(max-width:640px){.pkrow{grid-template-columns:24px minmax(0,1fr) auto;grid-template-areas:"ck n n" "ck st sp";row-gap:4px}
+ .pkrow>:nth-child(1){grid-area:ck}.pkrow>:nth-child(2){grid-area:n}.pkrow>:nth-child(3){grid-area:st}.pkrow>:nth-child(4){grid-area:sp}
+ .pkn{white-space:normal}.pklist{max-height:none}.pkh>:nth-child(3),.pkh>:nth-child(4){display:none}}
 </style>
 </head>
 <body>
@@ -2999,6 +3034,8 @@ function renderAuth(el,note){
     catch(x){errf(x.message);if(/already exists/.test(x.message)){ST.acctMode='signin';setTimeout(renderAcct,1800)}}};
 }
 function renderAcct(){
+  if(ST.pick&&ST.me&&ST.me.user)return renderPicker();
+  $('acctView').classList.remove('picking');
   const el=$('acctCard'),me=ST.me||{},u=me.user,msg=ST.acctMsg;ST.acctMsg=null;
   const note=msg?`<p class="${msg.ok?'okmsg':'ferr'}">${esc(msg.t)}</p>`:'';
   if(!API_OK){el.innerHTML=`<div><span class="kicker"><i></i>Early access</span><h2 style="margin-top:10px">Sign in</h2></div><p class="muted">Accounts and the Meta connection work on <b>optiroas.com</b>. Open the live site to sign in.</p>`;return}
@@ -3007,7 +3044,7 @@ function renderAcct(){
   el.innerHTML=`<div class="mhead2"><div><span class="eyebrow">Signed in</span><h2 style="margin-top:6px">${esc(u.name||'My account')}</h2><span class="muted small">${esc(u.email)}</span></div><button class="btn quiet sm" type="button" id="acOut">Sign out</button></div>
     ${note}${usageHTML(me.usage,u)}
     <div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('meta')}Meta ads</b>${m.connected?'<span class="pill Opportunity">Connected</span>':'<span class="pill Low">Not connected</span>'}</div>
-    ${m.connected?(A.length?`<p class="muted small" style="margin:0">Connected${m.name?' as '+esc(m.name):''}. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><select data-days="${esc(a.id)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select><button class="btn sm" type="button" data-run="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
+    ${m.connected?(A.length?`<p class="muted small" style="margin:0">Connected${m.name?' as '+esc(m.name):''}. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><button class="btn sm" type="button" data-pick="meta" data-acc="${esc(a.id)}">${TR('Choose campaigns','اختر الحملات')}</button></div></div>`).join('')}</div>`
       :'<p class="muted small" style="margin:0">Meta is connected, but no ad accounts were shared. Reconnect and tick at least one ad account.</p>')
       +`<div class="arow" style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/meta/start">Reconnect or change accounts</a><button class="btn quiet sm" type="button" id="acDisc">Disconnect Meta</button></div>`
     :`<p class="muted small" style="margin:0">Connect with Facebook and pick the ad accounts OptiROAS may read. Access is read-only and you can disconnect at any time.</p><div><a class="btn" href="/api/meta/start" id="acConn">Continue with Facebook</a></div>`}
@@ -3028,83 +3065,145 @@ function renderAcct(){
   $('acctCard').querySelectorAll('[data-trun]').forEach(b=>b.onclick=()=>runTiktokAudit(b.dataset.trun,+$('acctCard').querySelector(`[data-tdays="${b.dataset.trun}"]`).value,b));
   if($('tDisc'))$('tDisc').onclick=async()=>{if($('tDisc').dataset.sure!=='1'){$('tDisc').dataset.sure='1';$('tDisc').textContent='Click again to disconnect';return}
     try{await api('/api/tiktok/disconnect',{method:'POST'});await loadMe();ST.acctMsg={ok:true,t:'TikTok disconnected and access revoked.'};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
+  $('acctCard').querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>openPicker(b.dataset.pick,b.dataset.acc));
+  if($('gRef'))$('gRef').onclick=async()=>{const b=$('gRef');b.disabled=true;b.textContent=TR('Checking…','جارٍ التحقق…');try{const r=await api('/api/google/refresh',{method:'POST'});await loadMe();ST.acctMsg=r.n?{ok:true,t:TR(`Found ${r.n} Google Ads account${r.n===1?'':'s'}.`,`عُثر على ${r.n} من حسابات Google Ads.`)}:{t:r.note||TR('Still no Google Ads accounts for this login.','لا توجد حسابات Google Ads لهذا الحساب حتى الآن.')};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
+  $('acctCard').querySelectorAll('.alist2').forEach(l=>{const rows=[...l.querySelectorAll('.arow2')];if(rows.length<=6)return;
+    l.insertAdjacentHTML('beforebegin',`<input class="asearch" type="search" placeholder="${TR(`Search ${rows.length} accounts`,`ابحث في ${rows.length} حسابًا`)}" aria-label="${TR('Search accounts','ابحث في الحسابات')}">`);
+    const inp=l.previousElementSibling;inp.oninput=()=>{const t=inp.value.trim().toLowerCase();rows.forEach(r=>r.hidden=!!t&&!r.textContent.toLowerCase().includes(t))}});
   if($('sDisc'))$('sDisc').onclick=async()=>{if($('sDisc').dataset.sure!=='1'){$('sDisc').dataset.sure='1';$('sDisc').textContent='Click again to disconnect';return}
     try{await api('/api/snap/disconnect',{method:'POST'});await loadMe();ST.acctMsg={ok:true,t:'Snapchat disconnected. Stored access has been deleted.'};renderAcct()}catch(x){ST.acctMsg={t:x.message};renderAcct()}};
 }
 function snapCard(g){
   const A=g.accounts||[],per=k=>`<select data-sdays="${esc(k)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select>`;
   return `<div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('snap')}Snapchat Ads</b>${g.connected?'<span class="pill Opportunity">Connected</span>':g.available?'<span class="pill Low">Not connected</span>':'<span class="pill Low">Coming soon</span>'}</div>
-  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected${g.name||g.email?' as '+esc(g.name||g.email):''}. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${a.org?esc(a.org):''}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar">${per(a.id)}<button class="btn sm" type="button" data-srun="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
+  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected${g.name||g.email?' as '+esc(g.name||g.email):''}. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${a.org?esc(a.org):''}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><button class="btn sm" type="button" data-pick="snap" data-acc="${esc(a.id)}">${TR('Choose campaigns','اختر الحملات')}</button></div></div>`).join('')}</div>`
       :'<p class="muted small" style="margin:0">Snapchat is connected, but no active ad accounts were found for this login.</p>')
     +`<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/snap/start">Reconnect Snapchat</a><button class="btn quiet sm" type="button" id="sDisc">Disconnect Snapchat</button></div>`
   :g.available?`<p class="muted small" style="margin:0">Log in with the Snapchat account that manages your ads. OptiROAS only reads reporting data, and you can disconnect at any time.</p><div><a class="btn" href="/api/snap/start">Continue with Snapchat</a></div>`
   :'<p class="muted small" style="margin:0">Direct Snapchat connection is being switched on. Until then, upload your Snapchat Ads export on the audit page.</p>'}</div>`;
 }
-async function runSnapAudit(acc,days,btn){
+async function runSnapAudit(acc,days,btn,ids){
+  const cq=ids&&ids.length?`&campaigns=${encodeURIComponent(ids.join(','))}`:'',cn=ids&&ids.length?`${ids.length} campaign${ids.length===1?'':'s'}, `:'';
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
   try{
     const a=((ST.me&&ST.me.snap&&ST.me.snap.accounts)||[]).find(x=>x.id===acc),nm=(a&&a.name)||acc;
-    const r=await api(`/api/snap/report?account=${encodeURIComponent(acc)}&days=${days}`),n=+(r.headers.get('X-Rows')||0),txt=await r.text();
+    const r=await api(`/api/snap/report?account=${encodeURIComponent(acc)}&days=${days}${cq}`),n=+(r.headers.get('X-Rows')||0),txt=await r.text();
     if(!n){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No Snapchat ad spend in the last ${days} days for this account.`};renderAcct();return}
     ST.files=ST.files.filter(f=>!(f.name||'').startsWith(`Snapchat Ads · ${nm} (`));
     btn.disabled=false;btn.textContent=t;
-    await addFiles([new File([txt],`Snapchat Ads · ${nm} (campaigns, last ${days} days, live).csv`,{type:'text/csv'})]);
+    await addFiles([new File([txt],`Snapchat Ads · ${nm} (${cn||'campaigns, '}last ${days} days, live).csv`,{type:'text/csv'})]);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
 function tiktokCard(g){
   const A=g.accounts||[],per=k=>`<select data-tdays="${esc(k)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select>`;
   return `<div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('tiktok')}TikTok Ads</b>${g.connected?'<span class="pill Opportunity">Connected</span>':g.available?'<span class="pill Low">Not connected</span>':'<span class="pill Low">Coming soon</span>'}</div>
-  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar">${per(a.id)}<button class="btn sm" type="button" data-trun="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
+  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected. Choose an ad account and period to audit.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><button class="btn sm" type="button" data-pick="tiktok" data-acc="${esc(a.id)}">${TR('Choose campaigns','اختر الحملات')}</button></div></div>`).join('')}</div>`
       :'<p class="muted small" style="margin:0">TikTok is connected, but no advertiser accounts were shared. Reconnect and tick at least one.</p>')
     +`<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/tiktok/start">Reconnect TikTok</a><button class="btn quiet sm" type="button" id="tDisc">Disconnect TikTok</button></div>`
   :g.available?`<p class="muted small" style="margin:0">Log in with the TikTok for Business account that manages your ads and choose which advertiser accounts to share. OptiROAS only reads reporting data, and you can disconnect at any time.</p><div><a class="btn" href="/api/tiktok/start">Continue with TikTok</a></div>`
   :'<p class="muted small" style="margin:0">Direct TikTok connection is waiting for TikTok’s approval. Until then, upload your TikTok Ads export on the audit page.</p>'}</div>`;
 }
-async function runTiktokAudit(acc,days,btn){
+async function runTiktokAudit(acc,days,btn,ids){
+  const cq=ids&&ids.length?`&campaigns=${encodeURIComponent(ids.join(','))}`:'',cn=ids&&ids.length?`${ids.length} campaign${ids.length===1?'':'s'}, `:'';
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
   try{
     const a=((ST.me&&ST.me.tiktok&&ST.me.tiktok.accounts)||[]).find(x=>x.id===acc),nm=(a&&a.name)||acc;
-    const r=await api(`/api/tiktok/report?account=${encodeURIComponent(acc)}&days=${days}`),n=+(r.headers.get('X-Rows')||0),txt=await r.text();
+    const r=await api(`/api/tiktok/report?account=${encodeURIComponent(acc)}&days=${days}${cq}`),n=+(r.headers.get('X-Rows')||0),txt=await r.text();
     if(!n){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No TikTok ad spend in the last ${days} days for this account.`};renderAcct();return}
     ST.files=ST.files.filter(f=>!(f.name||'').startsWith(`TikTok Ads · ${nm} (`));
     btn.disabled=false;btn.textContent=t;
-    await addFiles([new File([txt],`TikTok Ads · ${nm} (ads, last ${days} days, live).csv`,{type:'text/csv'})]);
+    await addFiles([new File([txt],`TikTok Ads · ${nm} (${cn}last ${days} days, live).csv`,{type:'text/csv'})]);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
 const gid=id=>String(id).replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3');
 function googleCard(g){
   const A=g.accounts||[],per=k=>`<select data-gdays="${esc(k)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select>`;
   return `<div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('google')}Google Ads</b>${g.connected?'<span class="pill Opportunity">Connected</span>':g.available?'<span class="pill Low">Not connected</span>':'<span class="pill Low">Coming soon</span>'}</div>
-  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected${g.email?' as '+esc(g.email):''}. Choose an account and period to audit; search terms are included.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${gid(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar">${per(a.id)}<button class="btn sm" type="button" data-grun="${esc(a.id)}">Run audit</button></div></div>`).join('')}</div>`
-      :'<p class="muted small" style="margin:0">Google is connected, but no Google Ads accounts were found for this Google login. Reconnect with the Google account that has access to your ads.</p>')
+  ${g.connected?(A.length?`<p class="muted small" style="margin:0">Connected${g.email?' as '+esc(g.email):''}. Choose an account and period to audit; search terms are included.</p><div class="alist2">${A.map(a=>`<div class="arow2"><div class="an"><b>${esc(a.name||a.id)}</b><span class="muted small">${gid(a.id)}${a.currency?' · '+esc(a.currency):''}${a.timezone?' · '+esc(a.timezone):''}</span></div><div class="ar"><button class="btn sm" type="button" data-pick="google" data-acc="${esc(a.id)}">${TR('Choose campaigns','اختر الحملات')}</button></div></div>`).join('')}</div>`
+      :`<p class="muted small" style="margin:0">${g.note?esc(g.note):'Google is connected, but no Google Ads accounts were found for this Google login. Reconnect with the Google account that has access to your ads.'}</p><div><button class="btn quiet sm" type="button" id="gRef">${TR('Check again for accounts','ابحث عن الحسابات مجددًا')}</button></div>`)
     +`<div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn quiet sm" href="/api/google/start">Reconnect or switch Google account</a><button class="btn quiet sm" type="button" id="gDisc">Disconnect Google Ads</button></div>`
   :g.available?`<p class="muted small" style="margin:0">Sign in with the Google account that can see your Google Ads. Access is read-only and you can disconnect at any time.</p><div><a class="btn" href="/api/google/start">Continue with Google</a></div>`
   :'<p class="muted small" style="margin:0">Direct Google Ads connection is being switched on. Until then, upload your Google Ads campaign and search terms reports on the audit page.</p>'}</div>`;
 }
-async function runGoogleAudit(acc,days,btn){
+async function runGoogleAudit(acc,days,btn,ids){
+  const cq=ids&&ids.length?`&campaigns=${encodeURIComponent(ids.join(','))}`:'',cn=ids&&ids.length?`${ids.length} campaign${ids.length===1?'':'s'}, `:'';
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
   try{
     const a=((ST.me&&ST.me.google&&ST.me.google.accounts)||[]).find(x=>x.id===acc),nm=(a&&a.name)||gid(acc);
-    const r1=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}&type=campaigns`),n1=+(r1.headers.get('X-Rows')||0),t1=await r1.text();
+    const r1=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}${cq}&type=campaigns`),n1=+(r1.headers.get('X-Rows')||0),t1=await r1.text();
     if(!n1){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No Google Ads spend in the last ${days} days for this account.`};renderAcct();return}
-    let files=[new File([t1],`Google Ads · ${nm} (campaigns, last ${days} days, live).csv`,{type:'text/csv'})];
-    try{const r2=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}&type=searchterms`);if(+(r2.headers.get('X-Rows')||0))files.push(new File([await r2.text()],`Google Ads · ${nm} (search terms, last ${days} days, live).csv`,{type:'text/csv'}))}catch(e){}
+    let files=[new File([t1],`Google Ads · ${nm} (${cn||'campaigns, '}last ${days} days, live).csv`,{type:'text/csv'})];
+    try{const r2=await api(`/api/google/report?account=${encodeURIComponent(acc)}&days=${days}${cq}&type=searchterms`);if(+(r2.headers.get('X-Rows')||0))files.push(new File([await r2.text()],`Google Ads · ${nm} (search terms, ${cn}last ${days} days, live).csv`,{type:'text/csv'}))}catch(e){}
     ST.files=ST.files.filter(f=>!(f.name||'').startsWith(`Google Ads · ${nm} (`));
     btn.disabled=false;btn.textContent=t;
     await addFiles(files);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
-async function runMetaAudit(acc,days,btn){
+async function runMetaAudit(acc,days,btn,ids){
+  const cq=ids&&ids.length?`&campaigns=${encodeURIComponent(ids.join(','))}`:'',cn=ids&&ids.length?`${ids.length} campaign${ids.length===1?'':'s'}, `:'';
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
-  try{const r=await api(`/api/meta/report?account=${encodeURIComponent(acc)}&days=${days}`);
+  try{const r=await api(`/api/meta/report?account=${encodeURIComponent(acc)}&days=${days}${cq}`);
     const rows=+(r.headers.get('X-Rows')||0),txt=await r.text();
     if(!rows){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No ad spend in the last ${days} days for this account.`};renderAcct();return}
     const acct=((ST.me&&ST.me.meta&&ST.me.meta.accounts)||[]).find(a=>a.id===acc);
-    const file=new File([txt],`Meta · ${(acct&&acct.name)||acc} (last ${days} days, live).csv`,{type:'text/csv'});
+    const file=new File([txt],`Meta · ${(acct&&acct.name)||acc} (${cn}last ${days} days, live).csv`,{type:'text/csv'});
     ST.files=ST.files.filter(f=>!/\(last \d+ days, live\)\.csv$/.test(f.name)||!f.name.includes((acct&&acct.name)||acc));
     btn.disabled=false;btn.textContent=t;
     await addFiles([file]);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
+}
+
+/* ---------- campaign picker: account → period → campaigns → report ---------- */
+const PK={meta:{name:'Meta',me:'meta',run:(...a)=>runMetaAudit(...a)},google:{name:'Google Ads',me:'google',run:(...a)=>runGoogleAudit(...a)},snap:{name:'Snapchat',me:'snap',run:(...a)=>runSnapAudit(...a)},tiktok:{name:'TikTok',me:'tiktok',run:(...a)=>runTiktokAudit(...a)}};
+const PK_ST={active:['Active','نشطة'],paused:['Paused','متوقفة مؤقتًا'],removed:['Archived','مؤرشفة'],other:['Ended','منتهية']};
+const pkMoney=(v,c)=>`${c||''} ${Math.round(v).toLocaleString('en-US')}`.trim();
+function openPicker(plat,acc){
+  const a=(((ST.me||{})[PK[plat].me]||{}).accounts||[]).find(x=>String(x.id)===String(acc))||{id:acc};
+  ST.pick={plat,acc:String(acc),name:a.name||String(acc),cur:a.currency||'',days:60,list:null,sel:new Set(),f:'spend',q:'',err:null};
+  renderAcct();loadPicker();try{window.scrollTo({top:0,behavior:'smooth'})}catch(e){}
+}
+async function loadPicker(){
+  const P=ST.pick;if(!P)return;P.list=null;P.err=null;renderPicker();
+  try{const r=await api(`/api/${P.plat}/campaigns?account=${encodeURIComponent(P.acc)}&days=${P.days}`);if(ST.pick!==P)return;
+    P.cur=r.currency||P.cur;P.since=r.since;P.until=r.until;
+    P.list=(r.campaigns||[]).sort((x,y)=>(y.spend-x.spend)||((x.status==='active'?0:1)-(y.status==='active'?0:1))||String(x.name).localeCompare(String(y.name)));
+    P.sel=new Set(P.list.filter(c=>c.spend>0).map(c=>c.id));if(!P.list.some(c=>c.spend>0))P.f='all';
+  }catch(x){if(ST.pick===P)P.err=x.message}
+  if(ST.pick===P)renderPicker();
+}
+function renderPicker(){
+  $('acctView').classList.add('picking');
+  const P=ST.pick,el=$('acctCard'),L=P.list||[],msg=ST.acctMsg;ST.acctMsg=null;
+  const cnt={all:L.length,active:L.filter(c=>c.status==='active').length,paused:L.filter(c=>c.status==='paused').length,spend:L.filter(c=>c.spend>0).length};
+  const q=P.q.toLowerCase(),vis=L.filter(c=>(P.f==='all'||(P.f==='spend'?c.spend>0:c.status===P.f))&&(!q||String(c.name).toLowerCase().includes(q)));
+  const selList=L.filter(c=>P.sel.has(c.id)),selSpend=selList.reduce((t,c)=>t+c.spend,0),allVis=vis.length&&vis.every(c=>P.sel.has(c.id));
+  const per=`<select id="pkDays" aria-label="${TR('Period','الفترة')}">${[30,60,90].map(d=>`<option value="${d}"${d===P.days?' selected':''}>${TR(`Last ${d} days`,`آخر ${d} يومًا`)}</option>`).join('')}</select>`;
+  const chips=[['spend',TR('Had spend','فيها إنفاق')],['active',TR('Active','نشطة')],['paused',TR('Paused','متوقفة')],['all',TR('All','الكل')]].map(([k,t])=>`<button type="button" class="pkchip" data-pf="${k}" aria-pressed="${P.f===k}">${t} <span>${cnt[k]}</span></button>`).join('');
+  el.innerHTML=`<div><button class="linkbtn" type="button" id="pkBack">${TR('← Back to your accounts','→ العودة إلى حساباتك')}</button></div>
+  <div><span class="kicker"><i></i>${TR('New audit','تدقيق جديد')}</span><h2 style="margin-top:10px;display:flex;align-items:center;gap:10px">${dot(P.plat)}<span>${esc(PK[P.plat].name)} · <span class="notr">${esc(P.name)}</span></span></h2>
+    <ol class="pksteps"><li class="done">${TR('Account','الحساب')}</li><li class="on">${TR('Period and campaigns','الفترة والحملات')}</li><li>${TR('Report','التقرير')}</li></ol></div>
+  ${msg?`<p class="${msg.ok?'okmsg':'ferr'}">${esc(msg.t)}</p>`:''}
+  <div class="pkbar">${per}<div class="pkchips" role="group">${chips}</div><input type="search" id="pkQ" placeholder="${TR('Search campaigns','ابحث في الحملات')}" value="${esc(P.q)}"></div>
+  ${P.err?`<p class="ferr">${esc(P.err)}</p><div><button class="btn quiet sm" type="button" id="pkRetry">${TR('Try again','حاول مجددًا')}</button></div>`
+   :!P.list?`<div class="pkload"><span class="spin"></span>${TR('Loading campaigns…','جارٍ تحميل الحملات…')}</div>`
+   :!L.length?`<p class="muted">${TR('This account has no campaigns yet.','لا توجد حملات في هذا الحساب بعد.')}</p>`
+   :`<div class="pklist" role="table">
+      <div class="pkrow pkh" role="row"><label class="pkck"><input type="checkbox" id="pkAllVis"${allVis?' checked':''} aria-label="${TR('Select all shown','حدد كل المعروض')}"></label><span>${TR('Campaign','الحملة')}</span><span>${TR('Status','الحالة')}</span><span class="r">${TR('Spend','الإنفاق')}</span><span class="r pkimp">${TR('Impressions','مرات الظهور')}</span></div>
+      ${vis.map(c=>`<label class="pkrow" role="row"><span class="pkck"><input type="checkbox" data-cid="${esc(c.id)}"${P.sel.has(c.id)?' checked':''}></span><span class="pkn notr">${esc(c.name||c.id)}</span><span><span class="pill ${c.status==='active'?'Opportunity':'Low'}">${TR(...(PK_ST[c.status]||PK_ST.other))}</span></span><span class="r num">${c.spend?pkMoney(c.spend,P.cur):'—'}</span><span class="r num pkimp">${c.impr?Math.round(c.impr).toLocaleString('en-US'):'—'}</span></label>`).join('')||`<p class="muted small" style="padding:12px">${TR('No campaigns match this filter.','لا توجد حملات تطابق هذا التصفية.')}</p>`}
+    </div>`}
+  <div class="pkfoot"><span class="small"><b>${TR(`${selList.length} of ${L.length} campaigns selected`,`تم تحديد ${selList.length} من ${L.length} حملة`)}</b>${selList.length?` · ${pkMoney(selSpend,P.cur)} ${TR('spend','إنفاق')}`:''}${P.since?` · <span class="muted">${fmtDate(P.since)} – ${fmtDate(P.until)}</span>`:''}</span>
+    <div class="pkbtns"><button class="btn quiet" type="button" id="pkWhole"${L.length?'':' disabled'}>${TR('Audit whole account','دقّق الحساب كاملًا')}</button><button class="btn" type="button" id="pkGo"${selList.length?'':' disabled'}>${selList.length===L.length?TR('Audit all campaigns','دقّق كل الحملات'):TR(`Audit ${selList.length} campaign${selList.length===1?'':'s'}`,`دقّق ${selList.length} حملة`)}</button></div></div>
+  <p class="muted small" style="margin:0">${TR('Spend is for the selected period. Each report counts once on the free plan, whatever you select.','الإنفاق خلال الفترة المحددة. يُحتسب كل تقرير مرة واحدة في الخطة المجانية مهما اخترت.')}</p>`;
+  $('pkBack').onclick=()=>{ST.pick=null;renderAcct()};
+  $('pkDays').onchange=e=>{P.days=+e.target.value;loadPicker()};
+  if($('pkRetry'))$('pkRetry').onclick=()=>loadPicker();
+  el.querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{P.f=b.dataset.pf;renderPicker()});
+  const qi=$('pkQ');qi.oninput=()=>{P.q=qi.value;const pos=qi.selectionStart;renderPicker();const n=$('pkQ');n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}};
+  el.querySelectorAll('[data-cid]').forEach(c=>c.onchange=()=>{c.checked?P.sel.add(c.dataset.cid):P.sel.delete(c.dataset.cid);renderPicker()});
+  if($('pkAllVis'))$('pkAllVis').onchange=e=>{vis.forEach(c=>e.target.checked?P.sel.add(c.id):P.sel.delete(c.id));renderPicker()};
+  const go=async(ids,btn)=>{await PK[P.plat].run(P.acc,P.days,btn,ids);if(ST.page==='audit')ST.pick=null};
+  $('pkGo').onclick=()=>go(selList.length===L.length?null:selList.map(c=>c.id),$('pkGo'));
+  $('pkWhole').onclick=()=>go(null,$('pkWhole'));
 }
 function closeMenu(){$('profMenu').hidden=true;$('acctBtn').setAttribute('aria-expanded','false')}
 $('acctBtn').onclick=async e=>{e.stopPropagation();const open=$('profMenu').hidden;if(open){if(API_OK&&!ST.me)await loadMe();syncAcctBtn()}$('profMenu').hidden=!open;$('acctBtn').setAttribute('aria-expanded',String(open))};

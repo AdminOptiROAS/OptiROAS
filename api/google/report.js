@@ -1,5 +1,6 @@
 import { currentUser, sql, json, decrypt, logApi } from '../_lib/core.js';
 import { accessFromRefresh, gaql } from '../_lib/google.js';
+import { idsParam } from '../_lib/camps.js';
 
 // Returns Google Ads data as CSVs in the same layout as Google Ads UI exports, so the browser's
 // audit engine reads them unchanged. type=campaigns (daily campaign report) or type=searchterms.
@@ -19,7 +20,8 @@ export default async function handler(req, res) {
   const con = await sql`select token_enc from google_connections where user_id=${user.id}`;
   if (!con[0]) return json(res, 409, { error: 'Connect Google Ads first.' });
   const until = new Date(Date.now() - 864e5), since = new Date(until.getTime() - (days - 1) * 864e5);
-  const range = `segments.date BETWEEN '${iso(since)}' AND '${iso(until)}'`;
+  const ids = idsParam(q).filter(x => /^\d+$/.test(x));
+  const range = `segments.date BETWEEN '${iso(since)}' AND '${iso(until)}'` + (ids.length ? ` AND campaign.id IN (${ids.join(',')})` : '');
   let rows;
   try {
     const access = await accessFromRefresh(decrypt(con[0].token_enc));

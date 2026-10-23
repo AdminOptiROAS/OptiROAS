@@ -1,5 +1,6 @@
 import { currentUser, sql, json, logApi } from '../_lib/core.js';
 import { tokenFor, ttGet } from '../_lib/tiktok.js';
+import { idsParam } from '../_lib/camps.js';
 
 // Returns TikTok ad-level stats by day as a CSV in the layout of a TikTok Ads Manager export,
 // so the browser's audit engine reads it unchanged.
@@ -7,7 +8,7 @@ const cell = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s
 const n = v => { const x = parseFloat(v); return Number.isFinite(x) ? x : 0; };
 const localDay = (tz, d) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC' }).format(d);
 const addDays = (ymd, k) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + k); return d.toISOString().slice(0, 10); };
-const BASE = ['campaign_name', 'adgroup_name', 'ad_name', 'spend', 'impressions', 'clicks', 'conversion'];
+const BASE0 = ['campaign_name', 'adgroup_name', 'ad_name', 'spend', 'impressions', 'clicks', 'conversion'];
 const PURCH = ['complete_payment', 'complete_payment_roas', 'value_per_complete_payment'];
 
 async function pull(token, acc, s, e, metrics) {
@@ -35,6 +36,8 @@ export default async function handler(req, res) {
   const tz = own[0].timezone || 'UTC', cur = own[0].currency || 'USD';
   const end = addDays(localDay(tz, new Date()), -1), start = addDays(end, -(days - 1));
   let rows = [], purch = true;
+  const ids = new Set(idsParam(q));
+  const BASE = ids.size ? ['campaign_id', ...BASE0] : BASE0;
   try {
     const token = await tokenFor(user.id);
     if (!token) return json(res, 409, { error: 'Connect TikTok first.' });
@@ -53,7 +56,7 @@ export default async function handler(req, res) {
   const out = rows.map(r => { const m = r.metrics || {}, d = r.dimensions || {}, spend = n(m.spend), cp = n(m.complete_payment);
       const value = n(m.complete_payment_roas) > 0 ? n(m.complete_payment_roas) * spend : n(m.value_per_complete_payment) * cp;
       return { day: String(d.stat_time_day || '').slice(0, 10), m, spend, cp, value }; })
-    .filter(r => r.spend > 0 || n(r.m.impressions) > 0).sort((a, b) => a.day.localeCompare(b.day));
+    .filter(r => !ids.size || ids.has(String(r.m.campaign_id))).filter(r => r.spend > 0 || n(r.m.impressions) > 0).sort((a, b) => a.day.localeCompare(b.day));
   const lines = [['By Day', 'Campaign name', 'Ad group name', 'Ad name', 'Currency', 'Cost', 'Impressions', 'Clicks (destination)', 'Complete payment', 'Total complete payment value', 'Conversions'].join(',')]
     .concat(out.map(r => [r.day, r.m.campaign_name, r.m.adgroup_name, r.m.ad_name, cur, r.spend.toFixed(2), Math.round(n(r.m.impressions)), Math.round(n(r.m.clicks)),
       Math.round(r.cp), r.value.toFixed(2), Math.round(n(r.m.conversion))].map(cell).join(',')));

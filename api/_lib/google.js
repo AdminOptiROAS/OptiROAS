@@ -40,3 +40,28 @@ export async function gaql(access, customerId, query, loginCustomerId) {
   if (!r.ok) throw gerr(Array.isArray(j) ? j[0] : j, r.status);
   return (Array.isArray(j) ? j : [j]).flatMap(b => b.results || []);
 }
+
+// Finds the Google Ads accounts a login can reach (expanding manager accounts one level).
+// Returns the accounts plus a plain-English note when none could be read, so the UI can say why.
+export async function discover(access, log) {
+  const ids = await listAccessible(access); await log('google:listAccessibleCustomers', true);
+  if (!ids.length) return { accts: [], note: 'This Google login has no Google Ads accounts. Sign in with the Google account that has access to your ads, or ask the account owner to add this email in Google Ads (Admin → Access and security).' };
+  const accts = new Map(), errs = [];
+  for (const id of ids.slice(0, 50)) {
+    try {
+      const [c] = await gaql(access, id, 'SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.time_zone, customer.manager, customer.status FROM customer LIMIT 1');
+      await log('google:customer', true);
+      if (!c) continue;
+      if (c.customer.manager) {
+        const kids = await gaql(access, id, 'SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone, customer_client.manager, customer_client.status FROM customer_client WHERE customer_client.level <= 1 AND customer_client.manager = FALSE', id);
+        await log('google:customer_client', true);
+        for (const k of kids) { const cc = k.customerClient; if (cc.status && cc.status !== 'ENABLED') continue;
+          if (!accts.has(String(cc.id))) accts.set(String(cc.id), { id: String(cc.id), name: cc.descriptiveName, currency: cc.currencyCode, tz: cc.timeZone, login: String(id) }); }
+      } else if (!c.customer.status || c.customer.status === 'ENABLED') {
+        accts.set(String(c.customer.id), { id: String(c.customer.id), name: c.customer.descriptiveName, currency: c.customer.currencyCode, tz: c.customer.timeZone, login: null });
+      } else errs.push(`${id}: account is ${String(c.customer.status).toLowerCase()}`);
+    } catch (e) { await log('google:customer', false); errs.push(`${id}: ${e.message}`); console.error('google customer', id, e.status, e.code, e.message); }
+  }
+  const note = accts.size ? null : `Google found ${ids.length} account${ids.length === 1 ? '' : 's'} for this login but none could be read. ${errs.slice(0, 2).join(' · ')}`.slice(0, 400);
+  return { accts: [...accts.values()], note };
+}

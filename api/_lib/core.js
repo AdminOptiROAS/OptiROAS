@@ -48,6 +48,7 @@ export function ensureSchema() {
       user_id uuid not null references users(id) on delete cascade,
       account_id text not null, name text, currency text, timezone text,
       primary key(user_id, account_id))`;
+    await sql`alter table google_connections add column if not exists note text`;
     await sql`alter table users add column if not exists plan text not null default 'free'`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists email_verified_at timestamptz`;

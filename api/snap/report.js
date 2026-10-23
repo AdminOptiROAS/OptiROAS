@@ -1,5 +1,6 @@
 import { currentUser, sql, json, decrypt, encrypt, logApi } from '../_lib/core.js';
 import { snapToken, snapGet, tzOffset } from '../_lib/snap.js';
+import { idsParam } from '../_lib/camps.js';
 
 // Returns Snapchat campaign stats by day as a CSV in the layout of a Snapchat Ads Manager export,
 // so the browser's audit engine reads it unchanged.
@@ -52,7 +53,8 @@ export default async function handler(req, res) {
     const expired = e.code === 'invalid_grant' || e.status === 401;
     return json(res, expired ? 409 : 502, { error: expired ? 'Your Snapchat connection has expired. Reconnect Snapchat.' : `Snapchat: ${e.message}` });
   }
-  const rows = series.filter(r => (+r.s.spend || 0) > 0 || (+r.s.impressions || 0) > 0).sort((a, b) => a.day.localeCompare(b.day));
+  const ids = new Set(idsParam(q));
+  const rows = series.filter(r => !ids.size || ids.has(r.id)).filter(r => (+r.s.spend || 0) > 0 || (+r.s.impressions || 0) > 0).sort((a, b) => a.day.localeCompare(b.day));
   const lines = [['Date', 'Campaign Name', 'Campaign Status', 'Daily Budget', 'Currency', 'Paid Impressions', 'Swipe Ups', 'Spend', 'Purchases', 'Purchases Value', 'Sign Ups', 'Adds To Cart'].join(',')]
     .concat(rows.map(r => { const c = camps.get(r.id) || {}, s = r.s;
       return [r.day, c.name || r.id, nice(c.status), c.daily_budget_micro ? money(c.daily_budget_micro) : '', cur,
