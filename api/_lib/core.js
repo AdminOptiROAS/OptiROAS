@@ -49,6 +49,14 @@ export function ensureSchema() {
       account_id text not null, name text, currency text, timezone text,
       primary key(user_id, account_id))`;
     await sql`alter table google_connections add column if not exists note text`;
+    await sql`create table if not exists saved_reports(
+      id uuid primary key default gen_random_uuid(), user_id uuid not null references users(id) on delete cascade,
+      label text, period text, currency text, score int, data jsonb not null, lang text,
+      followup_at timestamptz, followup_sent_at timestamptz, created_at timestamptz not null default now())`;
+    await sql`create index if not exists saved_reports_user on saved_reports(user_id, created_at desc)`;
+    await sql`create table if not exists feedback(
+      id bigserial primary key, user_id uuid, email text, rating int, message text, page text, lang text, ua text,
+      created_at timestamptz not null default now())`;
     await sql`alter table users add column if not exists plan text not null default 'free'`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists email_verified_at timestamptz`;

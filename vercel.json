@@ -9,5 +9,11 @@
     "api/meta/report.js": {
       "maxDuration": 120
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/followups",
+      "schedule": "0 5 * * *"
+    }
+  ]
 }
