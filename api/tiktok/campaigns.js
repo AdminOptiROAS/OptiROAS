@@ -1,6 +1,7 @@
 import { currentUser, sql, json, logApi } from '../_lib/core.js';
 import { tokenFor, ttGet } from '../_lib/tiktok.js';
 import { STATUS, daysParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 const localDay = (tz, d) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC' }).format(d);
 const addDays = (ymd, k) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + k); return d.toISOString().slice(0, 10); };
@@ -8,6 +9,7 @@ const addDays = (ymd, k) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDa
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const acc = String(q.get('account') || ''), days = daysParam(q);
   const own = await sql`select account_id,currency,timezone from tiktok_ad_accounts where user_id=${user.id} and account_id=${acc}`;

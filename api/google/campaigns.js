@@ -1,10 +1,12 @@
 import { currentUser, sql, json, decrypt, logApi } from '../_lib/core.js';
 import { accessFromRefresh, gaql } from '../_lib/google.js';
 import { STATUS, range, daysParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const cid = String(q.get('account') || '').replace(/-/g, ''), days = daysParam(q), r = range(days);
   const own = await sql`select customer_id,currency,login_customer_id from google_ad_accounts where user_id=${user.id} and customer_id=${cid}`;

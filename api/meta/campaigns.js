@@ -1,10 +1,12 @@
 import { currentUser, sql, json, metaToken, graph, appSecretProof } from '../_lib/core.js';
 import { STATUS, range, daysParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 // Lists an ad account's campaigns with status and results for the chosen period, for the campaign picker.
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const account = String(q.get('account') || ''), days = daysParam(q), r = range(days);
   const own = await sql`select account_id,currency from meta_ad_accounts where user_id=${user.id} and account_id=${account}`;

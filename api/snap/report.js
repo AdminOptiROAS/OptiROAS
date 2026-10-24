@@ -1,6 +1,7 @@
 import { currentUser, sql, json, decrypt, encrypt, logApi } from '../_lib/core.js';
 import { snapToken, snapGet, tzOffset } from '../_lib/snap.js';
 import { idsParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 // Returns Snapchat campaign stats by day as a CSV in the layout of a Snapchat Ads Manager export,
 // so the browser's audit engine reads it unchanged.
@@ -17,6 +18,7 @@ const bound = (ymd, tz) => `${ymd}T00:00:00.000${tzOffset(tz, new Date(ymd + 'T1
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const acc = String(q.get('account') || '');
   const days = Math.min(90, Math.max(7, parseInt(q.get('days') || '60', 10) || 60));

@@ -1,6 +1,7 @@
 import { currentUser, sql, json, decrypt, logApi } from '../_lib/core.js';
 import { accessFromRefresh, gaql } from '../_lib/google.js';
 import { idsParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 // Returns Google Ads data as CSVs in the same layout as Google Ads UI exports, so the browser's
 // audit engine reads them unchanged. type=campaigns (daily campaign report) or type=searchterms.
@@ -12,6 +13,7 @@ const nice = s => String(s || '').toLowerCase().replace(/_/g, ' ').replace(/^\w/
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const cid = String(q.get('account') || '').replace(/-/g, ''), type = q.get('type') === 'searchterms' ? 'searchterms' : 'campaigns';
   const days = Math.min(90, Math.max(7, parseInt(q.get('days') || '60', 10) || 60));

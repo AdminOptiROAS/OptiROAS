@@ -1,5 +1,6 @@
 import { currentUser, sql, json, metaToken, graph, appSecretProof } from '../_lib/core.js';
 import { idsParam } from '../_lib/camps.js';
+import { canConnect } from '../_lib/plan.js';
 
 // Pulls daily ad-level insights for one connected ad account and returns them as a CSV in the
 // same layout as a Meta Ads Manager export, so the browser's audit engine reads it unchanged.
@@ -19,6 +20,7 @@ const iso = d => d.toISOString().slice(0, 10);
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in first.' });
+  if (!canConnect(user)) return json(res, 402, { error: 'Connecting ad accounts is part of Starter and Pro. Upgrade to connect.', code: 'upgrade' });
   const q = new URL(req.url, 'https://optiroas.com').searchParams;
   const account = String(q.get('account') || '');
   const days = Math.min(90, Math.max(7, parseInt(q.get('days') || '60', 10) || 60));

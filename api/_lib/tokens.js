@@ -23,7 +23,7 @@ export async function sendVerify(user, lang) {
   const ar = lang === 'ar';
   return sendMail({ to: user.email, subject: ar ? 'أكّد بريدك الإلكتروني لـ OptiROAS' : 'Confirm your email for OptiROAS', ...layout({ lang, link,
     title: ar ? 'أكّد بريدك الإلكتروني' : 'Confirm your email',
-    intro: ar ? 'اضغط الزر لتأكيد بريدك وتفعيل تقريرك المجاني الشهري.' : 'Click the button to confirm your email and unlock your free monthly report.',
+    intro: ar ? 'اضغط الزر لتأكيد بريدك وتفعيل تدقيقك المجاني.' : 'Click the button to confirm your email and unlock your free audit.',
     button: ar ? 'تأكيد البريد' : 'Confirm email',
     outro: ar ? 'ينتهي هذا الرابط بعد 3 أيام. إذا لم تنشئ حسابًا في OptiROAS، تجاهل هذه الرسالة.' : 'This link expires in 3 days. If you didn’t create an OptiROAS account, you can ignore this email.' }) });
 }
