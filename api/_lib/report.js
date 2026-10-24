@@ -9,7 +9,7 @@ export function cleanSummary(d) {
     impact: S(f.impact, 120), bucket: S(f.bucket, 20), h: S(f.h, 10), done: !!f.done, doneAt: f.done ? S(f.doneAt || new Date().toISOString(), 40) : null }));
   const plan = (Array.isArray(d.plan) ? d.plan : []).slice(0, 30).map(p => ({ h: S(p.h, 40), t: S(p.t, 300), tag: S(p.tag, 20) }));
   return { label: S(d.label, 160), period: S(d.period, 80), cur: S(d.cur, 8), score: Math.round(N(d.score)), band: S(d.band, 60),
-    total: N(d.total), monthly: N(d.monthly), waste: N(d.waste), roas: N(d.roas), margin: N(d.margin), marginSet: !!d.marginSet, by: S(d.by, 120), upside: S(d.upside, 80), slug: S(d.slug, 120), files: S(d.files, 160), ref: S(d.ref, 64), dProfit: d.dProfit == null ? null : N(d.dProfit), moved: N(d.moved), saved: N(d.saved), plats: (Array.isArray(d.plats) ? d.plats : []).slice(0, 10).map(x => S(x, 30)),
+    total: N(d.total), monthly: N(d.monthly), waste: N(d.waste), roas: N(d.roas), margin: N(d.margin), marginSet: !!d.marginSet, by: S(d.by, 120), upside: S(d.upside, 80), bench: S(d.bench, 40), slug: S(d.slug, 120), files: S(d.files, 160), ref: S(d.ref, 64), dProfit: d.dProfit == null ? null : N(d.dProfit), moved: N(d.moved), saved: N(d.saved), plats: (Array.isArray(d.plats) ? d.plats : []).slice(0, 10).map(x => S(x, 30)),
     findings, plan, lang: d.lang === 'ar' ? 'ar' : 'en' };
 }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

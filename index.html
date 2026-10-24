@@ -1838,7 +1838,7 @@ function auditPlatform(pk,all,ctx){
         const s=small.reduce((t,c)=>t+c.spend,0)*mo;
         push({sev:'Medium',bucket:'stop',conf:'Low',title:A(`${small.length} ${P.short} campaigns are too small to optimise`,`${small.length} حملات على ${P.short} أصغر من أن تُحسَّن`),
           ev:A(`${small.slice(0,6).map(c=>esc(c.name)).join(', ')}${small.length>6?' …':''} · each under 5% of spend and under 7 ${Us} a week · ${money(s)} a month combined`,`${small.slice(0,6).map(c=>esc(c.name)).join('، ')}${small.length>6?' …':''} · كل منها أقل من 5% من الإنفاق وأقل من 7 ${Usa} أسبوعيًا · ${money(s)} شهريًا مجتمعة`),
-          act:A(`Consolidate them into one or two campaigns so each gets enough ${Us} for the bidding algorithm to learn (roughly 50 a week on Meta, TikTok and Snapchat; 30 a month on Google).`,`ادمجها في حملة أو حملتين حتى تحصل كل منها على ما يكفي من ${Usa} لتتعلّم خوارزمية المزايدة (نحو 50 أسبوعيًا على Meta وTikTok وSnapchat، و30 شهريًا على Google).`),
+          act:A(`Consolidate them into one or two campaigns so each gets enough ${Us} for the bidding algorithm to learn (Meta and TikTok say about 50 a week lets a campaign exit its learning phase).`,`ادمجها في حملة أو حملتين حتى تحصل كل منها على ما يكفي من ${Usa} لتتعلّم خوارزمية المزايدة (تذكر Meta وTikTok أن نحو 50 أسبوعيًا تتيح للحملة الخروج من مرحلة التعلّم).`),
           sst:A(`${P.short}: merge ${small.length} small campaigns`,`${P.short}: ادمج ${small.length} حملات صغيرة`),impact:s*.15,kind:'waste',est:true});
       }
     }
@@ -1963,9 +1963,9 @@ function auditPlatform(pk,all,ctx){
       if(weak&&acc.conv>0){
         const R_=.5,gap=acc.conv*(weak.th/weak.rate-1),extra=gap*mo*R_,aov=acc.conv?acc.value/acc.conv:0;
         push({sev:'Medium',bucket:'test',conf:'Low',title:A(`${P.short} funnel: ${pct(weak.rate,0)} go from ${weak.from.toLowerCase()} to ${weak.to.toLowerCase()}`,`مسار التحويل في ${P.short}: ${pct(weak.rate,0)} ينتقلون من ${STG(weak.from)} إلى ${STG(weak.to)}`),
-          ev:st.map(s=>`${STG(s[0])} <b>${fmtInt(s[1])}</b>`).join(LANG==='ar'?' ← ':' → ')+A(` · OptiROAS uses ${pct(weak.th,0)} as a planning benchmark for this step in online stores; it isn't specific to your category · these are event counts, not tracked user journeys`,` · يستخدم OptiROAS نسبة ${pct(weak.th,0)} كمعيار تخطيطي لهذه الخطوة في المتاجر الإلكترونية؛ وهو ليس خاصًا بفئتك · هذه أعداد أحداث، لا رحلات مستخدمين متتبَّعة`),
+          ev:st.map(s=>`${STG(s[0])} <b>${fmtInt(s[1])}</b>`).join(LANG==='ar'?' ← ':' → ')+A(` · below OptiROAS's review threshold of ${pct(weak.th,0)} for this step. That threshold is our rule for flagging a step to look at, not an industry average · these are event counts, not tracked user journeys`,` · أقل من حد المراجعة لدى OptiROAS البالغ ${pct(weak.th,0)} لهذه الخطوة. هذا الحد قاعدتنا لتحديد خطوة تستحق الفحص، وليس متوسطًا للقطاع · هذه أعداد أحداث، لا رحلات مستخدمين متتبَّعة`),
           act:weak.act,sst:A(`${P.short}: investigate the ${weak.from.toLowerCase()} → ${weak.to.toLowerCase()} step`,`${P.short}: افحص خطوة ${STG(weak.from)} ← ${STG(weak.to)}`),...gain(mode==='value'?extra*aov:extra),est:true,rule:'funnel',
-          calc:[A(`${fmtInt(acc.conv)} ${Us} in ${D} days at ${pct(weak.rate,1)}. At the ${pct(weak.th,0)} benchmark there would be ${fmtInt(acc.conv*weak.th/weak.rate)}, a gap of ${fmtInt(gap)}.`,`${fmtInt(acc.conv)} ${Usa} خلال ${D} يومًا بنسبة ${pct(weak.rate,1)}. عند المعيار ${pct(weak.th,0)} سيكون العدد ${fmtInt(acc.conv*weak.th/weak.rate)}، بفارق ${fmtInt(gap)}.`),
+          calc:[A(`${fmtInt(acc.conv)} ${Us} in ${D} days at ${pct(weak.rate,1)}. At the ${pct(weak.th,0)} review threshold there would be ${fmtInt(acc.conv*weak.th/weak.rate)}, a gap of ${fmtInt(gap)}.`,`${fmtInt(acc.conv)} ${Usa} خلال ${D} يومًا بنسبة ${pct(weak.rate,1)}. عند حد المراجعة ${pct(weak.th,0)} سيكون العدد ${fmtInt(acc.conv*weak.th/weak.rate)}، بفارق ${fmtInt(gap)}.`),
             A(`× ${(30/D).toFixed(2)} for a 30-day run rate × ${Math.round(R_*100)}% assumed achievable = ${fmtInt(extra)} more ${Us} a month${mode==='value'?` × ${money(aov)} average order value = ${money(extra*aov,0)} revenue (not profit)`:''}.`,`× ${(30/D).toFixed(2)} على أساس 30 يومًا × ${Math.round(R_*100)}% يُفترض أنها قابلة للتحقيق = ${fmtInt(extra)} ${Usa} إضافية شهريًا${mode==='value'?` × ${money(aov)} متوسط قيمة الطلب = ${money(extra*aov,0)} إيرادات (لا أرباح)`:''}.`),
             A('Overlaps with the budget plan (the same visitors and orders), so it is shown separately and not added to it.','يتداخل مع خطة الميزانية (الزوار والطلبات أنفسهم)، لذا يُعرض منفصلًا ولا يُضاف إليها.')]});
       }
@@ -2006,7 +2006,7 @@ function auditPlatform(pk,all,ctx){
           act:A(`Much of this credit comes from people who only saw an ad (view-through attribution) or from duplicate events. Compare with a click-only attribution window before trusting ${P.short}'s ROAS.`,`جزء كبير من هذا الرصيد يأتي من أشخاص شاهدوا الإعلان فقط (إسناد المشاهدة) أو من أحداث مكررة. قارن بنافذة إسناد للنقر فقط قبل الوثوق بـ ROAS على ${P.short}.`),impact:0,kind:'none'});
       else if((mode==='value'||U==='purchase')&&acc.clicks>=200&&acc.cvr>.25)
         push({sev:'Medium',bucket:null,conf:'Medium',title:A(`${P.short} purchase rate of ${pct(acc.cvr,0)} of clicks is unusually high`,`معدل الشراء على ${P.short} ${pct(acc.cvr,0)} من النقرات، وهو مرتفع بشكل غير معتاد`),
-          ev:A(`${fmtInt(acc.conv)} purchases from ${fmtInt(acc.clicks)} clicks · online stores rarely exceed 5–10%`,`${fmtInt(acc.conv)} عملية شراء من ${fmtInt(acc.clicks)} نقرة · نادرًا ما تتجاوز المتاجر الإلكترونية 5–10%`),
+          ev:A(`${fmtInt(acc.conv)} purchases from ${fmtInt(acc.clicks)} clicks · above OptiROAS's 25% review threshold, which usually points to counting problems`,`${fmtInt(acc.conv)} عملية شراء من ${fmtInt(acc.clicks)} نقرة · أعلى من حد المراجعة لدى OptiROAS البالغ 25%، وهو ما يشير عادة إلى مشكلات في العدّ`),
           act:A(`Check for duplicate purchase events, such as the thank-you page firing again on refresh, or view-through credit inflating the count.`,`تحقّق من تكرار أحداث الشراء، مثل إطلاق صفحة الشكر مرة أخرى عند تحديثها، أو تضخيم العدد بإسناد المشاهدة.`),impact:0,kind:'none'});
       if((mode==='value'||U==='purchase')&&acc.atc>0&&acc.conv>acc.atc*1.05)
         push({sev:'Medium',bucket:null,conf:'High',title:A(`${P.short} shows more purchases than adds to cart`,`${P.short} يُظهر مشتريات أكثر من الإضافات إلى السلة`),
@@ -2239,63 +2239,74 @@ function auditPlatform(pk,all,ctx){
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
 
-/* ---------- vertical and sub-vertical benchmarks (published sources, USD) ---------- */
-const BSRC={tw:{n:'Triple Whale industry benchmarks, paid ads across platforms, Aug 2025 – Jul 2026',u:'https://www.triplewhale.com/blog/ecommerce-benchmarks'},
-  ws:{n:'WordStream Facebook ads benchmarks 2025, US campaigns, Apr 2024 – Jun 2025, medians',u:'https://www.wordstream.com/blog/facebook-ads-benchmarks-2025'},
-  dy:{n:'Dynamic Yield add-to-cart benchmarks (site-wide, per session)',u:'https://marketing.dynamicyield.com/benchmarks/add-to-cart-rate/'}};
-const tw=(roas,cpm,ctr,cvr,aov,cpa,atc)=>Object.assign({src:'tw',roas,cpm,ctr:ctr/100,cvr:cvr/100,aov,cpa},atc?{atc:atc/100,atcSrc:'dy'}:{});
-const ws=(ctr,cpc,cvr,cpl)=>({src:'ws',ctr:ctr==null?null:ctr/100,cpc,cvr:cvr==null?null:cvr/100,cpa:cpl,lead:true});
-const BENCH=[
-  {id:'fashion',n:['Fashion and lifestyle','الأزياء ونمط الحياة'],s:[
-    {id:'apparel',n:['Apparel and accessories','الملابس والإكسسوارات'],m:tw(2.70,11.72,1.95,1.80,89.17,31.44)},
-    {id:'boutique',n:['Lifestyle and boutique','نمط الحياة والبوتيك'],m:tw(2.31,12.35,1.91,1.98,67.05,28.03)},
-    {id:'luggage',n:['Travel accessories and luggage','إكسسوارات السفر والحقائب'],m:tw(2.80,15.03,2.02,1.53,130.91,42.07)}]},
-  {id:'beauty',n:['Beauty and health','التجميل والصحة'],s:[
-    {id:'beauty',n:['Beauty and personal care products','منتجات التجميل والعناية الشخصية'],m:tw(1.82,16.90,1.88,2.38,61.18,31.68,8.8)},
-    {id:'wellness',n:['Health and wellness, supplements','الصحة والعافية والمكملات'],m:tw(1.55,20.34,2.44,1.83,62.99,37.85)}]},
-  {id:'home',n:['Home and electronics','المنزل والإلكترونيات'],s:[
-    {id:'homegarden',n:['Home and garden, furniture','المنزل والحديقة والأثاث'],m:tw(2.72,14.16,1.78,1.64,114.43,41.62,3.12)},
-    {id:'electronics',n:['Electronics','الإلكترونيات'],m:tw(2.28,14.11,1.91,1.49,113.41,44.12)}]},
-  {id:'family',n:['Family, kids and pets','العائلة والأطفال والحيوانات الأليفة'],s:[
-    {id:'baby',n:['Baby','الرضّع'],m:tw(2.71,11.75,1.72,2.26,75.33,26.65)},
-    {id:'toys',n:['Toys, art and collectibles','الألعاب والفنون والمقتنيات'],m:tw(2.31,11.84,1.91,1.94,71.68,29.89)},
-    {id:'pets',n:['Pets','الحيوانات الأليفة'],m:tw(1.89,16.71,1.96,2.39,60.12,31.26)}]},
-  {id:'food',n:['Food and beverage','الأغذية والمشروبات'],s:[{id:'foodbev',n:['Food and beverage','الأغذية والمشروبات'],m:tw(2.03,14.55,1.67,2.60,63.32,29.48,9.55)}]},
-  {id:'sports',n:['Sports and outdoors','الرياضة والأنشطة الخارجية'],s:[{id:'sports',n:['Sports and outdoors','الرياضة والأنشطة الخارجية'],m:tw(3.01,12.38,1.74,1.77,113.93,35.80)}]},
-  {id:'auto',n:['Automotive','السيارات'],s:[{id:'autoparts',n:['Automotive products','منتجات السيارات'],m:tw(3.27,11.66,1.98,1.59,116.34,33.83)}]},
-  {id:'media',n:['Books, media and courses','الكتب والإعلام والدورات'],s:[
-    {id:'books',n:['Books and music','الكتب والموسيقى'],m:tw(1.78,12.79,2.11,2.01,52.56,26.76)},
-    {id:'courses',n:['E-learning and online courses','التعليم الإلكتروني والدورات'],m:tw(1.27,14.91,2.52,1.53,42.79,28.19)}]},
-  {id:'leads',n:['Services and lead generation','الخدمات وجمع العملاء المحتملين'],s:[
-    {id:'realestate',n:['Real estate','العقارات'],m:ws(1.68,.91,9.53,16.61)},
-    {id:'physicians',n:['Clinics: physicians and surgeons','العيادات: الأطباء والجراحون'],m:ws(.83,.82,4.51,47.47)},
-    {id:'dentists',n:['Clinics: dentists','العيادات: أطباء الأسنان'],m:ws(null,null,6.38,76.71)},
-    {id:'beautysvc',n:['Beauty and personal care services','خدمات التجميل والعناية الشخصية'],m:ws(1.81,.74,5.29,51.42)},
-    {id:'fitness',n:['Health and fitness','الصحة واللياقة'],m:ws(1.63,.80,5.63,52.98)},
-    {id:'education',n:['Education and training','التعليم والتدريب'],m:ws(1.45,.86,10.08,28.22)},
-    {id:'homeimp',n:['Home improvement','تحسين المنازل'],m:ws(1.28,.99,5.22,41.26)},
-    {id:'furniture',n:['Furniture showrooms','معارض الأثاث'],m:ws(1.39,.85,3.77,40.04)},
-    {id:'legal',n:['Legal services','الخدمات القانونية'],m:ws(1.76,.86,10.53,18.17)},
-    {id:'restaurants',n:['Restaurants and food','المطاعم والأغذية'],m:ws(1.67,.72,18.25,3.16)},
-    {id:'personal',n:['Personal services','الخدمات الشخصية'],m:ws(1.70,1.00,6.51,30.57)},
-    {id:'careers',n:['Careers and recruitment','الوظائف والتوظيف'],m:ws(null,null,5.77,17.64)}]}];
-const BFX={USD:1,AED:3.6725,SAR:3.75,QAR:3.64,BHD:.376,OMR:.3845}; // currencies pegged to the dollar; others skip money benchmarks
+/* ---------- vertical and sub-vertical benchmarks ----------
+   Only published figures, copied exactly from the source pages, with how comparable each one is.
+   Anything without a reliable published figure is shown as "Unavailable". OptiROAS's own benchmarks
+   will replace these as more connected accounts in each category share their vertical. */
+const BSRC={tw:{n:'Triple Whale industry benchmarks, paid ads, Aug 2025 – Jul 2026',u:'https://www.triplewhale.com/blog/ecommerce-benchmarks'},
+  lq:{n:'LocaliQ 2026 search advertising benchmarks (Google Ads and Microsoft Ads)',u:'https://localiq.com/blog/search-advertising-benchmarks/'}};
+// Triple Whale industry table: ROAS, CPA, AOV, CPM, CTR (their CVR is orders ÷ store sessions, which an ad export can't match, so it isn't used)
+const TW={'Automotive':[3.27,33.83,116.34,11.66,1.98],'Sports & Outdoors':[3.01,35.80,113.93,12.38,1.74],'Travel Accessories & Luggage':[2.80,42.07,130.91,15.03,2.02],
+  'Home & Garden':[2.72,41.62,114.43,14.16,1.78],'Baby':[2.71,26.65,75.33,11.75,1.72],'Apparel & Accessories':[2.70,31.44,89.17,11.72,1.95],'Toys, Art, & Collectibles':[2.31,29.89,71.68,11.84,1.91],
+  'Lifestyle & Boutique':[2.31,28.03,67.05,12.35,1.91],'Electronics':[2.28,44.12,113.41,14.11,1.91],'Food & Beverage':[2.03,29.48,63.32,14.55,1.67],'Pets & Animals':[1.89,31.26,60.12,16.71,1.96],
+  'Beauty':[1.82,31.68,61.18,16.90,1.88],'Books & Music':[1.78,26.76,52.56,12.79,2.11],'Health & Wellness':[1.55,37.85,62.99,20.34,2.44],'Elearning & Online Courses':[1.27,28.19,42.79,14.91,2.52]};
+// LocaliQ search table: CTR %, CPC $, CVR % (leads ÷ clicks, as the source defines it), CPL $
+const LQ={'Animals & Pets':[7.49,4.06,16.22,31.50],'Apparel / Fashion & Jewelry':[6.64,4.44,4.50,97.51],'Arts & Entertainment':[12.75,1.63,5.91,26.84],'Attorneys & Legal Services':[5.87,9.87,5.55,131.63],
+  'Automotive — For Sale':[8.28,2.27,6.01,44.26],'Automotive — Repair, Service & Parts':[5.56,4.35,15.51,29.96],'Beauty & Personal Care':[6.75,4.62,10.35,39.25],'Business Services':[6.10,5.87,4.85,93.69],
+  'Career & Employment':[5.88,5.81,3.05,67.36],'Dentists & Dental Services':[5.66,8.00,10.67,72.97],'Education & Instruction':[7.56,4.81,13.14,77.48],'Finance & Insurance':[9.83,3.39,2.64,74.44],
+  'Furniture':[6.57,3.97,2.99,106.70],'Health & Fitness':[5.81,6.17,6.94,67.36],'Home & Home Improvement':[6.47,8.33,8.05,90.92],'Industrial & Commercial':[6.57,5.87,8.20,75.19],
+  'Personal Services':[7.16,7.17,12.34,54.60],'Physicians & Surgeons':[6.61,4.76,12.43,40.04],'Real Estate':[7.61,3.22,3.70,102.51],'Restaurants & Food':[6.83,2.05,8.05,30.57],
+  'Shopping, Collectibles & Gifts':[8.28,4.14,4.01,49.40],'Sports & Recreation':[8.75,2.77,7.69,44.26],'Travel':[9.32,2.14,5.83,44.70]};
+// sub-verticals: [id, English, Arabic, Triple Whale row (online stores), LocaliQ row (search ads), 'shop' or 'lead']
+const BV=[
+ ['fashion','Fashion and lifestyle','الأزياء ونمط الحياة',[['apparel','Apparel and accessories','الملابس والإكسسوارات','Apparel & Accessories','Apparel / Fashion & Jewelry','shop'],
+   ['boutique','Lifestyle and boutique','نمط الحياة والبوتيك','Lifestyle & Boutique',null,'shop'],['jewelry','Jewelry and watches','المجوهرات والساعات',null,'Apparel / Fashion & Jewelry','shop'],
+   ['modest','Modest fashion and abayas','الأزياء المحتشمة والعبايات',null,null,'shop'],['luggage','Travel accessories and luggage','إكسسوارات السفر والحقائب','Travel Accessories & Luggage',null,'shop']]],
+ ['beauty','Beauty and health','التجميل والصحة',[['beauty','Beauty','التجميل','Beauty','Beauty & Personal Care','shop'],['fragrance','Fragrances and oud','العطور والعود',null,null,'shop'],
+   ['wellness','Health and wellness','الصحة والعافية','Health & Wellness',null,'shop']]],
+ ['home','Home and electronics','المنزل والإلكترونيات',[['homegarden','Home and garden','المنزل والحديقة','Home & Garden',null,'shop'],['furniture','Furniture','الأثاث',null,'Furniture','shop'],
+   ['electronics','Electronics','الإلكترونيات','Electronics',null,'shop']]],
+ ['family','Family, kids and pets','العائلة والأطفال والحيوانات الأليفة',[['baby','Baby','الرضّع','Baby',null,'shop'],['toys','Toys, art and collectibles','الألعاب والفنون والمقتنيات','Toys, Art, & Collectibles',null,'shop'],
+   ['pets','Pets and animals','الحيوانات الأليفة','Pets & Animals','Animals & Pets','shop']]],
+ ['food','Food and beverage','الأغذية والمشروبات',[['foodbev','Food and beverage products','منتجات الأغذية والمشروبات','Food & Beverage',null,'shop'],['restaurants','Restaurants and food delivery','المطاعم وتوصيل الطعام',null,'Restaurants & Food','lead']]],
+ ['sports','Sports and outdoors','الرياضة والأنشطة الخارجية',[['sports','Sports and outdoors','الرياضة والأنشطة الخارجية','Sports & Outdoors','Sports & Recreation','shop']]],
+ ['auto','Automotive','السيارات',[['autoparts','Automotive products','منتجات السيارات','Automotive',null,'shop'],['autosale','Car sales','بيع السيارات',null,'Automotive — For Sale','lead'],
+   ['autoservice','Car repair and service','صيانة السيارات',null,'Automotive — Repair, Service & Parts','lead']]],
+ ['media','Books, media and courses','الكتب والإعلام والدورات',[['books','Books and music','الكتب والموسيقى','Books & Music',null,'shop'],['courses','E-learning and online courses','التعليم الإلكتروني والدورات','Elearning & Online Courses',null,'shop']]],
+ ['health','Healthcare clinics','العيادات والرعاية الصحية',[['physicians','Physicians and surgeons','الأطباء والجراحون',null,'Physicians & Surgeons','lead'],['dentists','Dentists','أطباء الأسنان',null,'Dentists & Dental Services','lead'],
+   ['aesthetics','Aesthetic and dermatology clinics','عيادات التجميل والجلدية',null,null,'lead']]],
+ ['services','Services and lead generation','الخدمات وجمع العملاء المحتملين',[['realestate','Real estate','العقارات',null,'Real Estate','lead'],['education','Education and training','التعليم والتدريب',null,'Education & Instruction','lead'],
+   ['beautysvc','Salons and personal care','الصالونات والعناية الشخصية',null,'Beauty & Personal Care','lead'],['fitness','Gyms and fitness','الأندية الرياضية واللياقة',null,'Health & Fitness','lead'],
+   ['homeimp','Home services and improvement','خدمات وتحسين المنازل',null,'Home & Home Improvement','lead'],['legal','Legal services','الخدمات القانونية',null,'Attorneys & Legal Services','lead'],
+   ['finance','Finance and insurance','المال والتأمين',null,'Finance & Insurance','lead'],['business','Business services (B2B)','خدمات الأعمال (B2B)',null,'Business Services','lead'],
+   ['careers','Careers and recruitment','الوظائف والتوظيف',null,'Career & Employment','lead'],['personal','Personal services','الخدمات الشخصية',null,'Personal Services','lead'],
+   ['travel','Travel and tourism','السفر والسياحة',null,'Travel','lead']]]];
+const BENCH=BV.map(([id,en,ar,s])=>({id,n:[en,ar],s:s.map(([sid,se,sa,tw,lq,kind])=>({id:sid,n:[se,sa],tw,lq,kind}))}));
+const BFX={USD:1,AED:3.6725,SAR:3.75,QAR:3.64,BHD:.376,OMR:.3845}; // fixed US-dollar pegs; other currencies hide money benchmarks
 function benchFind(id){for(const v of BENCH)for(const s of v.s)if(s.id===id)return {v,s};return null}
-// Compares one platform with the chosen sub-vertical. Ratios always; money metrics only in USD-pegged currencies.
+// One row per metric the account has. basis: 'same' (source defines it the way we compute it), 'ind' (standard metric,
+// but the source doesn't publish its definition or attribution), 'na' (no reliable published figure).
 function benchCompare(p,id,cur){
-  const f=benchFind(id);if(!f)return null;const m=f.s.m,a=p.acc,fx=BFX[cur],V=p.mode==='value';
-  const you={ctr:a.ctr,cpm:a.cpm,cpc:a.clicks?a.spend/a.clicks:null,cvr:a.clicks?a.conv/a.clicks:null,aov:V&&a.conv?a.value/a.conv:null,cpa:a.conv?a.spend/a.conv:null,roas:V?a.roas:null,atc:a.atc&&a.clicks?a.atc/a.clicks:null};
-  const L={ctr:[A('Click-through rate','نسبة النقر'),1,v=>pct(v,2)],cpm:[A('CPM','CPM'),-1,v=>money(v)],cpc:[A('Cost per click','تكلفة النقرة'),-1,v=>money(v)],cvr:[m.lead?A('Lead rate (leads ÷ clicks)','معدل العملاء (العملاء ÷ النقرات)'):A('Purchase rate (purchases ÷ clicks)','معدل الشراء (المشتريات ÷ النقرات)'),1,v=>pct(v,2)],
-    atc:[A('Add-to-cart rate','معدل الإضافة إلى السلة'),1,v=>pct(v,1)],aov:[A('Average order value','متوسط قيمة الطلب'),1,v=>money(v)],cpa:[m.lead?A('Cost per lead','تكلفة العميل المحتمل'):A('Cost per purchase','تكلفة الشراء'),-1,v=>money(v)],roas:['ROAS',1,v=>x2(v)]};
-  const money_=new Set(['cpm','cpc','aov','cpa']),rows=[];
-  for(const k of ['roas','ctr','cpm','cpc','atc','cvr','aov','cpa']){
-    let b=m[k];if(b==null||you[k]==null||!isFinite(you[k]))continue;
-    if(money_.has(k)){if(!fx)continue;b=b*fx}
-    if((k==='cpa'||k==='cvr')&&(m.lead?V:!V))continue; // purchase benchmarks only for revenue data, lead ones only for lead data
-    const d=you[k]/b-1,good=L[k][1]*d;
-    rows.push({k,l:L[k][0],you:you[k],b,fmt:L[k][2],d,state:Math.abs(d)<.1?'near':good>0?'better':'worse',src:k==='atc'?m.atcSrc:m.src});
+  const f=benchFind(id);if(!f)return null;const s=f.s,a=p.acc,fx=BFX[cur],V=p.mode==='value',search=['google','microsoft'].includes(p.pk);
+  const isLeadData=!V,you={roas:V?a.roas:null,ctr:a.impr?a.ctr:null,cpm:a.impr?a.cpm:null,cpc:a.clicks?a.spend/a.clicks:null,cvr:a.clicks&&a.conv?a.conv/a.clicks:null,aov:V&&a.conv?a.value/a.conv:null,cpa:a.conv?a.spend/a.conv:null};
+  const L={roas:['ROAS',1,v=>x2(v)],ctr:[A('Click-through rate','نسبة النقر'),1,v=>pct(v,2)],cpm:['CPM',-1,v=>money(v)],cpc:[A('Cost per click','تكلفة النقرة'),-1,v=>money(v)],
+    cvr:[isLeadData?A('Conversion rate (results ÷ clicks)','معدل التحويل (النتائج ÷ النقرات)'):A('Purchase rate (purchases ÷ clicks)','معدل الشراء (المشتريات ÷ النقرات)'),1,v=>pct(v,2)],
+    aov:[A('Average order value','متوسط قيمة الطلب'),1,v=>money(v)],cpa:[isLeadData?A('Cost per result','التكلفة لكل نتيجة'):A('Cost per purchase','تكلفة الشراء'),-1,v=>money(v)]};
+  const bm={},money_=new Set(['cpm','cpc','aov','cpa']);
+  const tw=s.tw&&TW[s.tw],lq=search&&s.lq&&LQ[s.lq];
+  if(tw&&V){const [roas,cpa,aov,cpm,ctr]=tw;Object.assign(bm,{roas:[roas,'tw','ind'],cpa:[cpa,'tw','ind'],aov:[aov,'tw','same'],cpm:[cpm,'tw','ind'],ctr:[ctr/100,'tw','ind']})}
+  if(lq){const [ctr,cpc,cvr,cpl]=lq;Object.assign(bm,{ctr:[ctr/100,'lq','ind'],cpc:[cpc,'lq','ind']});if(isLeadData)Object.assign(bm,{cvr:[cvr/100,'lq','same'],cpa:[cpl,'lq','ind']})}
+  const rows=[];
+  for(const k of ['roas','ctr','cpm','cpc','cvr','aov','cpa']){
+    if(you[k]==null||!isFinite(you[k]))continue;
+    const r={k,l:L[k][0],you:you[k],fmt:L[k][2]};let x=bm[k];
+    if(x&&money_.has(k)&&!fx)x=null;
+    if(!x){rows.push(Object.assign(r,{basis:'na'}));continue}
+    const b=money_.has(k)?x[0]*fx:x[0],d=you[k]/b-1,good=L[k][1]*d;
+    rows.push(Object.assign(r,{b,d,src:x[1],basis:x[2],state:Math.abs(d)<.1?'near':good>0?'better':'worse'}));
   }
-  return {id,v:f.v,s:f.s,name:A(f.s.n[0],f.s.n[1]),vname:A(f.v.n[0],f.v.n[1]),rows,lead:!!m.lead,noFx:!fx,usd:cur==='USD'};
+  return {id,v:f.v,s,name:A(s.n[0],s.n[1]),vname:A(f.v.n[0],f.v.n[1]),rows,noFx:!fx,usd:cur==='USD',any:rows.some(r=>r.basis!=='na'),
+    why:!s.tw&&!s.lq?A('No reliable published benchmark exists for this category yet.','لا يوجد بعد معيار منشور موثوق لهذه الفئة.'):s.tw&&!V&&!lq?A('The published benchmark for this category covers online sales, and this platform reports leads or other results.','المعيار المنشور لهذه الفئة يخص المبيعات الإلكترونية، بينما تُبلغ هذه المنصة عن عملاء محتملين أو نتائج أخرى.'):!s.tw&&s.lq&&!search?A(`The published benchmark for this category covers Google and Microsoft search ads only, not ${p.P.short}.`,`المعيار المنشور لهذه الفئة يخص إعلانات البحث على Google وMicrosoft فقط، وليس ${p.P.short}.`):null};
 }
 
 /* ---------- account-wide audit ---------- */
@@ -2313,14 +2324,7 @@ function auditAll(files,S){
     plats.push(auditPlatform(pk,rows,{margin:S.margin,marginMissing:!!S.marginMissing,fallbackDays:S.days,unit,mixed,files:fs}));
   }
   plats.sort((a,b)=>b.acc.spend-a.acc.spend);
-  if(S.bench)for(const p of plats){p.bench=benchCompare(p,S.bench,S.currency||'USD');
-    const bw=p.bench&&p.bench.rows.filter(r=>r.state==='worse'&&Math.abs(r.d)>=.3&&['roas','cvr','ctr'].includes(r.k)).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d))[0];
-    if(bw&&p.acc.conv>=10){const ACT={roas:A('Returns trail similar brands. Start with the budget plan and the weakest campaigns, then test offers and landing pages.','العائد أقل من علامات مماثلة. ابدأ بخطة الميزانية وأضعف الحملات، ثم اختبر العروض وصفحات الهبوط.'),
-        cvr:A('Fewer clicks turn into results than at similar businesses. Check landing page speed, the offer and the steps to buy or enquire, and that the conversion event fires every time.','عدد أقل من النقرات يتحوّل إلى نتائج مقارنة بأعمال مماثلة. راجع سرعة صفحة الهبوط والعرض وخطوات الشراء أو الاستفسار، وتأكّد أن حدث التحويل يُسجَّل دائمًا.'),
-        ctr:A('Fewer people click than at similar businesses. Test new hooks, opening frames and offers in the creative.','عدد أقل من الناس ينقر مقارنة بأعمال مماثلة. اختبر بدايات ومشاهد افتتاحية وعروضًا جديدة في التصاميم.')};
-      p.F.push({plat:p.pk,pil:1,sev:'Low',bucket:'test',conf:'Low',rule:'bench',title:A(`${p.P.short} ${bw.l.toLowerCase()} is ${pct(Math.abs(bw.d),0)} below the ${p.bench.name} benchmark`,`${bw.l} على ${p.P.short} أقل بنسبة ${pct(Math.abs(bw.d),0)} من معيار ${p.bench.name}`),
-        ev:A(`You: <b>${bw.fmt(bw.you)}</b> · benchmark: <b>${bw.fmt(bw.b)}</b> · ${BSRC[bw.src].n}. Published benchmarks are mostly US brands, so treat this as a direction, not a target.`,`أنت: <b>${bw.fmt(bw.you)}</b> · المعيار: <b>${bw.fmt(bw.b)}</b> · ${BSRC[bw.src].n}. المعايير المنشورة لعلامات أمريكية في الغالب، لذا اعتبرها اتجاهًا لا هدفًا.`),
-        act:ACT[bw.k],sst:A(`${p.P.short}: close the gap to the ${p.bench.name} benchmark`,`${p.P.short}: قلّص الفجوة مع معيار ${p.bench.name}`),impact:0,kind:'none',rv:0,waste:0})}}
+  if(S.bench)for(const p of plats)p.bench=benchCompare(p,S.bench,S.currency||'USD'); // shown for context only; no recommendations are based on them
   const total=plats.reduce((t,p)=>t+p.acc.spend,0),monthly=plats.reduce((t,p)=>t+p.monthlySpend,0);
   plats.forEach(p=>p.share=total?p.acc.spend/total:0);
   const F=plats.flatMap(p=>p.F),notes=plats.flatMap(p=>p.notes);
@@ -2748,9 +2752,10 @@ $('exampleBtn').addEventListener('click',()=>{ST.files=exampleFiles();ST.example
 $('resetBtn').addEventListener('click',()=>{ST.files=[];ST.example=false;ST.claimed=false;ST.userCur=false;go('home')});
 ['margin','revenue','days'].forEach(id=>$(id).addEventListener('input',()=>render()));
 // Business type for benchmarks: remembered in this browser only
-const benchOpts=sel=>`<option value="">${TR('Not set (no benchmark)','غير محدد (بلا معيار)')}</option>`+BENCH.map(v=>`<optgroup label="${esc(TR(v.n[0],v.n[1]))}">${v.s.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(TR(x.n[0],x.n[1]))}</option>`).join('')}</optgroup>`).join('');
-function benchGet(){try{return localStorage.getItem('or_bench')||''}catch(e){return ST.benchMem||''}}
-function benchSet(v){ST.benchMem=v;try{localStorage.setItem('or_bench',v)}catch(e){}}
+const benchOpts=sel=>`<option value="">${TR('Not set (no benchmark)','غير محدد (بلا معيار)')}</option>`+BENCH.map(v=>`<optgroup label="${esc(TR(v.n[0],v.n[1]))}">${v.s.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(TR(x.n[0],x.n[1]))}${!x.tw&&!x.lq?TR(' · benchmark unavailable',' · المعيار غير متاح'):!x.tw?TR(' · Google search benchmark only',' · معيار بحث Google فقط'):''}</option>`).join('')}</optgroup>`).join('');
+function benchGet(){let v='';try{v=localStorage.getItem('or_bench')||''}catch(e){v=ST.benchMem||''}return v||(ST.me&&ST.me.user&&ST.me.user.vertical)||''}
+function benchSet(v){ST.benchMem=v;try{localStorage.setItem('or_bench',v)}catch(e){}
+  if(API_OK&&ST.me&&ST.me.user){ST.me.user.vertical=v;api('/api/auth/vertical',{method:'POST',body:JSON.stringify({vertical:v})}).catch(()=>{})}}
 function benchFill(){const b=$('bench');if(b){b.innerHTML=benchOpts(benchGet())}}
 benchFill();$('bench').addEventListener('change',e=>{benchSet(e.target.value);render()});
 $('currency').addEventListener('change',()=>{ST.userCur=true;render()});
@@ -3072,12 +3077,14 @@ function tipInit(){
   window.addEventListener('scroll',()=>{if(!box.hidden)hide()},{passive:true});
 }
 function benchHTML(p){
-  const b=p.bench;
-  if(!b)return `<div class="card bench nob"><div><b>${TR('Compare with your industry','قارن بقطاعك')}</b><p class="muted small" style="margin:4px 0 0">${TR('Choose your business type to see how your click-through rate, costs, conversion rate and ROAS compare with published benchmarks.','اختر نوع نشاطك لترى كيف تقارن نسبة النقر والتكاليف ومعدل التحويل وROAS لديك بالمعايير المنشورة.')}</p></div><select class="benchpick" aria-label="${TR('Business type','نوع النشاط')}">${benchOpts('')}</select></div>`;
-  const srcs=[...new Set(b.rows.map(r=>r.src))];
-  return `<div><h4 class="sub">${TR('Benchmarks','المعايير')} · ${esc(b.vname)} › ${esc(b.name)}</h4><div class="card bench"><div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Metric','المقياس')}</th><th>${TR('You','أنت')}</th><th>${TR('Benchmark','المعيار')}</th><th>${TR('Difference','الفرق')}</th></tr></thead><tbody>
-    ${b.rows.map(r=>`<tr><td class="lbl">${esc(r.l)}</td><td>${r.fmt(r.you)}</td><td class="muted">${r.fmt(r.b)}</td><td class="${r.state==='better'?'pos':r.state==='worse'?'neg':'muted'}">${r.state==='near'?TR('in line','متقارب'):(r.d>0?'+':'−')+pct(Math.abs(r.d),0)}</td></tr>`).join('')||`<tr><td colspan="4" class="muted">${TR('No comparable metrics in this export.','لا توجد مقاييس قابلة للمقارنة في هذا الملف.')}</td></tr>`}</tbody></table></div>
-    <p class="muted small" style="margin-top:8px">${TR('Green is better than the benchmark, red is worse.','الأخضر أفضل من المعيار والأحمر أسوأ.')} ${b.noFx?TR('Money benchmarks are in USD, so they’re hidden for this currency. ','المعايير المالية بالدولار، لذا أُخفيت لهذه العملة. '):b.usd?'':TR('Money benchmarks are converted from USD at the fixed peg. ','حُوّلت المعايير المالية من الدولار بسعر الربط الثابت. ')}${TR('Published benchmarks come mostly from US brands; GCC auction costs differ, so compare rates (click-through, conversion, ROAS) first.','المعايير المنشورة مصدرها علامات أمريكية في الغالب؛ تكاليف المزاد في الخليج مختلفة، لذا قارن النِّسب (النقر والتحويل وROAS) أولًا.')} ${TR('Sources','المصادر')}: ${srcs.map(k=>`<a href="${BSRC[k].u}" target="_blank" rel="noopener">${esc(BSRC[k].n)}</a>`).join(' · ')}.</p></div></div>`;
+  const b=p.bench,own=TR('OptiROAS will add its own benchmarks for each category as more connected accounts share their business type.','سيضيف OptiROAS معاييره الخاصة لكل فئة كلما شاركت حسابات مربوطة أكثر نوع نشاطها.');
+  if(!b)return `<div class="card bench nob"><div><b>${TR('Compare with your industry','قارن بقطاعك')}</b><p class="muted small" style="margin:4px 0 0">${TR('Choose your business type to compare your results with published benchmarks, where reliable ones exist.','اختر نوع نشاطك لمقارنة نتائجك بالمعايير المنشورة، حيثما وُجدت معايير موثوقة.')}</p></div><select class="benchpick" aria-label="${TR('Business type','نوع النشاط')}">${benchOpts('')}</select></div>`;
+  const srcs=[...new Set(b.rows.filter(r=>r.src).map(r=>r.src))],BAS={same:TR('Same definition','التعريف نفسه'),ind:TR('Indicative','استرشادي'),na:'—'};
+  return `<div><h4 class="sub">${TR('Benchmarks','المعايير')} · ${esc(b.vname)} › ${esc(b.name)}</h4><div class="card bench">
+    ${b.any?'':`<p class="muted" style="margin:0 0 8px"><b>${TR('Benchmarks unavailable for this category on this platform.','المعايير غير متاحة لهذه الفئة على هذه المنصة.')}</b> ${esc(b.why||'')}</p>`}
+    <div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Metric','المقياس')}</th><th>${TR('You','أنت')}</th><th>${TR('Benchmark','المعيار')}</th><th>${TR('Difference','الفرق')}</th><th>${TR('How comparable','مدى قابلية المقارنة')}</th></tr></thead><tbody>
+    ${b.rows.map(r=>`<tr><td class="lbl">${esc(r.l)}</td><td>${r.fmt(r.you)}</td>${r.basis==='na'?`<td class="muted">${TR('Unavailable','غير متاح')}</td><td class="muted">—</td><td class="muted">—</td>`:`<td class="muted">${r.fmt(r.b)}</td><td class="${r.state==='better'?'pos':r.state==='worse'?'neg':'muted'}">${r.state==='near'?TR('in line','متقارب'):(r.d>0?'+':'−')+pct(Math.abs(r.d),0)}</td><td class="muted small">${BAS[r.basis]}</td>`}</tr>`).join('')}</tbody></table></div>
+    <p class="muted small" style="margin-top:8px">${b.any?TR('Green is better than the benchmark, red is worse. <b>Same definition</b>: the source defines it the way this report calculates it. <b>Indicative</b>: a standard metric, but the source doesn’t publish its exact definition or attribution, so treat the gap as a direction, not a precise score. <b>Unavailable</b>: no reliable published figure. Benchmarks are for context only; no recommendation is based on them. ','الأخضر أفضل من المعيار والأحمر أسوأ. <b>التعريف نفسه</b>: يعرّفه المصدر كما يحسبه هذا التقرير. <b>استرشادي</b>: مقياس معتاد لكن المصدر لا ينشر تعريفه الدقيق أو طريقة الإسناد، لذا اعتبر الفرق اتجاهًا لا رقمًا دقيقًا. <b>غير متاح</b>: لا يوجد رقم منشور موثوق. المعايير للسياق فقط ولا تُبنى عليها أي توصية. '):''}${b.any&&b.noFx?TR('Money benchmarks are published in USD, so they’re unavailable for this currency. ','المعايير المالية منشورة بالدولار، لذا هي غير متاحة لهذه العملة. '):''}${b.any&&!b.noFx&&!b.usd?TR('Money benchmarks are converted from USD at the fixed peg. ','حُوّلت المعايير المالية من الدولار بسعر الربط الثابت. '):''}${b.any?TR('Published benchmarks come mostly from US businesses, and GCC costs differ. ','المعايير المنشورة مصدرها أعمال أمريكية في الغالب، والتكاليف في الخليج مختلفة. '):''}${own}${srcs.length?` ${TR('Sources','المصادر')}: ${srcs.map(k=>`<a href="${BSRC[k].u}" target="_blank" rel="noopener">${esc(BSRC[k].n)}</a>`).join(' · ')}.`:''}</p></div></div>`;
 }
 function platformExtras(p){
   const V=p.mode==='value';let h=benchHTML(p);
@@ -3094,8 +3101,8 @@ function platformExtras(p){
   if(p.funnel){
     const st=p.funnel.st,mx=st[0][1];
     const K=p.funnel.kpi||{},kp=[[TR('Click-through rate','نسبة النقر'),K.ctr,TR('clicks ÷ impressions','النقرات ÷ مرات الظهور')],[TR('Add-to-cart rate','معدل الإضافة إلى السلة'),K.atcRate,TR('adds to cart ÷ clicks','الإضافات ÷ النقرات')],[TR('Add to cart to sale','من السلة إلى البيع'),K.atcToSale,TR('purchases ÷ adds to cart','المشتريات ÷ الإضافات')],[TR('Cart to checkout','من السلة إلى الدفع'),K.icRate,TR('checkouts ÷ adds to cart','بدء الدفع ÷ الإضافات')],[TR('Checkout to sale','من الدفع إلى البيع'),K.icToSale,TR('purchases ÷ checkouts started','المشتريات ÷ بدء الدفع')],[TR('Conversion rate','معدل التحويل'),K.cvr,TR('purchases ÷ clicks','المشتريات ÷ النقرات')]].filter(x=>x[1]!=null);
-    h+=`<div><h4 class="sub">${TR('Conversion funnel','مسار التحويل')}</h4><p class="muted small" style="margin:-4px 0 10px">${TR(`Account-wide: all ${p.P.short} campaigns, not changed by the campaign filters above. Event counts from the export, not tracked journeys of the same people. “Benchmark” marks OptiROAS planning benchmarks for online stores, not figures for your category.`,`على مستوى الحساب: كل حملات ${p.P.short}، ولا تتأثر بمرشحات الحملات أعلاه. أعداد أحداث من الملف، لا رحلات متتبَّعة للأشخاص أنفسهم. «المعيار» هو معيار تخطيطي من OptiROAS للمتاجر الإلكترونية، لا أرقام خاصة بفئتك.`)}</p><div class="fkpi">${kp.map(([n,v,d])=>`<div class="card"><span class="eyebrow">${n}</span><span class="num">${pct(v,2)}</span><span class="muted small">${d}</span></div>`).join('')}</div><div class="card funnel">${st.map((s,i)=>{const step=i?p.funnel.steps[i-1]:null;
-      return (step?`<div class="fstep ${step.th&&step.rate<step.th?'neg':''}">↓ ${pct(step.rate,1)}${step.th?` <span class="muted">· ${TR('benchmark','المعيار')} ≥ ${pct(step.th,0)}</span>`:''}</div>`:'')+
+    h+=`<div><h4 class="sub">${TR('Conversion funnel','مسار التحويل')}</h4><p class="muted small" style="margin:-4px 0 10px">${TR(`Account-wide: all ${p.P.short} campaigns, not changed by the campaign filters above. Event counts from the export, not tracked journeys of the same people. “Review threshold” is OptiROAS’s rule for flagging a step to look at, not an industry average.`,`على مستوى الحساب: كل حملات ${p.P.short}، ولا تتأثر بمرشحات الحملات أعلاه. أعداد أحداث من الملف، لا رحلات متتبَّعة للأشخاص أنفسهم. «حد المراجعة» قاعدة OptiROAS لتحديد خطوة تستحق الفحص، وليس متوسطًا للقطاع.`)}</p><div class="fkpi">${kp.map(([n,v,d])=>`<div class="card"><span class="eyebrow">${n}</span><span class="num">${pct(v,2)}</span><span class="muted small">${d}</span></div>`).join('')}</div><div class="card funnel">${st.map((s,i)=>{const step=i?p.funnel.steps[i-1]:null;
+      return (step?`<div class="fstep ${step.th&&step.rate<step.th?'neg':''}">↓ ${pct(step.rate,1)}${step.th?` <span class="muted">· ${TR('review threshold','حد المراجعة')} ${pct(step.th,0)}</span>`:''}</div>`:'')+
       `<div class="frow"><span>${STG(s[0])}</span><span class="fbar"><i style="width:${Math.max(.6,s[1]/mx*100).toFixed(1)}%;background:${pc(p.pk)}"></i></span><span class="num">${fmtInt(s[1])}</span></div>`}).join('')}</div></div>`;
   }
   if(p.dow){
@@ -3552,7 +3559,7 @@ async function api(path,opts){
   if(!r.ok){let m='Something went wrong. Try again.',j=null;if(ct.includes('json')){try{j=await r.json();m=j.error||m}catch(e){}}const er=new Error(m);er.status=r.status;er.data=j;throw er}
   return ct.includes('json')?r.json():r;
 }
-async function loadMe(){const was=ST.me&&ST.me.user&&ST.me.usage&&ST.me.usage.verified;try{ST.me=await api('/api/auth/me')}catch(e){ST.me={user:null}}syncAcctBtn();
+async function loadMe(){const was=ST.me&&ST.me.user&&ST.me.usage&&ST.me.usage.verified;try{ST.me=await api('/api/auth/me')}catch(e){ST.me={user:null}}syncAcctBtn();try{benchFill()}catch(e){}
   const now=ST.me&&ST.me.user&&ST.me.usage&&ST.me.usage.verified;if(ST.me&&ST.me.user&&was===false&&now)onVerified();ST.wasVerified=now;return ST.me}
 // Email confirmed in another tab: pick it up without a refresh (focus, a signal from the confirming tab, or a light poll).
 function onVerified(){toast(TR('Email confirmed. You can generate your audit now.','تم تأكيد بريدك. يمكنك إنشاء التدقيق الآن.'),5000);if(ST.page==='start')renderWizard();if(!$('acctView').hidden)renderAcct()}
@@ -4124,7 +4131,7 @@ function buildSummary(A){
   const rd=ds.length?(()=>{const a=new Date(ds[0]+'T00:00:00Z'),b=new Date(ds[ds.length-1]+'T00:00:00Z'),o={timeZone:'UTC'},L=LANG==='ar'?'ar-AE-u-nu-latn':'en-GB';
     return a.getUTCFullYear()===b.getUTCFullYear()&&a.getUTCMonth()===b.getUTCMonth()?`${a.getUTCDate()}–${b.toLocaleDateString(L,{...o,day:'numeric',month:'short',year:'numeric'})}`:`${a.toLocaleDateString(L,{...o,day:'numeric',month:'short'})} – ${b.toLocaleDateString(L,{...o,day:'numeric',month:'short',year:'numeric'})}`})():'';
   const nm=reportName(A);
-  return {label:(ST.reportLabel||nm.label).slice(0,150),slug:nm.slug,files:names.slice(0,3).join(' · ').slice(0,150),ref:ST.reportRef||'',dProfit:A.plan&&A.plan.dP!=null?A.plan.dP:null,moved:A.plan?A.plan.moved:0,saved:A.plan?A.plan.saved:0,marginAssumed:!!A.marginAssumed,period:ds.length?`${fmtDate(ds[0])} – ${fmtDate(ds[ds.length-1])}`:TR('Dates not stated','التواريخ غير محددة'),cur:CUR,score:A.score,
+  return {bench:benchGet(),label:(ST.reportLabel||nm.label).slice(0,150),slug:nm.slug,files:names.slice(0,3).join(' · ').slice(0,150),ref:ST.reportRef||'',dProfit:A.plan&&A.plan.dP!=null?A.plan.dP:null,moved:A.plan?A.plan.moved:0,saved:A.plan?A.plan.saved:0,marginAssumed:!!A.marginAssumed,period:ds.length?`${fmtDate(ds[0])} – ${fmtDate(ds[ds.length-1])}`:TR('Dates not stated','التواريخ غير محددة'),cur:CUR,score:A.score,
     total:A.total,monthly:A.monthly,waste:A.waste,upside:'',plats:A.plats.map(p=>p.P.short),lang:LANG,
     roas:A.blendedRoas||0,margin:A.margin,marginSet:!!ST.marginSet,by:ST.me&&ST.me.user?(ST.me.user.name||ST.me.user.email):'',
     findings:A.F.map(f=>({k:fkey(f),title:f.sst||f.title,problem:f.title,plat:f.plat,sev:f.sev,pil:pilN(f.pil),act:f.act,impact:impactText(f,A),bucket:f.bucket,h:f.h,done:!!L[fkey(f)],doneAt:L[fkey(f)]?L[fkey(f)].doneAt:null}))};

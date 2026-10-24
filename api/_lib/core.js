@@ -59,6 +59,7 @@ export function ensureSchema() {
       created_at timestamptz not null default now())`;
     await sql`alter table users add column if not exists plan text not null default 'free'`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
+    await sql`alter table users add column if not exists vertical text`;
     await sql`alter table users add column if not exists email_verified_at timestamptz`;
     await sql`create table if not exists user_tokens(
       token_hash text primary key, user_id uuid not null references users(id) on delete cascade,
@@ -127,7 +128,7 @@ export async function startSession(res, userId) {
 export async function currentUser(req) {
   const t = cookies(req).or_session; if (!t) return null;
   await ensureSchema();
-  const r = await sql`select u.id,u.email,u.name,u.plan,u.email_verified_at from sessions s join users u on u.id=s.user_id
+  const r = await sql`select u.id,u.email,u.name,u.plan,u.email_verified_at,u.vertical from sessions s join users u on u.id=s.user_id
     where s.token_hash=${sha(t)} and s.expires_at>now()`;
   return r[0] || null;
 }
