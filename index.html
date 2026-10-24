@@ -832,8 +832,8 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
       <p class="muted small" style="margin-top:6px">CSV or Excel from any ad platform, plus store orders for delivered ROAS. Platform, currency and file type are detected automatically.</p>
     </div>
     <div class="row">
-      <button class="btn" type="button" id="dzGuide">Start guided audit</button><label class="btn quiet" for="fileIn">Choose files</label>
-      <button class="btn quiet" id="exampleBtn" type="button">Try the example</button>
+      <button class="btn" type="button" id="dzGuide">Choose files</button>
+      <button class="btn quiet" id="exampleBtn" type="button" hidden>Try the example</button>
       <input type="file" id="fileIn" accept=".csv,.tsv,.txt,.xlsx,.xls" multiple hidden>
     </div>
     <div class="plats" id="platChips"></div>
@@ -3794,7 +3794,7 @@ async function wzFromFiles(list){
     }catch(e){it.err=e.message||TR('This file could not be read.','تعذّرت قراءة هذا الملف.')}
     if(it.plat&&it.plat!=='orders'&&!it.odd)W.plats.add(WZ_PLATS.includes(it.plat)?it.plat:'other');if(it.plat==='orders')W.orders=true;
   }
-  W.step=3;if(ST.page==='start')renderWizard();else go('start');
+  if(ST.page==='start')renderWizard();else{W.step=1;go('start')}
 }
 const wzRange=(a,b)=>a?`${fmtDate(a)} – ${fmtDate(b)}`:TR('no dates','بلا تواريخ');
 function wzCheck(it){ // per-file validation: status ok | warn | bad, found and missing columns
