@@ -28,7 +28,7 @@ export function layout({ lang, title, intro, button, link, outro }) {
 <tr><td style="padding-top:10px;font-size:15px;line-height:1.6;color:#3d4f5c">${esc(intro)}</td></tr>
 <tr><td style="padding:24px 0"><a href="${esc(link)}" style="background:#0a6c86;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;display:inline-block">${esc(button)}</a></td></tr>
 <tr><td style="font-size:13px;line-height:1.6;color:#6b7c88">${esc(outro)}<br><br>${ar ? 'إذا لم يعمل الزر، انسخ هذا الرابط:' : 'If the button doesn’t work, copy this link:'}<br><span style="word-break:break-all">${esc(link)}</span></td></tr>
-</table><p style="font-size:12px;color:#8a99a4">OptiROAS · ${SUPPORT}</p></td></tr></table></body></html>`;
-  const text = `${title}\n\n${intro}\n\n${button}: ${link}\n\n${outro}\n\nOptiROAS · ${SUPPORT}`;
+</table><p style="font-size:12px;color:#8a99a4">OptiROAS, a product of BAAN Technology Services · ${SUPPORT}</p></td></tr></table></body></html>`;
+  const text = `${title}\n\n${intro}\n\n${button}: ${link}\n\n${outro}\n\nOptiROAS, a product of BAAN Technology Services · ${SUPPORT}`;
   return { html, text };
 }
