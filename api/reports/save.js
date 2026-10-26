@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) return json(res, 401, { error: 'Sign in to save reports to your account.', code: 'signin' });
   const b = body(req), d = cleanSummary(b.data);
-  if (!d.findings.length && !d.score) return json(res, 400, { error: 'Nothing to save.' });
+  if (!d.findings.length && d.score == null && !(+d.total > 0)) return json(res, 400, { error: 'Nothing to save.' });
   if (JSON.stringify(d).length > 250000) return json(res, 413, { error: 'This report is too large to save.' });
   const n = (await sql`select count(*)::int as n from saved_reports where user_id=${user.id}`)[0].n;
   if (n >= 100) return json(res, 409, { error: 'You have 100 saved reports. Delete some older ones to save more.' });

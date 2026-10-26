@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import { currentUser, setCookie, json } from '../_lib/core.js';
-import { canConnect } from '../_lib/plan.js';
+import { connectCheck } from '../_lib/plan.js';
 
 // Sends the signed-in user to TikTok's advertiser authorization page.
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) { res.statusCode = 302; res.setHeader('Location', '/?tiktok=signin#account'); return res.end(); }
-  if (!canConnect(user)) { res.statusCode = 302; res.setHeader('Location', '/?upgrade=connect#pricing'); return res.end(); }
+  const chk = await connectCheck(user, 'tiktok');
+  if (!chk.ok) { res.statusCode = 302; res.setHeader('Location', chk.to); return res.end(); }
   const { TIKTOK_APP_ID, TIKTOK_REDIRECT_URI } = process.env;
   if (!TIKTOK_APP_ID || !TIKTOK_REDIRECT_URI || !process.env.TIKTOK_APP_SECRET) return json(res, 500, { error: 'TikTok connection is not configured yet.' });
   const state = crypto.randomBytes(24).toString('base64url');

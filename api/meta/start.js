@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import { currentUser, setCookie, json } from '../_lib/core.js';
-import { canConnect } from '../_lib/plan.js';
+import { connectCheck } from '../_lib/plan.js';
 
 // Sends the signed-in user to Facebook Login for Business (read-only ads_read configuration).
 export default async function handler(req, res) {
   const user = await currentUser(req);
   if (!user) { res.statusCode = 302; res.setHeader('Location', '/?meta=signin#audit'); return res.end(); }
-  if (!canConnect(user)) { res.statusCode = 302; res.setHeader('Location', '/?upgrade=connect#pricing'); return res.end(); }
+  const chk = await connectCheck(user, 'meta');
+  if (!chk.ok) { res.statusCode = 302; res.setHeader('Location', chk.to); return res.end(); }
   const { META_APP_ID, META_LOGIN_CONFIG_ID, META_REDIRECT_URI, META_GRAPH_VERSION } = process.env;
   if (!META_APP_ID || !META_LOGIN_CONFIG_ID || !META_REDIRECT_URI) return json(res, 500, { error: 'Meta connection is not configured.' });
   const state = crypto.randomBytes(24).toString('base64url');

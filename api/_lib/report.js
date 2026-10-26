@@ -8,7 +8,7 @@ export function cleanSummary(d) {
     k: S(f.k, 300), title: S(f.title, 300), problem: S(f.problem, 300), plat: S(f.plat, 20), sev: S(f.sev, 20), pil: S(f.pil, 60), act: S(f.act, 800),
     impact: S(f.impact, 120), bucket: S(f.bucket, 20), h: S(f.h, 10), done: !!f.done, doneAt: f.done ? S(f.doneAt || new Date().toISOString(), 40) : null }));
   const plan = (Array.isArray(d.plan) ? d.plan : []).slice(0, 30).map(p => ({ h: S(p.h, 40), t: S(p.t, 300), tag: S(p.tag, 20) }));
-  return { label: S(d.label, 160), period: S(d.period, 80), cur: S(d.cur, 8), score: Math.round(N(d.score)), band: S(d.band, 60),
+  return { label: S(d.label, 160), period: S(d.period, 80), cur: S(d.cur, 8), score: d.score == null || d.score === '' ? null : Math.round(N(d.score)), band: S(d.band, 60),
     total: N(d.total), monthly: N(d.monthly), waste: N(d.waste), roas: N(d.roas), margin: N(d.margin), marginSet: !!d.marginSet, by: S(d.by, 120), upside: S(d.upside, 80), bench: S(d.bench, 40), slug: S(d.slug, 120), files: S(d.files, 160), ref: S(d.ref, 64), dProfit: d.dProfit == null ? null : N(d.dProfit), moved: N(d.moved), saved: N(d.saved), plats: (Array.isArray(d.plats) ? d.plats : []).slice(0, 10).map(x => S(x, 30)),
     findings, plan, lang: d.lang === 'ar' ? 'ar' : 'en' };
 }
@@ -25,7 +25,7 @@ export function summaryEmail(d, { mode = 'report', id } = {}) {
   const title = mode === 'followup' ? T('How are your OptiROAS actions going?', 'كيف يسير تنفيذ إجراءات OptiROAS؟') : T('Your OptiROAS audit report', 'تقرير تدقيق OptiROAS الخاص بك');
   const intro = mode === 'followup'
     ? T(`A week ago you saved an audit${d.label ? ` for ${d.label}` : ''}. You've marked ${done.length} of ${d.findings.length} actions as done. Here's what's still open.`, `قبل أسبوع حفظت تدقيقًا${d.label ? ` لـ ${d.label}` : ''}. علّمت ${done.length} من ${d.findings.length} إجراءات كمنفّذة. هذه الإجراءات التي لم تُنفَّذ بعد.`)
-    : T(`${d.label ? d.label + ' · ' : ''}${d.period}. Health score ${d.score}/100 · ad spend ${money(d.total, d.cur)} · avoidable spend ${money(d.waste, d.cur)}/month (30-day run rate).`, `${d.label ? d.label + ' · ' : ''}${d.period}. درجة الصحة ${d.score}/100 · الإنفاق ${money(d.total, d.cur)} · إنفاق يمكن تجنّبه ${money(d.waste, d.cur)} شهريًا (على أساس 30 يومًا).`);
+    : T(`${d.label ? d.label + ' · ' : ''}${d.period}. ${d.score == null ? 'Health score: not enough data yet' : `Health score ${d.score}/100`} · ad spend ${money(d.total, d.cur)} · ${N(d.waste) > 0 ? `avoidable spend ${money(d.waste, d.cur)}/month (30-day run rate)` : 'no avoidable spend identified in the completed checks'}.`, `${d.label ? d.label + ' · ' : ''}${d.period}. ${d.score == null ? 'درجة الصحة: البيانات غير كافية بعد' : `درجة الصحة ${d.score}/100`} · الإنفاق ${money(d.total, d.cur)} · ${N(d.waste) > 0 ? `إنفاق يمكن تجنّبه ${money(d.waste, d.cur)} شهريًا (على أساس 30 يومًا)` : 'لم يُرصد إنفاق يمكن تجنّبه في الفحوص المكتملة'}.`);
   const html = `<!doctype html><html lang="${d.lang}" dir="${dir}"><body style="margin:0;background:#f4f7f9;font-family:Segoe UI,Arial,sans-serif;color:#0f1f2b">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:28px 12px"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#fff;border-radius:12px;padding:28px;text-align:${al}">
 <tr><td style="font-size:22px;font-weight:800">Opti<span style="color:#0a6c86">ROAS</span></td></tr>
