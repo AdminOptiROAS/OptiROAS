@@ -367,6 +367,8 @@ tr.cur td{background:var(--accent-soft);font-weight:600}
 .lvk{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:baseline}
 .lvk .eyebrow{grid-column:1/-1}
 .lvk .num{font-size:18px;font-weight:600}
+.dataline{margin:2px 0 0;line-height:1.7}
+.ftype{font:600 10.5px var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}.ftype.estimate{border-style:dashed}.ftype.test{color:var(--accent);border-color:var(--accent)}
 .alist{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .alist li{display:flex;align-items:center;gap:8px}
 .adot{width:8px;height:8px;border-radius:50%;flex:none}.adot.g{background:var(--good)}.adot.b{background:var(--bad)}
@@ -394,7 +396,7 @@ nav.top .links .wsonly{display:none}body.ws nav.top .links .wsonly{display:inlin
 .vplan{grid-column:span 2;background:var(--accent-soft);border-color:transparent;border-inline-start:4px solid var(--accent);gap:10px}
 .vplan .vph{display:flex;justify-content:space-between;align-items:center;gap:10px}.vplan .eyebrow{color:var(--accent-deep)}
 .vprow{display:grid;grid-template-columns:1fr 1fr;gap:14px}.vpstat{display:flex;flex-direction:column;gap:4px;min-width:0}
-.vpstat b.num{font:600 clamp(18px,2vw,26px) var(--mono);color:var(--accent-deep);white-space:nowrap}.vpstat b small{font-size:13px;color:var(--muted);font-weight:500}
+.vpstat b.num{font:600 clamp(16px,1.7vw,22px) var(--mono);color:var(--accent-deep);white-space:normal;overflow-wrap:anywhere}.vpstat b small{font-size:13px;color:var(--muted);font-weight:500}
 .vpstat .small{color:var(--accent-deep);opacity:.85}.vpfoot{color:var(--muted)}
 .vplock b{font-size:15px;color:var(--accent-deep)}.vplock .btn{align-self:flex-start}
 .banner.mlock{background:var(--accent-soft);border-color:var(--accent)}.banner.mlock .tag{background:var(--accent)}
@@ -1728,7 +1730,7 @@ function auditPlatform(pk,all,ctx){
   const marg=e=>Math.min(e*.7,Math.max(accEff,mode==='value'&&!noM?be:0)*1.2);
   const gain=x=>{x=Math.max(0,x);return mode==='value'?{impact:x,kind:'gain',rv:x*margin}:{n:x,impact:x*cpa,kind:'results',rv:x*cpa}};
   const F=[],notes=[];
-  let PIL=2,trend=null,dow=null,funnel=null,creatives=null,crBest=null,crWorst=null,crLearning=0,crStats=null,forecast=null;const pacing=[];
+  let crBase=null,PIL=2,trend=null,dow=null,funnel=null,creatives=null,crBest=null,crWorst=null,crLearning=0,crStats=null,forecast=null;const pacing=[];
   const LEARN=7,FLAG=.05; // learning phase in days; minimum share of platform spend before a campaign is flagged
   const push=f=>{f.plat=pk;if(f.pil==null)f.pil=PIL;if(f.rv==null)f.rv=(f.kind==='waste'||f.kind==='loss')?f.impact:0;if(f.waste==null)f.waste=f.kind==='waste'?f.impact:0;F.push(f)};
   const G=P.grp,Gs=plural(G),Ga=GA(G),Gsa=GSA(G);
@@ -1939,7 +1941,7 @@ function auditPlatform(pk,all,ctx){
           push({sev:'Medium',bucket:'test',conf:'Medium',title:A(`${c.name} is saturating its audience`,`${c.name} تُشبع جمهورها`),
             ev:A(`Average daily frequency <b>${c.l7.freq.toFixed(2)}</b> in the last 7 days · ${effPlain(c)}`,`متوسط التكرار اليومي <b>${c.l7.freq.toFixed(2)}</b> خلال آخر 7 أيام · ${effPlain(c)}`),
             act:A(`Widen the audience or add new creative before raising its budget. Hold spend flat until frequency comes down.`,`وسّع الجمهور أو أضف تصاميم جديدة قبل رفع الميزانية. أبقِ الإنفاق ثابتًا حتى ينخفض التكرار.`),
-            sst:A(`${P.short}: a wider audience for ${c.name}`,`${P.short}: جمهور أوسع لـ ${c.name}`),impact:c.l7.spend*30/7*.1,kind:'waste',est:true});
+            sst:A(`${P.short}: a wider audience for ${c.name}`,`${P.short}: جمهور أوسع لـ ${c.name}`),impact:0,kind:'none'});
         }
       }
     }
@@ -1990,7 +1992,11 @@ function auditPlatform(pk,all,ctx){
             ev:A(`${lo.map(d=>`${d.day} ${effPlain(d)}`).join(' · ')} vs ${hi.map(d=>`${d.day} ${effPlain(d)}`).join(' · ')} · ${P.short} average ${effPlain(acc)} over ${Math.round(T.dates.length/7)} weeks`,`${lo.map(d=>`${DAYA(d.day)} ${effPlain(d)}`).join(' · ')} مقابل ${hi.map(d=>`${DAYA(d.day)} ${effPlain(d)}`).join(' · ')} · متوسط ${P.short} ${effPlain(acc)} على مدى ${Math.round(T.dates.length/7)} أسابيع`),
             act:pk==='google'||pk==='microsoft'?A(`Add an ad schedule with bids about 20% lower on ${names} and 10% higher on ${hn}. Check again after four weeks, since weekly patterns can be noise.`,`أضف جدولًا زمنيًا للإعلانات بمزايدات أقل بنحو 20% يومي ${namesA} وأعلى بنحو 10% يومي ${hnA}. راجع بعد أربعة أسابيع، فالأنماط الأسبوعية قد تكون عشوائية.`)
               :A(`Test lowering budgets about 20% on ${names} (automated rules or a scheduled budget) and adding it to ${hn}. Check again after four weeks, since weekly patterns can be noise.`,`جرّب خفض الميزانية بنحو 20% يومي ${namesA} (بقواعد تلقائية أو ميزانية مجدولة) وإضافتها إلى يومي ${hnA}. راجع بعد أربعة أسابيع، فالأنماط الأسبوعية قد تكون عشوائية.`),
-            sst:A(`${P.short}: shift budget from ${names} to ${hn}`,`${P.short}: انقل الميزانية من ${namesA} إلى ${hnA}`),...gain(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA)))});
+            sst:A(`${P.short}: shift budget from ${names} to ${hn}`,`${P.short}: انقل الميزانية من ${namesA} إلى ${hnA}`),...gain(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA))),est:true,
+            calc:[A(`Moved: 20% of ${names} spend, ${money(loA.spend,0)} in ${D} days × ${(30/D).toFixed(2)} × 20% = ${money(moved,0)} a month`,`المبلغ المنقول: 20% من إنفاق ${namesA}، ${money(loA.spend,0)} خلال ${D} يومًا × ${(30/D).toFixed(2)} × 20% = ${money(moved,0)} شهريًا`),
+              mode==='value'?A(`Extra revenue: ${money(moved,0)} × (${x2(Math.min(eff(hiA),marg(eff(hiA))))} expected on ${hn}, after diminishing returns, − ${x2(eff(loA))} on ${names}) = ${money(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA)),0)}`,`الإيراد الإضافي: ${money(moved,0)} × (${x2(Math.min(eff(hiA),marg(eff(hiA))))} المتوقع يومي ${hnA} بعد تناقص العائد − ${x2(eff(loA))} يومي ${namesA}) = ${money(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA)),0)}`)
+                :A(`Extra ${Us}: ${money(moved,0)} × (${(Math.min(eff(hiA),marg(eff(hiA)))).toFixed(4)} − ${eff(loA).toFixed(4)} ${Us} per ${CUR}) = ${cnt(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA)))}, valued at the average ${money(cpa)} each`,`${Usa} إضافية: ${money(moved,0)} × (${(Math.min(eff(hiA),marg(eff(hiA)))).toFixed(4)} − ${eff(loA).toFixed(4)}) = ${cnt(moved*Math.max(0,Math.min(eff(hiA),marg(eff(hiA)))-eff(loA)))}، بقيمة المتوسط ${money(cpa)} لكل منها`),
+              A('Weekday patterns can be noise; treat this as a test.','قد تكون أنماط أيام الأسبوع عشوائية؛ تعامل مع هذا كاختبار.')]});
         }
       }
     }
@@ -2090,6 +2096,7 @@ function auditPlatform(pk,all,ctx){
     chk(5,'Hook, message and format','البداية والرسالة والشكل',false,A('Needs access to the creative files.','يحتاج إلى الوصول إلى ملفات التصاميم.'));
     if(rows.some(r=>r.ad)){
       const base=daily?win(rows,0,29):rows,bA=agg(base),bE=eff(bA),bC=bA.conv?bA.spend/bA.conv:Infinity;
+      {const bd=base.map(r=>r.date).filter(Boolean).sort();crBase={first:bd[0]||T.first,last:bd[bd.length-1]||T.last,whole:base.length===rows.length,roas:bA.roas,cpa:isFinite(bC)?bC:null,spend:bA.spend,conv:bA.conv}}
       const fat=new Set(F.filter(f=>f.rule==='fatigue').map(f=>f.adKey));
       creatives=[...groupBy(base.filter(r=>r.ad),r=>r.campaign+'\u0001'+r.ad)].map(([k,rs])=>{const a=agg(rs);const [c,ad]=k.split('\u0001');
         a.name=ad;a.camp=c;a.share=bA.spend?a.spend/bA.spend:0;a.eff=eff(a);a.live=new Set(rs.filter(r=>r.spend>0&&r.date).map(r=>r.date)).size;
@@ -2314,6 +2321,10 @@ function auditPlatform(pk,all,ctx){
     let cur=0,mx=0;series.forEach(p=>{if(p.spend===0){cur++;mx=Math.max(mx,cur)}else cur=0});
     if(mx>=7)notes.push(A(`${P.short}: spend paused for ${mx} days in a row. Monthly figures use the ${D} days with delivery.`,`${P.short}: توقف الإنفاق ${mx} ${mx<=10?'أيام':'يومًا'} متتالية. الأرقام الشهرية تعتمد على ${D} يومًا من العرض الفعلي.`));
   }
+  // Conversion delay: platforms keep adding conversions to recent days for up to a week, so a weak last few days
+  // is flagged as possibly incomplete rather than judged.
+  if(daily&&series.length>=17){const l3=series.slice(-3),p14=series.slice(-17,-3),r=a=>{const sp=a.reduce((t,x)=>t+x.spend,0),y=a.reduce((t,x)=>t+(mode==='value'?x.value:x.conv),0);return sp?y/sp:null},a3=r(l3),b14=r(p14);
+    if(a3!=null&&b14&&a3<.7*b14)notes.push(A(`${P.short}: the last 3 days show ${pct(1-a3/b14,0)} fewer ${mode==='value'?'sales':Us} per ${CUR} than the 14 days before. Platforms keep adding conversions to recent days for up to a week, so treat those days as incomplete before acting on them.`,`${P.short}: آخر 3 أيام تُظهر ${mode==='value'?'مبيعات':Usa} أقل بنسبة ${pct(1-a3/b14,0)} لكل ${CUR} مقارنةً بالأيام الـ14 السابقة. تواصل المنصات إضافة التحويلات إلى الأيام الأخيرة لمدة تصل إلى أسبوع، فاعتبر تلك الأيام غير مكتملة قبل التصرف بناءً عليها.`))}
   // Live view: the latest day per campaign and per ad, against the average of the 7 days with spend before it
   let live=null;
   if(daily&&series.length>=8){const L=[...series].reverse().find(x=>x.spend>0);if(L){
@@ -2336,7 +2347,7 @@ function auditPlatform(pk,all,ctx){
       ogSpend+=a.spend;camps.push(a)}
     const gs=[...new Set(ogRows.map(goalOf))];
     notes.push(A(`${P.short}: the main objective here is ${Us} (most of the spend). ${money(ogSpend,0)} on campaigns optimised for ${(l=>l.length>1?l.slice(0,-1).join(', ')+' or '+l[l.length-1]:l[0])(gs.map(plural))} appears in the campaign table with its own results and isn’t judged against ${Us}.`,`${P.short}: الهدف الرئيسي هنا ${Usa} (معظم الإنفاق). أما ${money(ogSpend,0)} على حملات مُحسَّنة لـ ${gs.map(USA).join('، ')} فتظهر في جدول الحملات بنتائجها الخاصة، ولا تُقيَّم مقابل ${Usa}.`))}
-  return {pk,P,mode,U,Us,acc,accEff,be,camps,ogSpend,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,live,evidence,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
+  return {pk,P,mode,U,Us,acc,accEff,be,camps,ogSpend,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,live,evidence,crBase,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
     waste:(plan?plan.cut:0)+F.filter(f=>f.direct&&!(f.wcamp||[]).some(n=>camps.some(c=>c.name===n&&c.cutK))).reduce((t,f)=>t+f.impact,0),monthlySpend:acc.spend*mo,files:ctx.files||[]};
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
@@ -2447,7 +2458,11 @@ function auditAll(files,S){
               :A(`${p.P.short}: <b>${money(p.acc.cpa)}</b> per ${p.U} on ${pct(p.share,0)} of total spend · ${best.P.short}: <b>${money(best.acc.cpa)}</b> per ${best.U} on ${pct(best.share,0)}`,`${p.P.short}: <b>${money(p.acc.cpa)}</b> لكل ${UA(p.U)} على ${pct(p.share,0)} من إجمالي الإنفاق · ${best.P.short}: <b>${money(best.acc.cpa)}</b> لكل ${UA(best.U)} على ${pct(best.share,0)}`),
         act:A(`Move about 20% of ${p.P.short}'s budget (≈${money(moved,0)} a month) to ${best.P.short} in weekly steps, and check that real sales or leads in your store or CRM follow. Each platform counts conversions its own way, so confirm before going further.`,`انقل نحو 20% من ميزانية ${p.P.short} (≈${money(moved,0)} شهريًا) إلى ${best.P.short} بخطوات أسبوعية، وتأكّد أن المبيعات أو العملاء المحتملين الفعليين في متجرك أو نظام CRM يتبعون ذلك. كل منصة تحسب التحويلات بطريقتها، فتحقّق قبل المضي أكثر.`),
         sst:A(`Move ≈${money(moved,0)}/month from ${p.P.short} to ${best.P.short}`,`انقل ≈${money(moved,0)} شهريًا من ${p.P.short} إلى ${best.P.short}`),
-        ...(val?{impact:x,kind:'gain',rv:x*margin}:{n:x,impact:x*cpaB,kind:'results',rv:x*cpaB}),waste:0,est:true});
+        ...(val?{impact:x,kind:'gain',rv:x*margin}:{n:x,impact:x*cpaB,kind:'results',rv:x*cpaB}),waste:0,est:true,
+        calc:[A(`Moved: 20% of ${p.P.short}'s ${money(p.monthlySpend,0)} a month = ${money(moved,0)}`,`المبلغ المنقول: 20% من ${money(p.monthlySpend,0)} شهريًا على ${p.P.short} = ${money(moved,0)}`),
+          val?A(`Extra revenue: ${money(moved,0)} × (${x2(best.accEff)} on ${best.P.short} × 0.7 for diminishing returns − ${x2(p.accEff)} on ${p.P.short}) = ${money(x,0)}`,`الإيراد الإضافي: ${money(moved,0)} × (${x2(best.accEff)} على ${best.P.short} × 0.7 لتناقص العائد − ${x2(p.accEff)} على ${p.P.short}) = ${money(x,0)}`)
+             :A(`Extra results: ${money(moved,0)} × (${best.accEff.toFixed(4)} per ${CUR} on ${best.P.short} × 0.7 − ${p.accEff.toFixed(4)} on ${p.P.short}) = ${cnt(x)}, valued at ${money(cpaB)} each`,`نتائج إضافية: ${money(moved,0)} × (${best.accEff.toFixed(4)} على ${best.P.short} × 0.7 − ${p.accEff.toFixed(4)} على ${p.P.short}) = ${cnt(x)}، بقيمة ${money(cpaB)} لكل منها`),
+          A('Platforms count conversions differently and may claim the same sale, so confirm with store or CRM data before moving more.','تحتسب المنصات التحويلات بطرق مختلفة وقد تنسب البيع نفسه لنفسها، فتأكّد من بيانات المتجر أو CRM قبل نقل المزيد.')]});
     }
   }
   if(plats.length===1&&plats[0].acc.conv>=10&&['meta','google','tiktok','snap'].includes(plats[0].pk)){const p=plats[0],nx={meta:'Google Search',google:'Meta',tiktok:'Meta',snap:'Meta'}[p.pk],d=p.acc.spend/p.D*.1;
@@ -2471,6 +2486,8 @@ function auditAll(files,S){
   const first=plats.map(p=>p.T.first).filter(Boolean).sort()[0],last=plats.map(p=>p.T.last).filter(Boolean).sort().pop();
   const ofs=files.filter(f=>!f.err&&f.kind==='orders');let store=null;
   if(ofs.length&&plats.length){store=deliveredLayer({plats,total,first,last},ofs,S);F.push(...store.F)}
+  // observed fact, estimate or suggested test: shown on every card so the three are never mixed up
+  F.forEach(f=>{f.type=f.bucket==='test'||f.rule==='newcamp'||f.newc?'test':(f.est||f.kind==='gain'||f.kind==='results'||f.rule==='forecast')?'estimate':'observed'});
   F.forEach(f=>{if(f.rv==null)f.rv=0;if(f.waste==null)f.waste=0;if(f.pil==null)f.pil=2;
     f.h=(f.bucket==='stop'&&f.sev==='High')||(f.pil===9&&f.sev==='High')?'week':(['forecast','diversify','funnel'].includes(f.rule)||f.pil===9||f.pil===7)?'quarter':'month'});
   const tr=plats.filter(p=>p.trend&&p.trend.ch!=null),tw=tr.reduce((t,p)=>t+p.trend.l.spend,0);
@@ -2698,8 +2715,11 @@ function deliveredLayer(AU,ofiles,S){
     for(const c of p.camps){
       if(!c.name)continue;const n=normName(c.name);
       const co=os.filter(o=>o.ncamp&&(o.ncamp===n||(o.ncamp.length>=4&&(n.includes(o.ncamp)||o.ncamp.includes(n)))));
-      if(co.length){const ca=orderAgg(co);ca.droas=c.spend?ca.delV/c.spend:0;ca.eroas=c.spend?expV(ca)/c.spend:0;c.store=ca}
+      if(co.length){const ca=orderAgg(co);ca.droas=c.spend?ca.delV/c.spend:0;ca.eroas=c.spend?expV(ca)/c.spend:0;c.store=ca;co.forEach(o=>o._m=1)}
     }
+    // matching transparency: how many traced orders reached a campaign, and the utm_campaign values that didn't
+    {const un=os.filter(o=>!o._m),g=new Map();un.forEach(o=>{const k=o.camp||'';g.set(k,(g.get(k)||0)+1)});
+     a.campMatched=os.length-un.length;a.unmatched=[...g].sort((x,y)=>y[1]-x[1]).slice(0,6).map(([name,n])=>({name,n}));os.forEach(o=>delete o._m)}
     a.coverage=p.acc.conv?a.n/p.acc.conv:null;
     if(a.n>=10&&(a.coverage==null||a.coverage>=.3)){
       const rep=p.mode==='value'?p.acc.roas:null;
@@ -2707,11 +2727,14 @@ function deliveredLayer(AU,ofiles,S){
         F.push({plat:p.pk,pil:10,sev:'High',bucket:'stop',conf:'Medium',title:A(`${p.P.short} looks profitable on reported ROAS, but not on delivered orders`,`${p.P.short} يبدو مربحًا حسب ROAS المُبلَّغ، لكن ليس حسب الطلبات المُسلَّمة`),
           ev:A(`Reported ROAS <b>${x2(rep)}</b> vs delivered <b>${x2(a.droas)}</b> (<b>${x2(a.eroas)}</b> counting pending orders at your usual delivery rate) · break-even ${x2(be)} · ${pct(a.fail,0)} of its orders refused or returned`,`ROAS المُبلَّغ <b>${x2(rep)}</b> مقابل المُسلَّم <b>${x2(a.droas)}</b> (<b>${x2(a.eroas)}</b> مع احتساب الطلبات قيد التوصيل بمعدل التسليم المعتاد) · نقطة التعادل ${x2(be)} · ${pct(a.fail,0)} من طلباته مرفوضة أو مرتجعة`),
           act:A(`Judge ${p.P.short} on delivered revenue. Cut the campaigns with the highest refusal rates first, and add order confirmation by WhatsApp or call before dispatch for cash-on-delivery orders.`,`قيّم ${p.P.short} على أساس الإيرادات المُسلَّمة. خفّض الحملات ذات أعلى معدلات رفض أولًا، وأضف تأكيد الطلب عبر واتساب أو اتصال قبل الشحن لطلبات الدفع عند الاستلام.`),
-          sst:A(`${p.P.short}: manage to delivered ROAS, not reported`,`${p.P.short}: أدِر الحملات على أساس ROAS المُسلَّم لا المُبلَّغ`),impact:Math.max(0,(p.acc.spend-expV(a)*margin)*p.mo),kind:'loss',waste:0,rv:Math.max(0,(p.acc.spend-expV(a)*margin)*p.mo)});
+          sst:A(`${p.P.short}: manage to delivered ROAS, not reported`,`${p.P.short}: أدِر الحملات على أساس ROAS المُسلَّم لا المُبلَّغ`),impact:Math.max(0,(p.acc.spend-expV(a)*margin)*p.mo),kind:'loss',waste:0,rv:Math.max(0,(p.acc.spend-expV(a)*margin)*p.mo),
+          calc:[A(`Expected delivered revenue: ${money(a.delV,0)} delivered + ${money(a.penV,0)} pending × ${pct(dr,0)} usual delivery rate = ${money(expV(a),0)}`,`الإيراد المُسلَّم المتوقع: ${money(a.delV,0)} مُسلَّم + ${money(a.penV,0)} قيد التوصيل × ${pct(dr,0)} معدل التسليم المعتاد = ${money(expV(a),0)}`),
+            A(`Contribution: ${money(expV(a),0)} × ${Math.round(margin*100)}% margin − ${money(p.acc.spend,0)} spend = ${money(expV(a)*margin-p.acc.spend,0)} in the period, × ${p.mo.toFixed(2)} for a 30-day run rate`,`المساهمة: ${money(expV(a),0)} × هامش ${Math.round(margin*100)}% − ${money(p.acc.spend,0)} إنفاق = ${money(expV(a)*margin-p.acc.spend,0)} في الفترة، × ${p.mo.toFixed(2)} لمعدل 30 يومًا`),
+            A('Delivered revenue here is matched by UTM, so orders that couldn’t be matched are missing from it.','الإيراد المُسلَّم هنا مطابق عبر UTM، لذا تغيب عنه الطلبات التي تعذّرت مطابقتها.')]});
       } else if(rep!=null&&a.eroas>0&&a.eroas<rep*.7){
         F.push({plat:p.pk,pil:9,sev:'Medium',bucket:null,conf:'Medium',title:A(`${p.P.short} claims ${pct(rep/a.eroas-1,0)} more revenue than its orders delivered`,`${p.P.short} ينسب لنفسه إيرادات أعلى بنسبة ${pct(rep/a.eroas-1,0)} مما سلّمته طلباته`),
           ev:A(`Reported ROAS <b>${x2(rep)}</b> vs delivered <b>${x2(a.droas)}</b>, ${x2(a.eroas)} with pending orders · ${fmtInt(a.n)} orders traced to ${p.P.short}`,`ROAS المُبلَّغ <b>${x2(rep)}</b> مقابل المُسلَّم <b>${x2(a.droas)}</b>، و${x2(a.eroas)} مع الطلبات قيد التوصيل · ${fmtInt(a.n)} طلبًا منسوبًا إلى ${p.P.short}`),
-          act:A(`Use delivered ROAS when you set ${p.P.short} budgets and targets. The gap comes from refused, returned and double-counted orders.`,`استخدم ROAS المُسلَّم عند تحديد ميزانيات وأهداف ${p.P.short}. الفجوة تأتي من الطلبات المرفوضة والمرتجعة والمحسوبة مرتين.`),impact:0,kind:'none',waste:0,rv:0});
+          act:A(`Use delivered ROAS when you set ${p.P.short} budgets and targets. The gap can come from refused or returned orders, several platforms claiming the same order, or orders the UTM matching couldn’t link to ${p.P.short} (${fmtInt(a.n)} orders matched, ${a.coverage!=null?pct(Math.min(1,a.coverage),0)+' of the conversions it reports':'coverage unknown'}). It is not by itself a tracking error.`,`استخدم ROAS المُسلَّم عند تحديد ميزانيات وأهداف ${p.P.short}. قد تأتي الفجوة من طلبات مرفوضة أو مرتجعة، أو من نسب عدة منصات الطلب نفسه لنفسها، أو من طلبات لم تتمكن مطابقة UTM من ربطها بـ ${p.P.short} (${fmtInt(a.n)} طلبًا مطابقًا). وهي ليست بحد ذاتها خطأ في التتبّع.`),impact:0,kind:'none',waste:0,rv:0});
       }
       for(const c of p.camps){
         const ca=c.store;if(!ca||ca.n<10)continue;
@@ -2720,7 +2743,9 @@ function deliveredLayer(AU,ofiles,S){
           F.push({plat:p.pk,pil:10,sev:'High',bucket:'stop',conf:ca.n>=30?'High':'Medium',title:A(`${c.name}: ${pct(ca.fail,0)} of its orders were refused or returned`,`${c.name}: ${pct(ca.fail,0)} من طلباتها رُفضت أو أُرجعت`),
             ev:A(`${fmtInt(ca.n)} orders · ${fmtInt(ca.ref)} refused, ${fmtInt(ca.ret)} returned · store average ${pct(store.fail,0)} · delivered ROAS <b>${x2(ca.droas)}</b>${p.mode==='value'?` vs reported ${x2(c.roas)}`:''}`,`${fmtInt(ca.n)} طلبًا · ${fmtInt(ca.ref)} مرفوضًا، ${fmtInt(ca.ret)} مرتجعًا · متوسط المتجر ${pct(store.fail,0)} · ROAS المُسلَّم <b>${x2(ca.droas)}</b>${p.mode==='value'?` مقابل المُبلَّغ ${x2(c.roas)}`:''}`),
             act:A(`Confirm these orders by WhatsApp before dispatch, ask for a small deposit or prepayment on this audience, check the ad promises the same price and delivery time as the store, and exclude regions with the most refusals.`,`أكّد هذه الطلبات عبر واتساب قبل الشحن، واطلب عربونًا صغيرًا أو دفعًا مسبقًا لهذا الجمهور، وتأكّد أن الإعلان يعد بالسعر ومدة التوصيل نفسيهما الموجودين في المتجر، واستبعد المناطق الأكثر رفضًا.`),
-            sst:A(`${p.P.short}: cut refusals on ${c.name}`,`${p.P.short}: خفّض حالات الرفض في ${c.name}`),impact:w,kind:'waste',waste:w,rv:w});
+            sst:A(`${p.P.short}: cut refusals on ${c.name}`,`${p.P.short}: خفّض حالات الرفض في ${c.name}`),impact:0,kind:'none',waste:0,rv:w*.3,
+            calc:[A(`Spend linked to refused or returned orders: ${money(c.spend,0)} × ${pct(ca.fail,0)} of its orders × ${p.mo.toFixed(2)} (30-day run rate) ≈ ${money(w,0)} a month`,`الإنفاق المرتبط بطلبات مرفوضة أو مرتجعة: ${money(c.spend,0)} × ${pct(ca.fail,0)} من طلباتها × ${p.mo.toFixed(2)} (معدل 30 يومًا) ≈ ${money(w,0)} شهريًا`),
+              A('Not counted as avoidable spend: confirming orders and taking deposits recovers part of it, and the ads also brought the orders that were delivered.','لا يُحتسب كإنفاق يمكن تجنّبه: تأكيد الطلبات وأخذ العربون يستردّان جزءًا منه، كما أن الإعلانات جلبت أيضًا الطلبات التي سُلِّمت.')]});
         }
       }
     }
@@ -2964,14 +2989,18 @@ function render(scroll){
   const band=!A.scoreOk?TR('Not enough data yet','البيانات غير كافية بعد'):A.score>=80?TR('Healthy','بحالة جيدة'):A.score>=60?TR('Needs attention','يحتاج إلى متابعة'):TR('Leaking budget','ميزانية تتسرّب');
   $('vitals').innerHTML=`
     <div class="card vital scorecard">${dial(A.scoreOk?A.score:null)}<div><div class="eyebrow">Account health</div><h3 style="margin-top:4px;color:${A.scoreOk?scoreColor(A.score):'var(--muted)'}">${band}</h3><p class="muted small">${LANG==='ar'?`${arN(A.F.length,'ملاحظة واحدة','ملاحظات','ملاحظة')} عبر ${A.plats.map(p=>p.P.short).join('، ')}`:`${A.F.length} finding${A.F.length===1?'':'s'} across ${A.plats.map(p=>p.P.short).join(', ')}`}</p><button type="button" class="linkbtn small" ${tipAttr({t:TR('How the score works','كيف تُحسب الدرجة'),r:scoreHow(A)})}>${TR('How the score works','كيف تُحسب الدرجة')}</button></div></div>
-    ${A.vs>0?`<div class="card vital"><div class="eyebrow">${TR('Blended ROAS','ROAS المجمّع')}</div><div class="big" style="color:${ST.marginSet&&A.blendedRoas<A.be?'var(--bad)':'var(--ink)'}">${x2(A.blendedRoas)}</div><span class="muted small">${TR(`${money(A.pv,0)} revenue ÷ ${money(A.vs,0)} spend`,`${money(A.pv,0)} إيراد ÷ ${money(A.vs,0)} إنفاق`)}${ST.marginSet?TR(` · break-even ${x2(A.be)}`,` · التعادل ${x2(A.be)}`):''}</span></div>`:''}
-    <div class="card vital"><div class="eyebrow">Total ad spend</div><div class="big">${moneyExact(A.total)}</div><span class="muted small">≈${money(A.monthly,0)} ${LANG==='ar'?'شهريًا بهذه الوتيرة':'a month at this pace'}</span></div>
+    ${A.vs>0?`<div class="card vital"><div class="eyebrow">${TR('Blended ROAS','ROAS المجمّع')}</div><div class="big" style="color:${ST.marginSet&&A.blendedRoas<A.be?'var(--bad)':'var(--ink)'}">${x2(A.blendedRoas)}</div><span class="muted small">${TR(`${money(A.pv,0)} platform-reported revenue ÷ ${money(A.vs,0)} spend`,`${money(A.pv,0)} إيراد حسب المنصات ÷ ${money(A.vs,0)} إنفاق`)}${ST.marginSet?TR(` · break-even ${x2(A.be)}`,` · التعادل ${x2(A.be)}`):''}</span></div>`:''}
+    <div class="card vital"><div class="eyebrow">Total ad spend</div><div class="big">${moneyExact(A.total)}</div><span class="muted small">${A.first?TR(`${fmtDate(A.first)} – ${fmtDate(A.last)} · ≈${money(A.monthly,0)} a month at that period’s pace`,`${fmtDate(A.first)} – ${fmtDate(A.last)} · ≈${money(A.monthly,0)} شهريًا بوتيرة تلك الفترة`):TR(`≈${money(A.monthly,0)} a month at this pace`,`≈${money(A.monthly,0)} شهريًا بهذه الوتيرة`)}</span></div>
     ${vitalPlan(A)}`;
   $('vitals').querySelectorAll('[data-go-plan]').forEach(b=>b.onclick=()=>setView('recs','bplan'));
   $('vitals').querySelectorAll('[data-margin]').forEach(b=>b.onclick=focusMargin);
 
   // banners
   let B='';
+  B+=`<p class="muted small dataline">${A.plats.map(p=>{const live=ST.files.some(f=>!f.err&&f.plat===p.pk&&/, live\)\.csv$/.test(f.name)),e=p.evidence||{};
+    return `${dot(p.pk)} <b>${p.P.short}</b> ${p.T&&p.T.first?`${fmtDate(p.T.first)} – ${fmtDate(p.T.last)}`:TR('no dates in the file','لا تواريخ في الملف')}${p.daily?TR(` · ${e.days} days with spend`,` · ${e.days} يومًا بإنفاق`):''} · ${live?TR(`pulled from ${p.P.short}${ST.uploadedAt?' on '+new Date(ST.uploadedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''}`,`مسحوبة من ${p.P.short}`):TR('from your export','من ملفك')}`}).join(' &nbsp;·&nbsp; ')}${TR(' · Dates are in each ad account’s time zone.',' · التواريخ بتوقيت كل حساب إعلاني.')}</p>`;
+  if(!ST.example){const ago=A.last?Math.floor((Date.now()-Date.parse(A.last+'T23:59:59Z'))/864e5):0;
+   if(A.last&&ago>=4)B+=`<div class="banner info"><span class="tag">${TR('Older data','بيانات أقدم')}</span><p>${TR(`This data ends on <b>${fmtDate(A.last)}</b>, ${ago} days ago. Monthly figures are 30-day run rates of that period, not your current pace. Export or pull recent days to see where things stand now.`,`تنتهي هذه البيانات في <b>${fmtDate(A.last)}</b>، قبل ${ago} يومًا. الأرقام الشهرية هي معدلات 30 يومًا لتلك الفترة، وليست وتيرتك الحالية. صدّر أو اسحب الأيام الأخيرة لترى الوضع الآن.`)}</p></div>`}
   if(!A.scoreOk)B+=`<div class="banner info"><span class="tag">${TR('Not enough evidence yet','الأدلة غير كافية بعد')}</span><p>${TR('<b>No health score, forecasts or budget moves yet.</b> These need at least 14 days with delivery and 30 results per platform, and 10 results for any campaign whose budget would move.','<b>لا درجة صحة ولا توقعات ولا نقل للميزانية بعد.</b> تحتاج هذه إلى 14 يومًا على الأقل من العرض و30 نتيجة لكل منصة، و10 نتائج لأي حملة تُنقل ميزانيتها.')} ${esc(evTxt)}. ${TR('To unlock them: export a longer period (30 to 90 days), include every campaign, and make sure the results column is the one you optimise for. The checks below still ran on what’s here.','لفتحها: صدّر فترة أطول (30 إلى 90 يومًا)، وضمّن كل الحملات، وتأكّد أن عمود النتائج هو ما تُحسِّن له. الفحوص أدناه أُجريت على البيانات المتاحة.')}</p></div>`;
   if(A.vs>0&&!ST.marginSet)B+=`<div class="banner mlock"><span class="tag">${TR('Profit check','فحص الربحية')}</span><p>${TR('<b>Locked until you enter your profit margin.</b> OptiROAS doesn’t assume one, so break-even, profit verdicts and profit figures stay off. Everything else in the report works without it.','<b>مقفل حتى تُدخل هامش ربحك.</b> لا يفترض OptiROAS أي هامش، لذا تبقى نقطة التعادل وأحكام الربح وأرقام الربح معطّلة. كل ما عدا ذلك في التقرير يعمل بدونه.')}</p><button class="btn sm" type="button" data-margin>${TR('Enter your margin','أدخل هامشك')}</button></div>`;
   if(A.vs>0&&ST.marginSet){const pr=(A.blendedRoas*A.margin-1)*100,los=pr<0;
@@ -3017,7 +3046,7 @@ function render(scroll){
     hits.forEach((e,i)=>{h=h.split(e).join('\u0000'+i+'\u0001')});return h.replace(/\u0000(\d+)\u0001/g,(m,i)=>`<span class="cn" title="${hits[i]}">${hits[i]}</span>`)};
   const headline=f=>{const t=String(f.sst||f.title).replace(/^[^:]{1,24}:\s*/,'');return t.charAt(0).toUpperCase()+t.slice(1)};
   const fCard=(f,n)=>{const tag=BKT(f);return `<div class="f fa${LD[fkey(f)]?' isdone':''}"><div class="rank">${String(n).padStart(2,'0')}</div>
-    <div class="body"><div class="tl">${f.newc?`<span class="ptag New">${TR('New','جديد')}</span>`:''}<span class="ptag ${tag}">${TAGL(tag)}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
+    <div class="body"><div class="tl">${f.newc?`<span class="ptag New">${TR('New','جديد')}</span>`:''}<span class="ptag ${tag}">${TAGL(tag)}</span><span class="ftype ${f.type}" title="${f.type==='observed'?TR('Seen directly in your data','مرصود مباشرة في بياناتك'):f.type==='estimate'?TR('A projection from your data, not a measured result','تقدير من بياناتك، وليس نتيجة مقيسة'):TR('An idea to test with a small budget','فكرة للاختبار بميزانية صغيرة')}">${f.type==='observed'?TR('Observed','مرصود'):f.type==='estimate'?TR('Estimate','تقدير'):TR('Test idea','فكرة اختبار')}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
     <h3 class="fah">${nameWrap(headline(f))}</h3>${f.sst?`<p class="fap">${nameWrap(f.title)}</p>`:''}
     <details class="fx"><summary>${TR('Why and how','السبب والطريقة')}</summary><p class="ev">${f.ev}</p><p class="act">${esc(f.act)}</p>${f.calc&&f.calc.length?`<div class="calc"><b>${TR('How this is calculated','طريقة الحساب')}</b><ul>${f.calc.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`:''}</details></div>
     <div class="impact">${impactHTML(f,A)}<small>${TR('Confidence: ','الثقة: ')}${CONF(f.conf)}</small>${ST.example?'':`<button type="button" class="done-btn" data-done="${A.F.indexOf(f)}" aria-pressed="${!!LD[fkey(f)]}">${LD[fkey(f)]?TR('✓ Done','✓ تم'):TR('Mark done','تم التنفيذ')}</button>`}</div></div>`};
@@ -3101,7 +3130,9 @@ function renderCharts(A){
     const hits=p.series.map((s,i)=>`<rect x="${xx(i)-hb/2}" y="${tp}" width="${hb}" height="${ih2}" fill="transparent" data-i="${i}"/>`).join('');
     html+=`<div class="card chart" data-p="${p.pk}"><div class="sechead" style="margin:0"><span class="eyebrow">${dot(p.pk)} ${p.P.short} · ${V?'ROAS':cpu(p)}${TR(', 7-day rolling','، متوسط متحرك 7 أيام')}</span><span class="num" style="font-weight:600">${V?x2(vals[li]):money(vals[li])}</span></div>
       <svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${p.P.short} ${V?'ROAS':cpu(p)}">${g}${ref}<path d="${d}" fill="none" stroke="${pc(p.pk)}" stroke-width="2" stroke-linejoin="round"/><circle cx="${xx(li)}" cy="${yy(vals[li])}" r="4" fill="${pc(p.pk)}" stroke="var(--surface)" stroke-width="2"/><line class="xh" x1="0" x2="0" y1="${tp}" y2="${tp+ih2}" stroke="var(--muted)" stroke-dasharray="2 3" visibility="hidden"/>
-      <text x="${l}" y="${h-5}">${fmtDate(p.series[0].d)}</text><text x="${w-r}" y="${h-5}" text-anchor="end">${fmtDate(p.series[p.series.length-1].d)}</text><g class="hit">${hits}</g></svg><div class="tip" hidden></div></div>`;
+      <text x="${l}" y="${h-5}">${fmtDate(p.series[0].d)}</text><text x="${w-r}" y="${h-5}" text-anchor="end">${fmtDate(p.series[p.series.length-1].d)}</text><g class="hit">${hits}</g></svg><div class="tip" hidden></div>${(()=>{const w7=p.series.slice(Math.max(0,li-6),li+1),sp=w7.reduce((t,x)=>t+x.spend,0),cv=w7.reduce((t,x)=>t+x.conv,0),vv=w7.reduce((t,x)=>t+x.value,0),a=p.acc;
+        const f=(S,C,Vv)=>V?`${money(Vv,0)} ÷ ${money(S,0)} = ${x2(S?Vv/S:0)}`:`${money(S,0)} ÷ ${fmtInt(Math.round(C))} ${p.Us} = ${C?money(S/C):'—'}`;
+        return `<p class="muted small" style="margin:6px 0 0">${TR(`Each point is the 7 days ending that day. Latest (${fmtDate(w7[0].d)} – ${fmtDate(w7[w7.length-1].d)}): ${f(sp,cv,vv)}. Whole period (${fmtDate(p.series[0].d)} – ${fmtDate(p.series[p.series.length-1].d)}): ${f(a.spend,a.conv,a.value)}.`,`كل نقطة تمثل الأيام السبعة المنتهية في ذلك اليوم. الأحدث (${fmtDate(w7[0].d)} – ${fmtDate(w7[w7.length-1].d)}): ${f(sp,cv,vv)}. الفترة كاملة (${fmtDate(p.series[0].d)} – ${fmtDate(p.series[p.series.length-1].d)}): ${f(a.spend,a.conv,a.value)}.`)}</p>`})()}</div>`;
   });
   $('charts').innerHTML=html;
   // hover
@@ -3260,9 +3291,22 @@ function renderDelivered(A){
     <div class="card delta"><span class="eyebrow">Still pending</span><span class="num">${money(st.penV,0)}</span><span class="chg">${fmtInt(st.pen)} ${TR('orders','طلب')}</span></div>
     <div class="card delta main"><span class="eyebrow">Failed delivery rate</span><span class="num">${pct(st.fail,0)}</span><span class="chg">${pct(st.codShare,0)} ${TR('cash on delivery','دفع عند الاستلام')}</span></div>
   </div>
-  ${rows.length?`<div class="tablewrap"><table class="wide"><thead><tr><th>Platform</th><th>Spend</th><th>Traced orders</th><th>Refused or returned</th><th>Reported ROAS</th><th>Delivered ROAS</th><th>With pending</th><th>Gap</th></tr></thead><tbody>${rows.map(p=>{const a=p.store,rep=p.mode==='value'?p.acc.roas:null;
+  ${rows.length?`<div class="tablewrap"><table class="wide"><thead><tr><th>Platform</th><th>Spend</th><th>Traced orders</th><th>Refused or returned</th><th>${TR('Platform-reported ROAS','ROAS حسب المنصة')}</th><th>Delivered ROAS</th><th>With pending</th><th>Gap</th></tr></thead><tbody>${rows.map(p=>{const a=p.store,rep=p.mode==='value'?p.acc.roas:null;
     return `<tr><td class="lbl">${dot(p.pk)} ${p.P.name}</td><td>${money(p.acc.spend,0)}</td><td>${fmtInt(a.n)}</td><td class="${a.fail>=.25?'neg':''}">${pct(a.fail,0)}</td><td>${rep==null?'—':x2(rep)}</td><td class="${a.droas<A.be?'neg':'pos'}"><b>${x2(a.droas)}</b></td><td>${x2(a.eroas)}</td><td>${rep==null||!rep?'—':`<span class="neg">${pct(a.eroas/rep-1,0)}</span>`}</td></tr>`}).join('')}</tbody></table></div>
-  <p class="muted small" style="margin-top:8px">${TR(`Delivered ROAS counts only delivered or paid orders. "With pending" adds orders still in transit at your usual delivery rate of ${pct(s.dr,0)}. Break-even at your margin is ${x2(A.be)}. Orders are matched to platforms by their source or UTM, and to campaigns by utm_campaign.`,`ROAS المُسلَّم يحتسب الطلبات المُسلَّمة أو المدفوعة فقط. عمود «مع قيد التوصيل» يضيف الطلبات التي ما زالت في الطريق بمعدل التسليم المعتاد لديك ${pct(s.dr,0)}. نقطة التعادل عند هامشك ${x2(A.be)}. تُربط الطلبات بالمنصات عبر المصدر أو UTM، وبالحملات عبر utm_campaign.`)}</p>`
+  <p class="muted small" style="margin-top:8px">${TR(`Delivered ROAS counts only delivered or paid orders. "With pending" adds orders still in transit at your usual delivery rate of ${pct(s.dr,0)}. Break-even at your margin is ${x2(A.be)}. Orders are matched to platforms by their source or UTM, and to campaigns by utm_campaign.`,`ROAS المُسلَّم يحتسب الطلبات المُسلَّمة أو المدفوعة فقط. عمود «مع قيد التوصيل» يضيف الطلبات التي ما زالت في الطريق بمعدل التسليم المعتاد لديك ${pct(s.dr,0)}. نقطة التعادل عند هامشك ${x2(A.be)}. تُربط الطلبات بالمنصات عبر المصدر أو UTM، وبالحملات عبر utm_campaign.`)}</p>
+  <p class="muted small">${TR('Platform-reported revenue is what each platform attributes to itself. Platforms can claim the same order, so adding them up is not your store sales; delivered revenue comes from your store file.','الإيراد حسب المنصة هو ما تنسبه كل منصة لنفسها. قد تنسب المنصات الطلب نفسه لنفسها، لذا فمجموعها ليس مبيعات متجرك؛ أما الإيراد المُسلَّم فمصدره ملف متجرك.')}</p>
+  <div class="card" style="padding:14px 16px;margin-top:12px"><h4 style="margin:0 0 6px">${TR('Revenue, cash and profit','الإيراد والنقد والربح')}</h4>
+    <div class="tablewrap"><table class="wide"><tbody>
+      <tr><td>${TR('Ordered (all statuses)','الطلبات (كل الحالات)')}</td><td>${money(st.val,0)}</td><td class="muted small">${fmtInt(st.n)} ${TR('orders','طلب')}</td></tr>
+      <tr><td>${TR('Delivered revenue','الإيراد المُسلَّم')}</td><td><b>${money(st.delV,0)}</b></td><td class="muted small">${TR('delivered or paid orders','الطلبات المُسلَّمة أو المدفوعة')}</td></tr>
+      <tr><td>${TR('Cash still to collect','نقد لم يُحصَّل بعد')}</td><td>${money(st.penV,0)}</td><td class="muted small">${TR(`pending orders; about ${pct(s.dr,0)} usually get delivered`,`طلبات قيد التوصيل؛ يُسلَّم عادةً نحو ${pct(s.dr,0)} منها`)}</td></tr>
+      <tr><td>${TR('Lost to refusals and returns','خسارة بسبب الرفض والإرجاع')}</td><td class="neg">${money(st.refV+st.retV,0)}</td><td class="muted small">${TR('refunded or never collected','مستردّ أو لم يُحصَّل')}</td></tr>
+      <tr><td>${TR('Contribution after ad spend','المساهمة بعد الإنفاق الإعلاني')}</td><td>${ST.marginSet?`<b class="${st.delV*A.margin-A.total<0?'neg':'pos'}">${money(st.delV*A.margin-A.total,0)}</b>`:'🔒'}</td><td class="muted small">${ST.marginSet?TR(`${money(st.delV,0)} × ${Math.round(A.margin*100)}% margin − ${money(A.total,0)} ad spend`,`${money(st.delV,0)} × هامش ${Math.round(A.margin*100)}% − ${money(A.total,0)} إنفاق إعلاني`):TR('enter your margin to see it','أدخل هامشك لرؤيته')}</td></tr>
+    </tbody></table></div></div>
+  <div class="card" style="padding:14px 16px;margin-top:12px"><h4 style="margin:0 0 6px">${TR('How orders were matched','كيف طوبقت الطلبات')}</h4>
+    <p class="muted small" style="margin:0 0 8px">${TR(`${fmtInt(s.attributed)} of ${fmtInt(s.total)} orders carry a source or UTM that points to an ad platform; ${fmtInt(s.total-s.attributed)} don’t, so they are left out of delivered ROAS.${s.outOfRange?` ${fmtInt(s.outOfRange)} orders fall outside the ad dates and are left out too.`:''}`,`${fmtInt(s.attributed)} من ${fmtInt(s.total)} طلبًا تحمل مصدرًا أو UTM يشير إلى منصة إعلانية؛ و${fmtInt(s.total-s.attributed)} لا تحمل، فتُستبعد من ROAS المُسلَّم.${s.outOfRange?` و${fmtInt(s.outOfRange)} طلبًا خارج تواريخ الإعلانات استُبعدت أيضًا.`:''}`)}</p>
+    ${rows.length?`<div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Platform','المنصة')}</th><th>${TR('Traced orders','الطلبات المنسوبة')}</th><th>${TR('Matched to a campaign','مطابقة لحملة')}</th><th>${TR('utm_campaign values with no matching campaign','قيم utm_campaign بلا حملة مطابقة')}</th></tr></thead><tbody>${rows.map(p=>{const a=p.store;return `<tr><td class="lbl">${dot(p.pk)} ${p.P.short}</td><td>${fmtInt(a.n)}</td><td>${fmtInt(a.campMatched||0)} (${pct((a.campMatched||0)/Math.max(1,a.n),0)})</td><td class="small">${(a.unmatched||[]).length?a.unmatched.map(u=>`${u.name?esc(u.name):TR('(empty)','(فارغ)')} · ${fmtInt(u.n)}`).join('<br>'):'—'}</td></tr>`}).join('')}</tbody></table></div>
+      <p class="muted small" style="margin-top:6px">${TR('To fix a missing match, make utm_campaign in your ad links the same as the campaign name in the ad platform, then re-export your orders.','لإصلاح مطابقة مفقودة، اجعل utm_campaign في روابط إعلاناتك مطابقًا لاسم الحملة في المنصة الإعلانية، ثم أعد تصدير طلباتك.')}</p>`:''}</div>`
   :`<p class="muted small">${TR("None of these orders carry a source or UTM that matches your ad platforms, so delivered ROAS can't be split by platform yet. Add utm_source and utm_campaign to your ad links.",'لا يحمل أي من هذه الطلبات مصدرًا أو UTM يطابق منصاتك الإعلانية، لذا لا يمكن تقسيم ROAS المُسلَّم حسب المنصة بعد. أضف utm_source وutm_campaign إلى روابط إعلاناتك.')}</p>`}`;
 }
 
@@ -4630,8 +4674,12 @@ function campFill(p,A){
   if(ST.lang==='ar')i18Apply($('campWrap'));
 }
 /* ---- creative sections ---- */
+// Creative tables use the same window as the creative analysis (the last 30 days of the data when it is daily),
+// and compare against that window's average, not the whole period's.
+const crAvg=p=>{const V=p.mode==='value',b=p.crBase;return b?(V?b.roas:b.cpa):(V?p.acc.roas:p.acc.cpa)};
+const crWinTxt=p=>{const b=p.crBase;if(!b)return '';return b.whole?TR(`whole period, ${fmtDate(b.first)} – ${fmtDate(b.last)}`,`الفترة كاملة، ${fmtDate(b.first)} – ${fmtDate(b.last)}`):TR(`last 30 days of the data, ${fmtDate(b.first)} – ${fmtDate(b.last)}`,`آخر 30 يومًا من البيانات، ${fmtDate(b.first)} – ${fmtDate(b.last)}`)};
 function crPools(p){
-  const V=p.mode==='value',a=p.acc,avg=V?a.roas:a.cpa,all=p.creatives||[];
+  const V=p.mode==='value',avg=crAvg(p),all=p.creatives||[];
   const judged=s=>all.filter(c=>s.learn||!(p.daily&&c.live<7));
   // Top creatives always exist: the better half of ads with at least one result, ranked by ROAS (or cost per result).
   // Weakest: the rest that are below the account average. An ad is never in both lists.
@@ -4642,8 +4690,8 @@ function crSection(p,kind){
   const V=p.mode==='value',s=crGet(p.pk,kind);
   const sorts=[['value',TR('Revenue','الإيراد')],['roas','ROAS'],['spend',TR('Spend','الإنفاق')],['conv',UsL(p)],['ctr',TR('Click-through','نسبة النقر')],['cpa',CPU(p)],['live',TR('Days live','أيام النشاط')]].filter(([k])=>V||!['value','roas'].includes(k));
   if(!V&&['value','roas'].includes(s.sort))s.sort='conv';
-  return `<div class="crsec"><h4 class="sub">${kind==='best'?TR('Top creatives','أفضل الإعلانات'):TR('Weakest creatives','أضعف الإعلانات')}<span class="muted small" style="font-weight:400"> · ${kind==='best'?(V?TR(`your best ads by ROAS: the top half of ads with at least one ${p.U}. Below the ${p.P.short} average (${x2(p.acc.roas)}) is marked`,`أفضل إعلاناتك حسب ROAS: النصف الأعلى من الإعلانات التي حققت ${UA(p.U)} واحدًا على الأقل. ما هو أقل من متوسط ${p.P.short} (${x2(p.acc.roas)}) مُعلَّم`):TR(`your best ads by cost per result: the top half of ads with at least one result. Above the ${p.P.short} average (${money(p.acc.cpa)}) is marked`,`أفضل إعلاناتك حسب تكلفة النتيجة: النصف الأعلى من الإعلانات التي حققت نتيجة واحدة على الأقل. ما هو أعلى من متوسط ${p.P.short} (${money(p.acc.cpa)}) مُعلَّم`)):(V?TR(`ROAS below the ${p.P.short} average`,`ROAS أقل من متوسط ${p.P.short}`):TR('cost per result above average','تكلفة النتيجة أعلى من المتوسط'))}${p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):''}</span></h4>
-    ${fbar('crBar-'+kind,s,{sorts,count:true,V,learn:p.daily})}<div id="crWrap-${kind}"></div></div>`;
+  return `<div class="crsec"><h4 class="sub">${kind==='best'?TR('Top creatives','أفضل الإعلانات'):TR('Weakest creatives','أضعف الإعلانات')}<span class="muted small" style="font-weight:400"> · ${kind==='best'?(V?TR(`your best ads by ROAS: the top half of ads with at least one ${p.U}. Below the ${p.P.short} average for this window (${x2(crAvg(p))}) is marked`,`أفضل إعلاناتك حسب ROAS: النصف الأعلى من الإعلانات التي حققت ${UA(p.U)} واحدًا على الأقل. ما هو أقل من متوسط ${p.P.short} لهذه الفترة (${x2(crAvg(p))}) مُعلَّم`):TR(`your best ads by cost per result: the top half of ads with at least one result. Above the ${p.P.short} average for this window (${money(crAvg(p))}) is marked`,`أفضل إعلاناتك حسب تكلفة النتيجة: النصف الأعلى من الإعلانات التي حققت نتيجة واحدة على الأقل. ما هو أعلى من متوسط ${p.P.short} لهذه الفترة (${money(crAvg(p))}) مُعلَّم`)):(V?TR(`ROAS below the ${p.P.short} average`,`ROAS أقل من متوسط ${p.P.short}`):TR('cost per result above average','تكلفة النتيجة أعلى من المتوسط'))}${p.daily?TR(' · last 30 days',' · آخر 30 يومًا'):''}</span></h4>
+    ${kind==='best'&&p.crBase?`<p class="muted small" style="margin:0 0 6px">${TR('Period','الفترة')}: ${crWinTxt(p)}</p>`:''}${fbar('crBar-'+kind,s,{sorts,count:true,V,learn:p.daily})}<div id="crWrap-${kind}"></div></div>`;
 }
 function crFill(p,kind){
   const V=p.mode==='value',s=crGet(p.pk,kind),pool=crPools(p)[kind](s),L=applyF(pool,s,V),n=+s.n,shown=n?L.slice(0,n):L;
@@ -4661,7 +4709,7 @@ function crMapHTML(p){
 const chartW=()=>Math.round(Math.max(300,Math.min(1080,(document.documentElement.clientWidth||1000)-(innerWidth<700?64:110))));
 function scatterChart(L,{p,A,V,title,sub,col,tip,legend}){
   const W=chartW(),H=Math.round(Math.min(340,Math.max(240,W*.42))),ml=56,mr=16,mt=14,mb=40,iw=W-ml-mr,ih=H-mt-mb;
-  const be=p.be,avg=V?p.acc.roas:p.acc.cpa,ys=L.map(c=>V?c.roas:(isFinite(c.cpa)?c.cpa:0));
+  const be=p.be,avg=crAvg(p),ys=L.map(c=>V?c.roas:(isFinite(c.cpa)?c.cpa:0));
   const xm=niceMax(Math.max(...L.map(c=>c.spend))*1.05),ym=niceMax(Math.max(...ys,V?be*1.3:avg*1.3,0.01)*1.08);
   const X=v=>ml+v/xm*iw,Y=v=>mt+ih-Math.min(v,ym)/ym*ih,ticks=n=>[...Array(n+1)].map((_,i)=>i/n);
   const nx=W<520?2:4,kf=v=>{const a=Math.abs(v);return a>=1e6?(v/1e6).toFixed(a>=1e7?0:1).replace(/\.0$/,'')+'M':a>=1e3?(v/1e3).toFixed(a>=1e4?0:1).replace(/\.0$/,'')+'K':Math.round(v)+''},nf=v=>Number.isInteger(+v.toFixed(2))?String(Math.round(v)):v.toFixed(1);
