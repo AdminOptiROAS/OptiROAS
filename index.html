@@ -3441,7 +3441,7 @@ function setView(v,anchor){ST.view=v;document.querySelectorAll('.rtab').forEach(
 
 /* ================= live dashboard (Pro) ================= */
 function renderLive(A){
-  const pro=!!ST.livePreview,el=$('live');
+  const pro=!!ST.livePreview||!!(ST.me&&ST.me.usage&&ST.me.usage.live),el=$('live');
   if(!pro){
     const pp=priceTxt(129);
     el.innerHTML=`<div class="card lock"><span class="lk big">PRO</span><h3>The live dashboard is part of Pro</h3>

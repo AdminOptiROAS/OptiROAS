@@ -21,5 +21,5 @@ export async function usageFor(u) {
   const used = (await sql`select count(distinct coalesce(fp, id::text))::int as n from usage_reports where user_id=${u.id}`)[0].n;
   const dl = await sql`select kind, count(*)::int as n from usage_downloads where user_id=${u.id} group by kind`;
   const downloads = { plan: 0, summary: 0 }; for (const r of dl) downloads[r.kind] = r.n;
-  return { plan, unlimited, used, limit: unlimited ? null : freeLimit(), resets: null, once: !unlimited, verified: verified(u), downloads, dlLimit: unlimited ? null : 1, canConnect: canConnect(u) };
+  return { plan, unlimited, used, limit: unlimited ? null : freeLimit(), resets: null, once: !unlimited, verified: verified(u), downloads, dlLimit: unlimited ? null : 1, canConnect: canConnect(u), live: plan === 'pro' || isAdmin(u) || isReviewer(u) };
 }
