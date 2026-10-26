@@ -8,7 +8,10 @@ export default async function handler(req, res) {
   try {
     await ensureSchema();
     users = (await sql`select count(*)::int as n from users`)[0].n;
-    calls = (await sql`select count(*) filter (where ok)::int as ok, count(*)::int as total from api_log where at > now() - interval '15 days'`)[0];
+    // Meta Graph calls only (paths start with the API version, e.g. /v26.0/...); ad account ids are masked
+    calls = (await sql`select count(*) filter (where ok)::int as ok, count(*)::int as total from api_log where at > now() - interval '15 days' and endpoint like '/v%'`)[0];
+    calls.byEndpoint = await sql`select regexp_replace(regexp_replace(endpoint,'act_[0-9]+','act_*','g'),'/[0-9]{6,}','/*','g') as endpoint, count(*) filter (where ok)::int as ok, count(*)::int as total
+      from api_log where at > now() - interval '15 days' and endpoint like '/v%' group by 1 order by 3 desc limit 20`;
   } catch (e) { db = 'error: ' + String(e.message).slice(0, 120); }
   const googleMissing = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'].filter(k => !process.env[k]);
   const snapMissing = ['SNAP_CLIENT_ID', 'SNAP_CLIENT_SECRET', 'SNAP_REDIRECT_URI'].filter(k => !process.env[k]);

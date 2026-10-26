@@ -60,6 +60,7 @@ export function ensureSchema() {
     await sql`alter table users add column if not exists plan text not null default 'free'`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists vertical text`;
+    await sql`alter table api_log add column if not exists err text`;
     await sql`alter table users add column if not exists email_verified_at timestamptz`;
     await sql`create table if not exists user_tokens(
       token_hash text primary key, user_id uuid not null references users(id) on delete cascade,
@@ -164,16 +165,16 @@ export async function graph(path, params = {}, { userId, method = 'GET' } = {}) 
   for (const [k, v] of Object.entries(params)) if (v != null) url.searchParams.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   let r, j;
   try { r = await fetch(url, { method }); j = await r.json(); }
-  catch (e) { await logCall(userId, url.pathname, false); throw new Error('Could not reach Meta. Try again in a moment.'); }
-  await logCall(userId, url.pathname, r.ok && !j.error);
+  catch (e) { await logCall(userId, url.pathname, false, 'network: ' + e.message); throw new Error('Could not reach Meta. Try again in a moment.'); }
+  await logCall(userId, url.pathname, r.ok && !j.error, j && j.error ? `${j.error.code || r.status}${j.error.error_subcode ? '/' + j.error.error_subcode : ''} ${j.error.type || ''}: ${j.error.message || ''}` : null);
   if (!r.ok || j.error) {
     const e = new Error(j?.error?.message || `Meta returned ${r.status}`);
     e.meta = j?.error; e.status = r.status; throw e;
   }
   return j;
 }
-async function logCall(userId, endpoint, ok) {
-  try { await sql`insert into api_log(user_id,endpoint,ok) values(${userId || null},${String(endpoint).slice(0, 200)},${ok})`; } catch {}
+async function logCall(userId, endpoint, ok, err) {
+  try { await sql`insert into api_log(user_id,endpoint,ok,err) values(${userId || null},${String(endpoint).slice(0, 200)},${ok},${err ? String(err).slice(0, 300) : null})`; } catch {}
 }
 export async function logApi(userId, endpoint, ok) { return logCall(userId, endpoint, ok); }
 export async function metaToken(userId) {
