@@ -360,6 +360,9 @@ tr.cur td{background:var(--accent-soft);font-weight:600}
 .bplan{padding:16px 18px;margin-bottom:14px}.bplan table td,.bplan table th{white-space:normal}.bplan .cn{font-weight:600}
 .pst{font-size:11.5px;font-weight:600;letter-spacing:.02em;align-self:flex-start;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}.pst.limited{color:var(--warn);border-color:currentColor}.pst.not{color:var(--muted);border-style:dashed}
 .vital .linkbtn{font-size:inherit}
+.wzconn{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px;border:1.5px solid var(--accent);background:var(--accent-soft)}
+.wzor{font-size:15px;margin:6px 0 10px}.wzconn2{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.mcard.flash{outline:2px solid var(--accent);outline-offset:2px}
 .bench.nob{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px}.bench .benchpick{max-width:100%}.bench{padding:12px 14px}
 .ptag.New{background:var(--accent);color:#fff}
 .vplan{grid-column:span 2;background:var(--accent-soft);border-color:transparent;border-inline-start:4px solid var(--accent);gap:10px}
@@ -3714,6 +3717,11 @@ function gateConnect(root){
     links.forEach((a,i)=>{if(i){a.remove();return}const b=document.createElement('button');b.type='button';b.className='btn';b.textContent=TR('Upgrade to connect','قم بالترقية للربط');b.onclick=upgradeConnect;a.replaceWith(b)});
     const p=card.querySelector('p.muted');if(p&&!p.dataset.g){p.dataset.g=1;p.insertAdjacentHTML('afterbegin',`<b>${TR('Starter and Pro.','في Starter وPro.')}</b> `)}});
 }
+// Right after a platform connects: one account opens campaign selection directly; several are highlighted to choose from.
+function afterConnect(pk){const A=((ST.me||{})[PK[pk].me]||{}).accounts||[];
+  if(A.length===1){openPicker(pk,A[0].id);return}
+  setTimeout(()=>{const b=document.querySelector(`#acctCard [data-pick="${pk}"]`);if(!b)return;const card=b.closest('.mcard');card.classList.add('flash');card.scrollIntoView({behavior:'smooth',block:'center'});
+    if(!card.querySelector('.pickhint'))card.querySelector('.mhead2').insertAdjacentHTML('afterend',`<p class="okmsg pickhint" style="margin:0">${TR('Next: click “Choose campaigns” next to the ad account you want to audit.','الخطوة التالية: اضغط «اختر الحملات» بجانب الحساب الإعلاني الذي تريد تدقيقه.')}</p>`)},250)}
 function snapCard(g){
   const A=g.accounts||[],per=k=>`<select data-sdays="${esc(k)}" aria-label="Period"><option value="30">Last 30 days</option><option value="60" selected>Last 60 days</option><option value="90">Last 90 days</option></select>`;
   return `<div class="mcard"><div class="mhead2"><b style="display:flex;align-items:center;gap:8px">${dot('snap')}Snapchat Ads</b>${g.connected?'<span class="pill Opportunity">Connected</span>':g.available?'<span class="pill Low">Not connected</span>':'<span class="pill Low">Coming soon</span>'}</div>
@@ -3868,19 +3876,19 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())ret
   if(mm){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
-    openAcct(msgs[mm]||null)}
+    openAcct(msgs[mm]||null);if(mm==='connected')afterConnect('meta')}
   else if(gg){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Google Ads connected. ${n} account${n===1?'':'s'} available.`:'Google connected, but no Google Ads accounts were found for that Google login.'},cancelled:{t:'Google connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Google Ads.'},error:{t:'Google connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
-    openAcct(msgs[gg]||null)}
+    openAcct(msgs[gg]||null);if(gg==='connected')afterConnect('google')}
   else if(sn){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Snapchat connected. ${n} ad account${n===1?'':'s'} available.`:'Snapchat connected, but no active ad accounts were found for that login.'},cancelled:{t:'Snapchat connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Snapchat.'},error:{t:'Snapchat connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
-    openAcct(msgs[sn]||null)}
+    openAcct(msgs[sn]||null);if(sn==='connected')afterConnect('snap')}
   else if(tk){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`TikTok connected. ${n} ad account${n===1?'':'s'} available.`:'TikTok connected, but no advertiser accounts were shared. Reconnect and tick at least one.'},cancelled:{t:'TikTok connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect TikTok.'},error:{t:'TikTok connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
-    openAcct(msgs[tk]||null)}
+    openAcct(msgs[tk]||null);if(tk==='connected')afterConnect('tiktok')}
   else if(rid&&/^[0-9a-f-]{36}$/i.test(rid)){try{history.replaceState(null,'','/#account')}catch(e){}openSaved(rid)}
   else if(rtok){ST.resetToken=rtok;ST.acctMode='reset';try{history.replaceState(null,'','/#account')}catch(e){}openAcct()}
   else if(upg){try{history.replaceState(null,'',location.pathname+'#pricing')}catch(e){}go('pricing');setTimeout(()=>toast(TR('Connecting ad accounts is part of Starter and Pro.','ربط الحسابات الإعلانية جزء من Starter وPro.'),5000),400)}
@@ -4020,9 +4028,13 @@ function renderWizard(){
     <span class="eyebrow">${TR(`Step ${W.step} of 4`,`الخطوة ${W.step} من 4`)}</span><h1 class="wzh1">${titles[W.step-1]}</h1><p class="muted">${subs[W.step-1]}</p></div>`;
   let body='',back=W.step>1?`<button class="btn quiet" type="button" id="wzBack">${TR('Back','رجوع')}</button>`:`<button class="btn quiet" type="button" data-go-page="home">${TR('Cancel','إلغاء')}</button>`,next='';
   if(W.step===1){
-    body=`<div class="wzgrid">${WZ_PLATS.map(k=>`<button type="button" class="wzopt" data-wzp="${k}" aria-pressed="${W.plats.has(k)}">${WZ_DOT(k)}<b>${WZ_NAME(k)}</b><span class="muted small">${k==='other'?TR('LinkedIn, Microsoft, Pinterest, X or any CSV','LinkedIn أو Microsoft أو Pinterest أو X أو أي ملف CSV'):TR('Ads export','ملف تصدير الإعلانات')}</span><i class="wzck" aria-hidden="true"></i></button>`).join('')}</div>
+    body=`<div class="card wzconn"><div><b>${TR('Connect your ad accounts','اربط حساباتك الإعلانية')}</b> <span class="pill Opportunity">${TR('Starter and Pro','Starter وPro')}</span>
+        <p class="muted small" style="margin:4px 0 0">${TR('Sign in with Meta, Google Ads, Snapchat or TikTok, then choose the ad account, the period and the campaigns to audit. No exporting.','سجّل الدخول عبر Meta أو Google Ads أو Snapchat أو TikTok، ثم اختر الحساب الإعلاني والفترة والحملات لتدقيقها. دون تصدير.')}</p></div>
+        <button class="btn" type="button" id="wzConn">${canConn()?TR('Connect an ad account','اربط حسابًا إعلانيًا'):TR('Upgrade to connect','قم بالترقية للربط')}</button></div>
+      <h3 class="wzor">${TR('Or upload exports: which platforms?','أو ارفع ملفات التصدير: أي منصات؟')}</h3>
+      <div class="wzgrid">${WZ_PLATS.map(k=>`<button type="button" class="wzopt" data-wzp="${k}" aria-pressed="${W.plats.has(k)}">${WZ_DOT(k)}<b>${WZ_NAME(k)}</b><span class="muted small">${k==='other'?TR('LinkedIn, Microsoft, Pinterest, X or any CSV','LinkedIn أو Microsoft أو Pinterest أو X أو أي ملف CSV'):TR('Ads export','ملف تصدير الإعلانات')}</span><i class="wzck" aria-hidden="true"></i></button>`).join('')}</div>
       <label class="wzorders"><input type="checkbox" id="wzOrd"${W.orders?' checked':''}> <span><b>${TR('Also add store orders','أضف أيضًا طلبات المتجر')}</b> <span class="muted small">${TR('Salla, Zid or Shopify, for delivered ROAS after refusals and returns. Optional.','سلة أو زد أو Shopify، لحساب ROAS المُسلَّم بعد الرفض والإرجاع. اختياري.')}</span></span></label>
-      <p class="muted small">${TR('Prefer not to export? ','تفضّل عدم التصدير؟ ')}<button class="linkbtn" type="button" id="wzConn">${TR('Connect your ad accounts instead','اربط حساباتك الإعلانية بدلًا من ذلك')}</button>${TR(' and pick campaigns directly.',' واختر الحملات مباشرة.')}</p>`;
+`;
     body+=wzAcctNote();
     next=`<button class="btn" type="button" id="wzNext"${W.plats.size?'':' disabled'}>${TR('Continue','متابعة')}</button>`;
   } else if(W.step===2){
@@ -4030,8 +4042,9 @@ function renderWizard(){
     const g=WZ_GUIDE[W.tab];
     body=`<div class="wztabs" role="tablist">${tabs.map(k=>`<button type="button" role="tab" data-wzt="${k}" aria-selected="${k===W.tab}">${WZ_DOT(k)}${WZ_NAME(k)}</button>`).join('')}</div>
       <div class="wzmsg info"><span><b>${TR('For the most detailed audit:','لأدق تدقيق:')}</b> ${TR('always break the report down <b>by day</b>, and add the richest extra breakdown the platform allows, such as <b>placement and device</b> or <b>age and gender</b>. Day-by-day data unlocks trend, fatigue and pacing checks; breakdowns show where money is wasted. Upload <b>one file per platform</b>: the same spend in two files with different breakdowns would be counted twice.','قسّم التقرير دائمًا <b>حسب اليوم</b>، وأضف أغنى تقسيم إضافي تتيحه المنصة، مثل <b>الموضع والجهاز</b> أو <b>العمر والجنس</b>. البيانات اليومية تتيح فحوصات الاتجاه وإرهاق الإعلانات ووتيرة الإنفاق؛ والتقسيمات تكشف أين يُهدر المال. ارفع <b>ملفًا واحدًا لكل منصة</b>: الإنفاق نفسه في ملفين بتقسيمات مختلفة سيُحسب مرتين.')}</span></div>
-      <div class="wzguide card"><div class="wzgl"><h3>${TR('In','في')} ${g.where(TR)}</h3><ol class="wzol">${g.steps(TR).map(s=>`<li>${s}</li>`).join('')}</ol>
-        ${g.url?`<a class="btn quiet sm" href="${g.url}" target="_blank" rel="noopener">${TR('Open','افتح')} ${g.where(TR)} ↗</a>`:''}</div>
+      ${PK[W.tab]?`<div class="wzmsg info wzconn2"><span>${TR(`<b>Prefer not to export?</b> Connect ${PK[W.tab].name} and pick the account and campaigns directly.`,`<b>تفضّل عدم التصدير؟</b> اربط ${PK[W.tab].name} واختر الحساب والحملات مباشرة.`)}</span><button class="btn sm" type="button" data-wzconn="${W.tab}">${canConn()?TR(`Connect ${PK[W.tab].name}`,`اربط ${PK[W.tab].name}`):TR('Upgrade to connect','قم بالترقية للربط')}</button></div>`:''}
+      <div class="wzguide card"><div class="wzgl"><h3>${TR('Export from','صدّر من')} ${g.where(TR)}</h3><ol class="wzol">${g.steps(TR).map(s=>`<li>${s}</li>`).join('')}</ol>
+        ${g.url?`<a class="btn quiet sm" href="${g.url}" target="_blank" rel="noopener">${TR('Open','افتح')} ${g.where(TR)} ${TR('to export','للتصدير')} ↗</a>`:''}</div>
         <div class="wzgr"><span class="eyebrow">${TR('Columns to include','الأعمدة المطلوبة')}</span><ul class="wzcols">${g.cols.map(c=>`<li><code class="notr">${c}</code></li>`).join('')}</ul><p class="wztip">${g.tip(TR)}</p></div></div>
       <p class="muted small">${TR('Menus change from time to time. If a button has a slightly different name, look for Export or Download near the date picker.','تتغير القوائم من وقت لآخر. إذا اختلف اسم زر قليلًا، ابحث عن تصدير أو تنزيل قرب منتقي التاريخ.')}</p>`;
     next=`<button class="btn" type="button" id="wzNext">${TR('I have my files','ملفاتي جاهزة')}</button>`;
@@ -4092,7 +4105,10 @@ function renderWizard(){
   el.querySelectorAll('[data-wzp]').forEach(b=>b.onclick=()=>{const k=b.dataset.wzp;W.plats.has(k)?W.plats.delete(k):W.plats.add(k);renderWizard()});
   if($('wzOrd'))$('wzOrd').onchange=e=>{W.orders=e.target.checked};
   if($('wzAcct'))$('wzAcct').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()};
-  if($('wzConn'))$('wzConn').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())return upgradeConnect();openAcct()};
+  if($('wzConn'))$('wzConn').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())return upgradeConnect();openAcct();setTimeout(()=>{const c=document.querySelector('#acctCard .mcard a[href$="/start"],#acctCard .mcard [data-pick]');if(c)c.closest('.mcard').scrollIntoView({behavior:'smooth',block:'center'})},200)};
+  el.querySelectorAll('[data-wzconn]').forEach(b=>b.onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())return upgradeConnect();
+    if(!(ST.me&&ST.me.user)){openAcct({ok:true,t:TR('Sign in first, then connect your ad account.','سجّل الدخول أولًا، ثم اربط حسابك الإعلاني.')});return}
+    const pk=b.dataset.wzconn,m=ST.me[PK[pk].me]||{};if(m.connected){openAcct();return}location.href='/api/'+pk+'/start'});
   el.querySelectorAll('[data-wzt]').forEach(b=>b.onclick=()=>{W.tab=b.dataset.wzt;renderWizard()});
   el.querySelectorAll('[data-wzhelp]').forEach(b=>b.onclick=()=>{W.tab=b.dataset.wzhelp;W.plats.add(b.dataset.wzhelp);W.step=2;renderWizard();window.scrollTo(0,0)});
   el.querySelectorAll('[data-go-page]').forEach(b=>b.onclick=()=>go(b.dataset.goPage));
