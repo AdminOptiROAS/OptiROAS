@@ -345,6 +345,22 @@ tr.cur td{background:var(--accent-soft);font-weight:600}
 .rpanel{display:flex;flex-direction:column;gap:22px;padding-top:22px}
 .lock{padding:22px;display:flex;flex-direction:column;gap:10px;max-width:720px}
 .lock ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+.lvt{padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lvv{display:flex;flex-direction:column;align-items:stretch;gap:6px}.lvv .num{font-size:22px;font-weight:600}
+.lvv svg.spk{color:var(--accent);display:block;width:100%!important;height:28px;overflow:hidden}
+.lvtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:10px}
+.lvplat{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.lvbox{padding:14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}.lvbox h4{margin:0;font-size:15px}
+.lvduo,.lvmv{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px}
+.lvtbl{width:100%;border-collapse:collapse;font-size:13.5px}.lvtbl th,.lvtbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:start;vertical-align:top}.lvtbl .n{text-align:end;white-space:nowrap}.lvtbl td.nm{max-width:260px;overflow-wrap:anywhere}
+.tblwrap{overflow-x:auto}
+.lvf{display:inline-block;font-size:11.5px;padding:2px 7px;border-radius:999px;background:var(--sunk);margin:1px 0}.lvf.b{background:rgba(220,60,60,.13);color:var(--bad)}.lvf.g{background:rgba(40,160,90,.14);color:var(--good)}
+.lvch{width:100%;height:auto}.lvch rect{fill:var(--line);}.lvch rect.cur{fill:var(--ink)}.lvch .ln{stroke:var(--good);stroke-width:2}.lvch text{font-size:10px;fill:var(--muted)}
+.lgd{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 8px;vertical-align:middle}.lgd.b{background:var(--line)}.lgd.l{background:var(--good);height:3px}
+.pbar{position:relative;height:10px;border-radius:6px;background:var(--line);overflow:visible}.pbar i{display:block;height:100%;border-radius:6px;background:var(--ink)}.pbar b{position:absolute;top:-4px;width:2px;height:18px;background:var(--muted)}
+.lvads{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}.lvads li{display:flex;gap:10px;align-items:center}.lvads li>div{display:flex;flex-direction:column;min-width:0}.lvads b{overflow-wrap:anywhere;font-size:14px}
+.lvads img,.lvads .ph{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none;background:var(--line);display:grid;place-items:center;font-weight:700;color:var(--muted)}
+.lvact{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.lvauto{display:flex;gap:6px;align-items:center}
 .lvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:12px}
 .lv{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .lvh{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -1630,7 +1646,7 @@ function buildFile(name,grid){
   });
   if(!rows.length)throw new Error('No campaign rows with spend or impressions were found after removing total rows.');
   let unit=map.conv!=null?unitFromHeader(header[map.conv]):(map.cpr!=null?unitFromHeader(header[map.cpr]):'conversion');
-  const types=new Map();rows.filter(r=>r.conv>0&&r.rtype).forEach(r=>{const u=unitFromType(r.rtype);types.set(u,(types.get(u)||0)+r.conv)});
+  const types=new Map();rows.filter(r=>r.rtype&&(r.conv>0||r.spend>0)).forEach(r=>{const u=unitFromType(r.rtype);types.set(u,(types.get(u)||0)+r.spend)});
   if(types.size){unit=[...types].sort((a,b)=>b[1]-a[1])[0][0]}
   const ds=rows.map(r=>r.date).filter(Boolean).sort();
   const detected=Object.entries(map).filter(([k])=>!['currency','rtype','roas','cpr','freq'].includes(k)).map(([k,i])=>[k,header[i]]);
@@ -1678,6 +1694,11 @@ const PEN={High:9,Medium:5,Low:2,Opportunity:0};
 /* ---------- per-platform audit ---------- */
 function auditPlatform(pk,all,ctx){
   const P=PLATS[pk]||PLATS.other;
+  // Campaigns optimised for a different result than the main one (e.g. leads in a messaging account) are listed
+  // with their own results, but not judged against the main objective.
+  const goalOf=r=>r.rtype?unitFromType(r.rtype):'';
+  const ogRows=ctx.unit?all.filter(r=>!r.detail&&goalOf(r)&&goalOf(r)!==ctx.unit):[];
+  if(ogRows.length&&ogRows.length<all.length)all=all.filter(r=>!ogRows.includes(r));
   const main=all.filter(r=>!r.detail),det=all.filter(r=>r.detail);
   const rows=main.length?main:all,kwRows=det.length?det:rows;
   // No margin entered: nothing is assumed. Profit verdicts, break-even checks and profit figures are skipped;
@@ -2047,7 +2068,7 @@ function auditPlatform(pk,all,ctx){
       const at=new Set(rows.map(r=>r.attr).filter(Boolean));
       if(at.size>1)push({sev:'Low',bucket:null,conf:'High',title:A(`${P.short} rows use ${at.size} different attribution settings`,`صفوف ${P.short} تستخدم ${at.size} إعدادات إسناد مختلفة`),
         ev:[...at].map(esc).join(' · '),act:A(`Results from different attribution windows aren't comparable. Re-export with one attribution setting for all campaigns.`,`النتائج من نوافذ إسناد مختلفة غير قابلة للمقارنة. أعد التصدير بإعداد إسناد واحد لكل الحملات.`),impact:0,kind:'none'});
-      if(ctxMixed(ctx))push({sev:'Medium',bucket:null,conf:'High',title:A(`${P.short} “Results” mix different goals`,`«النتائج» في ${P.short} تخلط أهدافًا مختلفة`),
+      if(ctxMixed(ctx)&&!ogRows.length)push({sev:'Medium',bucket:null,conf:'High',title:A(`${P.short} “Results” mix different goals`,`«النتائج» في ${P.short} تخلط أهدافًا مختلفة`),
         ev:A(`This export counts ${ctx.mixed.join(', ')} together as results`,`هذا الملف يحسب ${ctx.mixed.map(UA).join('، ')} معًا كنتائج`),
         act:A(`Cost per result compares unlike things here. Judge each objective separately, or export one objective at a time.`,`تكلفة النتيجة هنا تقارن أشياء مختلفة. قيّم كل هدف على حدة، أو صدّر هدفًا واحدًا في كل مرة.`),impact:0,kind:'none'});
     }
@@ -2270,11 +2291,19 @@ function auditPlatform(pk,all,ctx){
   let series=[];
   if(daily){
     const byD=groupBy(rows,r=>r.date),t0=Date.parse(T.first);
-    for(let t=t0;t<=T.endMs;t+=DAY){const d=isoDay(t),a=agg(byD.get(d)||[]);series.push({d,spend:a.spend,value:a.value,conv:a.conv})}
+    for(let t=t0;t<=T.endMs;t+=DAY){const d=isoDay(t),a=agg(byD.get(d)||[]);series.push({d,spend:a.spend,value:a.value,conv:a.conv,impr:a.impr,clicks:a.clicks})}
     series.forEach((p,i)=>{const w=series.slice(Math.max(0,i-6),i+1),s=w.reduce((t,x)=>t+x.spend,0),v=w.reduce((t,x)=>t+x.value,0),n=w.reduce((t,x)=>t+x.conv,0);p.roas7=s?v/s:null;p.cpa7=n?s/n:null});
     let cur=0,mx=0;series.forEach(p=>{if(p.spend===0){cur++;mx=Math.max(mx,cur)}else cur=0});
     if(mx>=7)notes.push(A(`${P.short}: spend paused for ${mx} days in a row. Monthly figures use the ${D} days with delivery.`,`${P.short}: توقف الإنفاق ${mx} ${mx<=10?'أيام':'يومًا'} متتالية. الأرقام الشهرية تعتمد على ${D} يومًا من العرض الفعلي.`));
   }
+  // Live view: the latest day per campaign and per ad, against the average of the 7 days with spend before it
+  let live=null;
+  if(daily&&series.length>=8){const L=[...series].reverse().find(x=>x.spend>0);if(L){
+    const prev=series.filter(x=>x.d<L.d&&x.spend>0).slice(-7).map(x=>x.d),pset=new Set(prev),nB=Math.max(1,prev.length),F5=['spend','conv','value','impr','clicks'];
+    const grp=(kf,lab)=>{const m=new Map();for(const r of rows){if(!r.date||(r.date!==L.d&&!pset.has(r.date)))continue;const k=kf(r);if(!k)continue;if(!m.has(k))m.set(k,{k,lab:lab(r),t:[],b:[]});(r.date===L.d?m.get(k).t:m.get(k).b).push(r)}
+      return [...m.values()].map(o=>{const t=agg(o.t),b=agg(o.b),T={},B={};F5.forEach(f=>{T[f]=t[f];B[f]=b[f]/nB});return {key:o.k,...o.lab,t:T,b:B}}).filter(o=>o.t.spend>0||o.b.spend>0)};
+    live={last:L.d,prev:prev.length,camps:grp(r=>r.campaign,r=>({name:r.campaign})),ads:grp(r=>r.ad?r.campaign+'\u0001'+r.ad:'',r=>({name:r.ad,camp:r.campaign}))}}}
+
   let score=100-F.reduce((t,f)=>t+PEN[f.sev],0);
   if(mode==='value'&&!noM&&acc.roas<be)score-=15;
   const cov=checks.length?checks.filter(c=>c.ran).length/checks.length:1;
@@ -2282,7 +2311,14 @@ function auditPlatform(pk,all,ctx){
   score=Math.round(Math.max(12,Math.min(100,score)));
   F.forEach(f=>{if(f.kind!=='plan')return;if(f.dp!=null)f.rv=Math.max(0,f.dp)});
   camps.forEach(c=>{if(noM)c.profit100=null});
-  return {pk,P,mode,U,Us,acc,accEff,be,camps,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
+  let ogSpend=0;
+  if(ogRows.length&&ogRows.length<rows.length+ogRows.length){const tot=acc.spend+ogRows.reduce((t,r)=>t+r.spend,0);
+    for(const [name,rs] of groupBy(ogRows,r=>r.campaign)){const a=agg(rs),g=goalOf(rs[0]);a.name=name;a.share=tot?a.spend/tot:0;a.cshare=0;a.eff=0;a.daily=a.spend/Math.max(1,D);a.goal=g;a.verdict='Other goal';a.whyV='Other goal';a.profit100=null;
+      a.why=A(`Optimised for ${plural(g)}: ${cnt(a.conv)} ${a.conv===1?g:plural(g)}${a.conv?` at ${money(a.spend/a.conv)} each`:''}. This report judges ${Us}, so it isn’t compared with those campaigns.`,`مُحسَّنة لـ ${USA(g)}: ${cnt(a.conv)}${a.conv?` بتكلفة ${money(a.spend/a.conv)} لكل منها`:''}. يقيّم هذا التقرير ${Usa}، لذا لا تُقارن بتلك الحملات.`);
+      ogSpend+=a.spend;camps.push(a)}
+    const gs=[...new Set(ogRows.map(goalOf))];
+    notes.push(A(`${P.short}: the main objective here is ${Us} (most of the spend). ${money(ogSpend,0)} on campaigns optimised for ${gs.map(plural).join(', ')} is listed in the campaign table with its own results, and isn’t judged against ${Us}.`,`${P.short}: الهدف الرئيسي هنا ${Usa} (معظم الإنفاق). أما ${money(ogSpend,0)} على حملات مُحسَّنة لـ ${gs.map(USA).join('، ')} فتظهر في جدول الحملات بنتائجها الخاصة، ولا تُقيَّم مقابل ${Usa}.`))}
+  return {pk,P,mode,U,Us,acc,accEff,be,camps,ogSpend,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,live,score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
     waste:(plan?plan.cut:0)+F.filter(f=>f.direct&&!(f.wcamp||[]).some(n=>camps.some(c=>c.name===n&&c.cutK))).reduce((t,f)=>t+f.impact,0),monthlySpend:acc.spend*mo,files:ctx.files||[]};
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
@@ -2717,6 +2753,7 @@ function seasonsAhead(today,days){const lim=isoDay(Date.parse(today)+days*DAY);r
 <script id="ui">
 const $=id=>document.getElementById(id);
 const cnt_=n=>cnt(n);
+const BOOT_HASH=location.hash,BOOT_PATH=location.pathname;
 const ST={groupBy:'platform',files:[],example:false,filter:'all',pil:null,tab:null,userCur:false,last:null};
 const seq=(()=>{let i=0;return()=>'f'+(++i)})();
 const PORDER=['meta','google','tiktok','snap','linkedin','microsoft','pinterest','x','other'];
@@ -2797,7 +2834,7 @@ drop.addEventListener('drop',e=>{e.stopPropagation();if(e.dataTransfer.files.len
 document.addEventListener('dragover',e=>e.preventDefault());
 document.addEventListener('drop',e=>{if(!drop.contains(e.target)){e.preventDefault();if(e.dataTransfer.files.length){const l=[...e.dataTransfer.files];if(reportOpen()&&isFree()){toast(TR('Files are locked for your free audit.','الملفات مقفلة لتدقيقك المجاني.'));return}reportOpen()?addFiles(l):wzFromFiles(l)}}});
 $('exampleBtn').addEventListener('click',()=>{ST.files=exampleFiles();ST.example=true;ST.tab=null;ST.view='overview';$('currency').value=CURRENCIES.includes(regionCur())?regionCur():'USD';ST.exampleFiles=ST.files.map(f=>{f.cur=$('currency').value;return f});$('revenue').value='';render(true)});
-$('resetBtn').addEventListener('click',()=>{ST.files=[];ST.crMeta=null;ST.example=false;ST.claimed=false;ST.userCur=false;go('home')});
+$('resetBtn').addEventListener('click',()=>{sessClear();ST.liveSrc=null;ST.liveToday=null;ST.liveAuto=false;clearInterval(ST.liveIv);ST.files=[];ST.crMeta=null;ST.example=false;ST.claimed=false;ST.userCur=false;go('home')});
 ['margin','revenue','days'].forEach(id=>$(id).addEventListener('input',()=>render()));
 // Business type for benchmarks: remembered in this browser only
 const benchOpts=sel=>`<option value="">${TR('Not set (no benchmark)','غير محدد (بلا معيار)')}</option>`+BENCH.map(v=>`<optgroup label="${esc(TR(v.n[0],v.n[1]))}">${v.s.map(x=>`<option value="${x.id}"${x.id===sel?' selected':''}>${esc(TR(x.n[0],x.n[1]))}${!x.tw&&!x.lq?TR(' · benchmark unavailable',' · المعيار غير متاح'):!x.tw?TR(' · Google search benchmark only',' · معيار بحث Google فقط'):''}</option>`).join('')}</optgroup>`).join('');
@@ -2860,6 +2897,20 @@ const pname=k=>k==='cross'?TR('Cross-channel','عبر القنوات'):PLATS[k].
 const pdot=k=>k==='cross'?'<span class="dot" style="background:transparent;border:2px solid var(--ink);border-radius:50%"></span>':dot(k);
 function fmtDate(d){if(!d)return '';const t=new Date(d+'T00:00:00Z');return t.toLocaleDateString(LANG==='ar'?'ar-AE-u-nu-latn':'en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'})}
 
+/* ================= keep the open report for this signed-in session (until sign out or Start over) ================= */
+const SESS={db:null,t:0};
+function sessDB(){return SESS.db||(SESS.db=new Promise((res,rej)=>{try{const r=indexedDB.open('optiroas-session',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}}))}
+async function sessPut(v){try{const db=await sessDB();await new Promise((res,rej)=>{const t=db.transaction('s','readwrite'),o=t.objectStore('s');v===null?o.delete('cur'):o.put(v,'cur');t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}catch(e){}}
+async function sessGet(){try{const db=await sessDB();return await new Promise((res,rej)=>{const r=db.transaction('s').objectStore('s').get('cur');r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}catch(e){return null}}
+function sessSave(){const u=ST.me&&ST.me.user;if(!u||ST.example||!ST.files.length||ST.restoring)return;clearTimeout(SESS.t);SESS.t=setTimeout(()=>{if(!ST.files.length||ST.example)return;sessPut({uid:u.id,at:Date.now(),files:ST.files,crMeta:ST.crMeta||null,claimed:!!ST.claimed,userCur:!!ST.userCur,liveSrc:ST.liveSrc||null,liveToday:ST.liveToday||null,liveAt:ST.liveAt||0,platOver:ST.platOver||{},uploadedAt:ST.uploadedAt||'',label:ST.reportLabel||'',view:ST.view||'overview',tab:ST.tab||null,
+  form:{margin:$('margin').value,revenue:$('revenue').value,currency:$('currency').value,days:$('days').value,bench:$('bench')?$('bench').value:''}})},250)}
+function sessClear(){clearTimeout(SESS.t);sessPut(null)}
+async function sessRestore(){const u=ST.me&&ST.me.user;if(!u||ST.files.length)return false;const s=await sessGet();if(!s||!Array.isArray(s.files)||!s.files.length)return false;
+  if(s.uid!==u.id){sessClear();return false}
+  ST.restoring=true;try{ST.files=s.files;ST.crMeta=s.crMeta||null;ST.claimed=!!s.claimed;ST.liveSrc=s.liveSrc||null;ST.liveToday=s.liveToday||null;ST.liveAt=s.liveAt||0;ST.userCur=!!s.userCur;ST.platOver=s.platOver||{};ST.uploadedAt=s.uploadedAt||'';if(s.label)ST.reportLabel=s.label;ST.example=false;ST.view=s.view||'overview';ST.tab=s.tab||null;
+    const f=s.form||{};$('margin').value=f.margin||'';$('revenue').value=f.revenue||'';if(f.currency)$('currency').value=f.currency;if(f.days)$('days').value=f.days;if(f.bench&&$('bench'))$('bench').value=f.bench;
+    render(false)}catch(e){ST.files=[];ST.restoring=false;return false}
+  ST.restoring=false;return true}
 function render(scroll){
   const rep=$('report');
   if(!ST.files.length){if(ST.page==='audit')go('home');return}
@@ -2959,7 +3010,7 @@ function render(scroll){
   }
 
   $('findings').querySelectorAll('[data-done]').forEach(b=>{const f=A.F[+b.dataset.done];if(LD[fkey(f)])b.closest('.f').classList.add('isdone');b.onclick=()=>ledgerToggle(f)});
-  renderBudgetPlan(A);renderPlan(A);renderDelivered(A);renderSeason(A);renderCalc(A);lockCalc();renderTabs(A);renderLive(A);
+  renderBudgetPlan(A);renderPlan(A);renderDelivered(A);renderSeason(A);renderCalc(A);lockCalc();renderTabs(A);renderLive(A);sessSave();
   if(ST.wantLive){ST.wantLive=false;setTimeout(()=>{setView('live')},50)}
   ST.reportFp=ST.files.filter(f=>!f.err).map(f=>f.name+':'+f.size).sort().join('|');ST.reportRef=refOf(ST.reportFp);renderKeepBar();renderUpsell();
 
@@ -3467,7 +3518,7 @@ $('waitForm').addEventListener('submit',async e=>{
 $('wlBack').onclick=()=>showView('site');
 if(STRIPE.portal){$('portalBtn').href=STRIPE.portal;$('footPortal').href=STRIPE.portal;$('footPortal').hidden=false;$('portalBtn').rel=$('footPortal').rel='noopener'}
 $('signInBtn').onclick=async()=>{if(ST.me&&ST.me.user){await signOut()}else{ST.acctMode='signin';openAcct()}};
-async function signOut(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}ST.claimed=false;await loadMe();if(!$('acctView').hidden)renderAcct();if(ST.page==='start')renderWizard();toast(TR('Signed out.','تم تسجيل الخروج.'))}
+async function signOut(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}sessClear();ST.claimed=false;ST.liveSrc=null;ST.liveAuto=false;clearInterval(ST.liveIv);if(!ST.example){ST.files=[];ST.crMeta=null;ST.last=null;$('navAudit').hidden=true;if(ST.page==='audit')go('home')}await loadMe();if(!$('acctView').hidden)renderAcct();if(ST.page==='start')renderWizard();toast(TR('Signed out.','تم تسجيل الخروج.'))}
 function toast(m,ms){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(ST.tt);ST.tt=setTimeout(()=>t.hidden=true,ms||Math.max(2600,Math.min(7000,String(m).length*45)))}
 
 /* ================= report tabs ================= */
@@ -3480,7 +3531,7 @@ function renderTabs(A){
   $('rtabs').querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>setView(b.dataset.view));
   document.querySelectorAll('.rpanel').forEach(p=>p.hidden=p.dataset.panel!==ST.view);
 }
-function setView(v,anchor){ST.view=v;document.querySelectorAll('.rtab').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));document.querySelectorAll('.rpanel').forEach(p=>p.hidden=p.dataset.panel!==v);
+function setView(v,anchor){ST.view=v;sessSave();document.querySelectorAll('.rtab').forEach(b=>b.setAttribute('aria-selected',b.dataset.view===v));document.querySelectorAll('.rpanel').forEach(p=>p.hidden=p.dataset.panel!==v);
   (anchor&&$(anchor)?$(anchor):$('rtabs')).scrollIntoView({block:'start'});afterRender()}
 
 /* ================= live dashboard (Pro) ================= */
@@ -3496,31 +3547,87 @@ function renderLive(A){
   }
   const rows=A.plats.filter(p=>p.daily&&p.series.length>=8);
   if(!rows.length){el.innerHTML=`<div class="card lock"><h3>Live dashboard</h3><p class="muted">Upload exports broken down by day to preview the live view. Once your platforms are connected, it refreshes every hour on its own.</p></div>`;return}
-  const cards=[],alerts=[];
+  const alerts=[],blocks=[],todayISO=new Date().toISOString().slice(0,10);
+  const effOf=(o,V)=>V?(o.spend?o.value/o.spend:null):(o.conv?o.spend/o.conv:null);
+  const chg=(c,b,upGood,lbl)=>{if(c==null||!b)return `<span class="chg muted">${lbl||''}</span>`;const ch=c/b-1,g=upGood?ch>0:ch<0;return `<span class="chg ${Math.abs(ch)<.1?'':g?'pos':'neg'}">${ch>=0?'▲':'▼'} ${pct(Math.abs(ch),0)} ${lbl||''}</span>`};
+  const spark=(vals,upGood)=>{const v=vals.map(x=>x==null||!isFinite(x)?null:x),ok=v.filter(x=>x!=null);if(ok.length<3)return '';const mn=Math.min(...ok),mx=Math.max(...ok),W=120,H=30,n=v.length;
+    const pts=v.map((x,i)=>x==null?null:[(i/(n-1))*W,mx===mn?H/2:H-3-((x-mn)/(mx-mn))*(H-6)]).filter(Boolean),lp=pts[pts.length-1];
+    return `<svg class="spk" viewBox="0 0 ${W} ${H}" height="28" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts.map(p=>p.map(z=>z.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="2.6" fill="currentColor"/></svg>`};
   for(const p of rows){
-    const s=p.series,last=[...s].reverse().find(x=>x.spend>0);if(!last)continue;
-    const wd=new Date(last.d+'T00:00:00Z').getUTCDay(),prior=s.filter(x=>x.d<last.d&&x.spend>0&&new Date(x.d+'T00:00:00Z').getUTCDay()===wd).slice(-4);
-    const base=prior.length?prior:s.filter(x=>x.d<last.d&&x.spend>0).slice(-7);
-    const avg=k=>base.reduce((t,x)=>t+x[k],0)/Math.max(1,base.length);
-    const V=p.mode==='value',bS=avg('spend'),bV=avg('value'),bC=avg('conv');
-    const eff=V?(last.spend?last.value/last.spend:0):(last.conv?last.spend/last.conv:null),bE=V?(bS?bV/bS:0):(bC?bS/bC:null);
-    const ch=eff!=null&&bE?eff/bE-1:null,sch=bS?last.spend/bS-1:null;
-    const good=ch==null?null:V?ch>0:ch<0;
-    if(ch!=null&&Math.abs(ch)>=.25)alerts.push({p,t:LANG==='ar'?`${p.P.short}: ${V?'ROAS':cpu(p)} ${ch>0?'ارتفع':'انخفض'} ${pct(Math.abs(ch),0)} مقارنة بيوم ${DAYA(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][wd])} المعتاد`:`${p.P.short} ${V?'ROAS':cpu(p)} ${ch>0?'up':'down'} ${pct(Math.abs(ch),0)} vs a normal ${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][wd]}`,good});
-    if(sch!=null&&sch>=.5)alerts.push({p,t:TR(`${p.P.short} spend ${pct(sch,0)} above a normal day`,`إنفاق ${p.P.short} أعلى بنسبة ${pct(sch,0)} من اليوم المعتاد`),good:false});
-    if(last.conv===0&&p.acc.conv&&last.spend>=2*(p.acc.spend/p.acc.conv))alerts.push({p,t:TR(`${p.P.short}: ${money(last.spend,0)} spent with no ${p.Us}. Check tracking`,`${p.P.short}: أُنفق ${money(last.spend,0)} دون أي ${UA(p.U)}. تحقّق من التتبّع`),good:false});
-    cards.push(`<div class="card lv"><div class="lvh"><span>${dot(p.pk)} <b>${p.P.short}</b></span><span class="muted small">${fmtDate(last.d)}</span></div>
-      <div class="lvk"><span class="eyebrow">Spend</span><span class="num">${money(last.spend,0)}</span><span class="muted small">${TR('normal','المعتاد')} ${money(bS,0)}</span></div>
-      <div class="lvk"><span class="eyebrow">${V?'ROAS':CPU(p)}</span><span class="num">${eff==null?'—':V?x2(eff):money(eff)}</span><span class="chg ${good==null||Math.abs(ch)<.1?'':good?'pos':'neg'}">${ch==null?'':(ch>=0?'▲ ':'▼ ')+pct(Math.abs(ch),0)} ${TR('vs normal','مقابل المعتاد')}</span></div>
-      <div class="lvk"><span class="eyebrow">${UPC(p)}</span><span class="num">${cnt(last.conv)}</span><span class="muted small">${TR('normal','المعتاد')} ${cnt(bC)}</span></div></div>`);
+    const s=p.series,lv=p.live,last=[...s].reverse().find(x=>x.spend>0);if(!last)continue;
+    const V=p.mode==='value',idx=s.indexOf(last),prevD=s.slice(0,idx).filter(x=>x.spend>0).slice(-7),nB=Math.max(1,prevD.length);
+    const partial=!!(ST.liveToday&&last.d===ST.liveToday),hr=new Date(),frac=partial?Math.min(1,Math.max(.05,(hr.getHours()+hr.getMinutes()/60)/24)):1,early=partial&&frac<.25,ic=v=>Number.isInteger(v)?fmtInt(v):cnt(v);
+    const B={};['spend','conv','value','impr','clicks'].forEach(k=>B[k]=prevD.reduce((t,x)=>t+(x[k]||0),0)/nB*frac);
+    const L=last,lE=effOf(L,V),bE=effOf(B,V),lCtr=L.impr?L.clicks/L.impr:null,bCtr=B.impr?B.clicks/B.impr:null,lCpm=L.impr?L.spend/L.impr*1000:null,bCpm=B.impr?B.spend/B.impr*1000:null;
+    const s14=s.slice(Math.max(0,idx-13),idx+1),cT=(c,b,up,l)=>early?`<span class="chg muted">${TR('too early to compare','مبكر للمقارنة')}</span>`:chg(c,b,up,l),nl=partial?TR('normal by this hour','المعتاد حتى هذه الساعة'):TR('vs 7-day avg','مقابل متوسط 7 أيام');
+    const tile=(lab,val,c,sp)=>`<div class="card lvt"><span class="eyebrow">${lab}</span><div class="lvv"><span class="num">${val}</span>${sp}</div>${c}</div>`;
+    const tiles=[
+      tile(TR('Spend','الإنفاق'),money(L.spend,0),cT(L.spend,B.spend,true,nl),spark(s14.map(x=>x.spend))),
+      tile(UPC(p),ic(L.conv),cT(L.conv,B.conv,true,nl),spark(s14.map(x=>x.conv))),
+      tile(V?'ROAS':CPU(p),lE==null?'—':V?x2(lE):money(lE),chg(lE,bE,V,TR('vs 7-day avg','مقابل متوسط 7 أيام')),spark(s14.map(x=>effOf(x,V)))),
+      ...(L.impr||B.impr?[tile(TR('Click-through rate','نسبة النقر'),lCtr==null?'—':pct(lCtr,2),chg(lCtr,bCtr,true,TR('vs 7-day avg','مقابل متوسط 7 أيام')),spark(s14.map(x=>x.impr?x.clicks/x.impr:null))),
+        tile('CPM',lCpm==null?'—':money(lCpm),chg(lCpm,bCpm,false,TR('vs 7-day avg','مقابل متوسط 7 أيام')),spark(s14.map(x=>x.impr?x.spend/x.impr*1000:null))),
+        tile(TR('Link clicks','نقرات الرابط'),fmtInt(L.clicks),cT(L.clicks,B.clicks,true,nl),spark(s14.map(x=>x.clicks)))]:[])];
+    // pacing
+    const pace=B.spend?L.spend/B.spend:null;
+    const paceTxt=pace==null?'':early?TR(`${money(L.spend,0)} spent so far today. It’s early in the day, so pacing is shown from 6am.`,`أُنفق ${money(L.spend,0)} حتى الآن اليوم. ما زال الوقت مبكرًا، لذا تظهر الوتيرة ابتداءً من السادسة صباحًا.`):partial?TR(`By ${hr.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} you have spent ${money(L.spend,0)}, ${pct(Math.abs(pace-1),0)} ${pace>=1?'ahead of':'behind'} a normal day at this hour (assuming even delivery). At this pace today ends near ${money(L.spend/frac,0)}.`,`حتى الساعة ${hr.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})} أنفقت ${money(L.spend,0)}، أي ${pace>=1?'أعلى':'أقل'} بنسبة ${pct(Math.abs(pace-1),0)} من اليوم المعتاد في هذه الساعة (بافتراض توزيع متساوٍ). بهذه الوتيرة ينتهي اليوم عند نحو ${money(L.spend/frac,0)}.`)
+      :TR(`${fmtDate(L.d)}: ${money(L.spend,0)} spent, ${pct(Math.abs(pace-1),0)} ${pace>=1?'above':'below'} the 7-day average of ${money(B.spend,0)} a day.`,`${fmtDate(L.d)}: أُنفق ${money(L.spend,0)}، ${pace>=1?'أعلى':'أقل'} بنسبة ${pct(Math.abs(pace-1),0)} من متوسط 7 أيام البالغ ${money(B.spend,0)} يوميًا.`);
+    const pw=pace==null||early?0:Math.min(100,pace*50);
+    // week on week
+    const w1=s.slice(Math.max(0,idx-6),idx+1),w0=s.slice(Math.max(0,idx-13),Math.max(0,idx-6)),sum=(a,k)=>a.reduce((t,x)=>t+(x[k]||0),0);
+    const W1={spend:sum(w1,'spend'),conv:sum(w1,'conv'),value:sum(w1,'value'),impr:sum(w1,'impr'),clicks:sum(w1,'clicks')},W0={spend:sum(w0,'spend'),conv:sum(w0,'conv'),value:sum(w0,'value'),impr:sum(w0,'impr'),clicks:sum(w0,'clicks')};
+    const wr=(lab,a,b,fmt,up)=>`<tr><td>${lab}</td><td class="n">${a==null?'—':fmt(a)}</td><td class="n">${b==null?'—':fmt(b)}</td><td class="n">${chg(a,b,up,'')}</td></tr>`;
+    const wow=w0.length>=7?`<div class="card lvbox"><h4>${TR('Last 7 days vs the 7 before','آخر 7 أيام مقابل الـ7 التي قبلها')}</h4><div class="tblwrap"><table class="lvtbl"><thead><tr><th></th><th class="n">${TR('Last 7 days','آخر 7 أيام')}</th><th class="n">${TR('7 days before','الأيام السبعة قبلها')}</th><th class="n">${TR('Change','التغيّر')}</th></tr></thead><tbody>
+      ${wr(TR('Spend','الإنفاق'),W1.spend,W0.spend,v=>money(v,0),true)}${wr(UPC(p),W1.conv,W0.conv,cnt,true)}${wr(V?'ROAS':CPU(p),effOf(W1,V),effOf(W0,V),v=>V?x2(v):money(v),V)}
+      ${W1.impr?wr(TR('Click-through rate','نسبة النقر'),W1.impr?W1.clicks/W1.impr:null,W0.impr?W0.clicks/W0.impr:null,v=>pct(v,2),true)+wr('CPM',W1.impr?W1.spend/W1.impr*1000:null,W0.impr?W0.spend/W0.impr*1000:null,v=>money(v),false):''}</tbody></table></div></div>`:'';
+    // 14-day chart: results bars, cost per result line
+    const mxC=Math.max(1,...s14.map(x=>x.conv)),effs=s14.map(x=>effOf(x,V)),okE=effs.filter(x=>x!=null),mxE=okE.length?Math.max(...okE):1,CW=560,CH=150,bw=CW/s14.length;
+    const chart=`<div class="card lvbox"><h4>${TR(`Last ${s14.length} days`,`آخر ${s14.length} يومًا`)}</h4><p class="muted small">${TR(`Bars: ${UsL(p)} per day · line: ${V?'ROAS':cpu(p)}`,`الأعمدة: ${UsL(p)} يوميًا · الخط: ${V?'ROAS':cpu(p)}`)}</p>
+      <svg class="lvch" viewBox="0 0 ${CW} ${CH+18}" role="img" aria-label="${esc(UPC(p))}">${s14.map((x,i)=>{const h=x.conv/mxC*(CH-10);return `<rect x="${(i*bw+3).toFixed(1)}" y="${(CH-h).toFixed(1)}" width="${(bw-6).toFixed(1)}" height="${h.toFixed(1)}" rx="2" class="${x===L?'cur':''}"><title>${fmtDate(x.d)}: ${cnt(x.conv)} ${esc(p.Us)} · ${money(x.spend,0)}</title></rect>`}).join('')}
+      <polyline fill="none" class="ln" points="${effs.map((e,i)=>e==null?null:`${(i*bw+bw/2).toFixed(1)},${(CH-6-(e/mxE)*(CH-20)).toFixed(1)}`).filter(Boolean).join(' ')}"/>
+      ${s14.map((x,i)=>i%Math.ceil(s14.length/7)===0||x===L?`<text x="${(i*bw+bw/2).toFixed(1)}" y="${CH+14}" text-anchor="middle">${x.d.slice(8)}/${x.d.slice(5,7)}</text>`:'').join('')}</svg></div>`;
+    // campaigns
+    const cprA=p.acc.conv?p.acc.spend/p.acc.conv:null;
+    const camps=(lv&&lv.camps||[]).map(c=>{const t={...c.t},b={};Object.keys(c.b).forEach(k=>b[k]=c.b[k]*frac);const tE=effOf(t,V),bEf=effOf(b,V),ch=tE!=null&&bEf?tE/bEf-1:null,flags=[];
+      if(b.spend>0&&!t.spend)flags.push(['n',TR('No spend','بلا إنفاق')]);else if(!b.spend&&t.spend)flags.push(['n',TR('New','جديدة')]);
+      if(!V&&!early&&t.spend&&!t.conv&&cprA&&t.spend>=2*cprA)flags.push(['b',TR(`No ${p.Us}`,`بلا ${UA(p.Us)}`)]);
+      if(ch!=null&&Math.abs(ch)>=.25)flags.push([(V?ch>0:ch<0)?'g':'b',(V?ch>0:ch<0)?TR('Better','أفضل'):TR('Worse','أسوأ')]);
+      if(!early&&b.spend&&t.spend/b.spend>=1.5)flags.push(['n',TR('Spend up','الإنفاق أعلى')]);
+      return {...c,t,b,tE,bE:bEf,ch,flags}}).sort((a,b)=>Math.max(b.t.spend,b.b.spend)-Math.max(a.t.spend,a.b.spend));
+    camps.forEach(c=>{if(c.flags.some(f=>f[0]==='b'))alerts.push({p,good:false,t:TR(`${c.name}: ${c.flags.filter(f=>f[0]==='b').map(f=>f[1]).join(', ').toLowerCase()} (${money(c.t.spend,0)} spent, ${V?'ROAS '+(c.tE==null?'—':x2(c.tE)):cpu(p)+' '+(c.tE==null?'—':money(c.tE))} vs ${c.bE==null?'—':V?x2(c.bE):money(c.bE)} normally)`,`${c.name}: ${c.flags.filter(f=>f[0]==='b').map(f=>f[1]).join('، ')} (أُنفق ${money(c.t.spend,0)}، ${V?'ROAS '+(c.tE==null?'—':x2(c.tE)):cpu(p)+' '+(c.tE==null?'—':money(c.tE))} مقابل ${c.bE==null?'—':V?x2(c.bE):money(c.bE)} عادةً)`)});
+      else if(c.flags.some(f=>f[0]==='g'))alerts.push({p,good:true,t:TR(`${c.name}: ${V?'ROAS':cpu(p)} ${pct(Math.abs(c.ch),0)} better than its 7-day average`,`${c.name}: ${V?'ROAS':cpu(p)} أفضل بنسبة ${pct(Math.abs(c.ch),0)} من متوسط 7 أيام`)})});
+    const ctbl=camps.length?`<div class="card lvbox"><h4>${TR('Campaigns today vs their normal day','الحملات اليوم مقابل يومها المعتاد')}</h4><div class="tblwrap"><table class="lvtbl"><thead><tr><th>${TR('Campaign','الحملة')}</th><th class="n">${TR('Spend','الإنفاق')}</th><th class="n">${UPC(p)}</th><th class="n">${V?'ROAS':CPU(p)}</th><th>${TR('Flags','إشارات')}</th></tr></thead><tbody>
+      ${camps.slice(0,12).map(c=>`<tr><td class="nm">${esc(c.name)}</td><td class="n">${money(c.t.spend,0)}<br>${early?'':chg(c.t.spend,c.b.spend,true,'')}</td><td class="n">${ic(c.t.conv)}<br><span class="muted small">${TR('normal','المعتاد')} ${cnt(c.b.conv)}</span></td><td class="n">${c.tE==null?'—':V?x2(c.tE):money(c.tE)}<br><span class="muted small">${TR('normal','المعتاد')} ${c.bE==null?'—':V?x2(c.bE):money(c.bE)}</span></td><td>${c.flags.map(f=>`<span class="lvf ${f[0]}">${f[1]}</span>`).join(' ')}</td></tr>`).join('')}</tbody></table></div>${camps.length>12?`<p class="muted small">${TR(`Top 12 of ${camps.length} campaigns by spend.`,`أعلى 12 من ${camps.length} حملة حسب الإنفاق.`)}</p>`:''}</div>`:'';
+    // ad movers
+    const minS=Math.max(1,(B.spend||L.spend)*.03),ads=(lv&&lv.ads||[]).map(a=>{const b={};Object.keys(a.b).forEach(k=>b[k]=a.b[k]*frac);const tE=effOf(a.t,V),bEa=effOf(b,V);return {...a,b,tE,bE:bEa,ch:tE!=null&&bEa?tE/bEa-1:null}}).filter(a=>a.ch!=null&&a.t.spend>=minS&&(a.t.conv>=1||a.b.conv>=1));
+    const better=ads.filter(a=>V?a.ch>.1:a.ch<-.1).sort((a,b)=>V?b.ch-a.ch:a.ch-b.ch).slice(0,3),worse=ads.filter(a=>V?a.ch<-.1:a.ch>.1).sort((a,b)=>V?a.ch-b.ch:b.ch-a.ch).slice(0,3);
+    const thumb=a=>{const m=ST.crMeta&&ST.crMeta[a.camp+'\u0001'+a.name];return m&&m.thumb?`<img src="${esc(m.thumb)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:`<span class="ph">${esc(String(a.name||'?').slice(0,1).toUpperCase())}</span>`};
+    const mv=(a,g)=>`<li>${thumb(a)}<div><b>${esc(a.name)}</b><span class="muted small">${esc(a.camp)}</span><span class="small">${V?'ROAS '+x2(a.tE):cpu(p)+' '+money(a.tE)} · ${TR('normal','المعتاد')} ${V?x2(a.bE):money(a.bE)} <span class="chg ${g?'pos':'neg'}">${a.ch>=0?'▲':'▼'} ${pct(Math.abs(a.ch),0)}</span></span></div></li>`;
+    const movers=better.length||worse.length?`<div class="lvmv">${better.length?`<div class="card lvbox"><h4>${TR('Ads improving','إعلانات تتحسّن')}</h4><ul class="lvads">${better.map(a=>mv(a,true)).join('')}</ul></div>`:''}${worse.length?`<div class="card lvbox"><h4>${TR('Ads slipping','إعلانات تتراجع')}</h4><ul class="lvads">${worse.map(a=>mv(a,false)).join('')}</ul></div>`:''}</div>`:'';
+    // account-level alerts
+    if(lE!=null&&bE&&Math.abs(lE/bE-1)>=.25){const ch=lE/bE-1;alerts.push({p,good:V?ch>0:ch<0,t:TR(`${p.P.short} ${V?'ROAS':cpu(p)} ${ch>0?'up':'down'} ${pct(Math.abs(ch),0)} vs the 7-day average`,`${p.P.short}: ${V?'ROAS':cpu(p)} ${ch>0?'ارتفع':'انخفض'} ${pct(Math.abs(ch),0)} مقابل متوسط 7 أيام`)})}
+    if(pace!=null&&!early&&pace>=1.5)alerts.push({p,good:false,t:TR(`${p.P.short} spend ${pct(pace-1,0)} above a normal day${partial?' at this hour':''}`,`إنفاق ${p.P.short} أعلى بنسبة ${pct(pace-1,0)} من اليوم المعتاد`)});
+    if(lCtr!=null&&bCtr&&lCtr/bCtr-1<=-.3)alerts.push({p,good:false,t:TR(`${p.P.short} click-through rate down ${pct(1-lCtr/bCtr,0)}: check for tired creatives or a broken link`,`نسبة النقر في ${p.P.short} انخفضت ${pct(1-lCtr/bCtr,0)}: تحقّق من إرهاق التصاميم أو رابط معطّل`)});
+    if(lCpm!=null&&bCpm&&lCpm/bCpm-1>=.3)alerts.push({p,good:false,t:TR(`${p.P.short} CPM up ${pct(lCpm/bCpm-1,0)}: reaching people got more expensive`,`CPM في ${p.P.short} ارتفع ${pct(lCpm/bCpm-1,0)}: أصبح الوصول إلى الناس أغلى`)});
+    worse.filter(a=>Math.abs(a.ch)>=.5).slice(0,2).forEach(a=>alerts.push({p,good:false,t:TR(`Ad “${a.name}” (${a.camp}): ${V?'ROAS':cpu(p)} ${pct(Math.abs(a.ch),0)} worse than its 7-day average. Check frequency and comments, or pause it if it stays this way`,`الإعلان «${a.name}» (${a.camp}): ${V?'ROAS':cpu(p)} أسوأ بنسبة ${pct(Math.abs(a.ch),0)} من متوسط 7 أيام. راجع التكرار والتعليقات، أو أوقفه إن استمر كذلك`)}));
+    if(!early&&!L.conv&&p.acc.conv&&L.spend>=2*(p.acc.spend/p.acc.conv))alerts.push({p,good:false,t:TR(`${p.P.short}: ${money(L.spend,0)} spent with no ${p.Us}. Check tracking`,`${p.P.short}: أُنفق ${money(L.spend,0)} دون أي ${UA(p.U)}. تحقّق من التتبّع`)});
+    const og=(p.camps||[]).filter(c=>c.verdict==='Other goal');
+    blocks.push(`<div class="lvplat"><div class="lvh"><span>${dot(p.pk)} <b>${p.P.name}</b> · <span class="muted">${partial?TR('today so far','اليوم حتى الآن'):fmtDate(L.d)}</span></span><span class="muted small">${TR(`compared with the average of the ${prevD.length} days before`,`مقارنةً بمتوسط ${prevD.length} أيام قبله`)}</span></div>
+      <div class="lvtiles">${tiles.join('')}</div>
+      ${pace!=null?`<div class="card lvbox lvpace"><h4>${TR('Pacing','وتيرة الإنفاق')}</h4><div class="pbar"><i style="width:${pw}%"></i><b style="left:50%"></b></div><p class="small">${paceTxt}</p></div>`:''}
+      <div class="lvduo">${chart}${wow}</div>${ctbl}${movers}${og.length?`<p class="muted small">${TR(`Judged on ${p.Us}, the main objective here. Not included: ${og.map(c=>c.name).join(', ')} (optimised for a different result; see the campaign table in the report).`,`التقييم على أساس ${UA(p.Us)}، الهدف الرئيسي هنا. غير مشمولة: ${og.map(c=>c.name).join('، ')} (مُحسّنة لنتيجة مختلفة؛ راجع جدول الحملات في التقرير).`)}</p>`:''}</div>`);
   }
-  
-  el.innerHTML=`<div class="sechead" style="margin-bottom:12px"><div><h3 style="font-size:20px">Live dashboard</h3><p class="muted small" style="margin-top:4px">Preview from the latest day in your files. Once platforms are connected, this refreshes every hour and compares today so far with the same hours on recent days.</p></div><span class="pill Opportunity">Pro</span></div>
-    <div class="lvgrid">${cards.join('')}</div>
-    <div class="card" style="padding:16px 18px;margin-top:14px"><h3 style="font-size:16px">Alerts that would be sent</h3>
-      ${alerts.length?`<ul class="alist">${alerts.map(x=>`<li><span class="adot ${x.good?'g':'b'}"></span>${dot(x.p.pk)} ${esc(x.t)}</li>`).join('')}</ul>`:'<p class="muted small">Nothing unusual on the latest day.</p>'}
-      <p class="muted small">${TR('Email alerts cover ROAS and CPA swings, spend spikes, tracking breaks and creative fatigue. On Pro you choose which ones you get.','تغطي التنبيهات بالبريد تقلبات ROAS وCPA، وقفزات الإنفاق، وانقطاع التتبّع، وإرهاق التصاميم. في Pro تختار ما يصلك منها.')}</p></div>`;
+  const src=ST.liveSrc&&!ST.example?ST.liveSrc:null,auto=!!ST.liveAuto,upd=ST.liveAt?new Date(ST.liveAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
+  el.innerHTML=`<div class="sechead" style="margin-bottom:12px"><div><h3 style="font-size:20px">${TR('Live dashboard','اللوحة المباشرة')}</h3><p class="muted small" style="margin-top:4px">${src?TR(`Pulled from Meta${upd?' at '+upd:''}${ST.liveToday?', including today so far':''}. Press Refresh for the latest numbers; with auto-refresh on, this page updates every 30 minutes while it’s open.`,`مسحوبة من Meta${upd?' الساعة '+upd:''}${ST.liveToday?'، مع اليوم حتى الآن':''}. اضغط «تحديث» لأحدث الأرقام؛ مع التحديث التلقائي تتحدّث الصفحة كل 30 دقيقة ما دامت مفتوحة.`):TR('From the latest day in your files. Connect Meta to pull today’s numbers and refresh them here.','من آخر يوم في ملفاتك. اربط Meta لسحب أرقام اليوم وتحديثها هنا.')}</p></div>
+    <div class="lvact">${src?`<button class="btn" type="button" id="lvRef">${TR('Refresh with today’s data','حدّث ببيانات اليوم')}</button><label class="small lvauto"><input type="checkbox" id="lvAuto"${auto?' checked':''}> ${TR('Auto-refresh','تحديث تلقائي')}</label>`:''}<span class="pill Opportunity">Pro</span></div></div>
+    <div class="card lvbox"><h4>${TR('What needs attention','ما يحتاج انتباهك')}</h4>
+      ${alerts.length?`<ul class="alist">${alerts.sort((a,b)=>a.good-b.good).slice(0,10).map(x=>`<li><span class="adot ${x.good?'g':'b'}"></span>${dot(x.p.pk)} ${esc(x.t)}</li>`).join('')}</ul>`:`<p class="muted small">${TR('Nothing unusual on the latest day.','لا شيء غير معتاد في آخر يوم.')}</p>`}</div>
+    ${blocks.join('')}`;
+  if(src){$('lvRef').onclick=()=>liveRefresh();$('lvAuto').onchange=e=>{ST.liveAuto=e.target.checked;liveTimer()}}
 }
+async function liveRefresh(){const s=ST.liveSrc;if(!s||ST.liveBusy)return;const b=$('lvRef');ST.liveBusy=true;if(b){b.disabled=true;b.textContent=TR('Refreshing…','جارٍ التحديث…')}
+  try{await runMetaAudit(s.acc,s.days,b||document.createElement('button'),s.ids,{today:true,stay:true})}finally{ST.liveBusy=false}}
+function liveTimer(){clearInterval(ST.liveIv);if(ST.liveAuto&&ST.liveSrc)ST.liveIv=setInterval(()=>{if(document.visibilityState==='visible'&&ST.page==='audit'&&ST.view==='live')liveRefresh()},30*60*1000)}
 
 $('copyBtn').addEventListener('click',async()=>{
   if(isFree()){lockModal(TR('Copy report is part of Starter and Pro','نسخ التقرير متاح في Starter وPro'),TR('On the free plan, download the action plan or the full summary PDF instead.','في الخطة المجانية، نزّل خطة العمل أو ملف PDF للملخص الكامل بدلًا من ذلك.'));return}
@@ -3876,12 +3983,12 @@ async function runGoogleAudit(acc,days,btn,ids){
     await addFiles(files);
   }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
 }
-async function runMetaAudit(acc,days,btn,ids){
+async function runMetaAudit(acc,days,btn,ids,opt){opt=opt||{};
   const cq=ids&&ids.length?`&campaigns=${encodeURIComponent(ids.join(','))}`:'',cn=ids&&ids.length?`${ids.length} campaign${ids.length===1?'':'s'}, `:'';
   const t=btn.textContent;btn.disabled=true;btn.textContent='Pulling data…';
-  try{const r=await api(`/api/meta/report?account=${encodeURIComponent(acc)}&days=${days}${cq}`);
-    const rows=+(r.headers.get('X-Rows')||0),txt=await r.text();
-    if(!rows){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:`No ad spend in the last ${days} days for this account.`};renderAcct();return}
+  try{const r=await api(`/api/meta/report?account=${encodeURIComponent(acc)}&days=${days}${cq}${opt.today?'&today=1':''}`);
+    const rows=+(r.headers.get('X-Rows')||0),txt=await r.text(),tdy=r.headers.get('X-Today')==='1'?r.headers.get('X-Until'):null;
+    if(!rows){btn.disabled=false;btn.textContent=t;if(opt.stay){toast(TR('Meta returned no rows for this period.','لم يُرجع Meta أي بيانات لهذه الفترة.'));return}ST.acctMsg={t:`No ad spend in the last ${days} days for this account.`};renderAcct();return}
     const acct=((ST.me&&ST.me.meta&&ST.me.meta.accounts)||[]).find(a=>a.id===acc);
     const file=new File([txt],`Meta · ${(acct&&acct.name)||acc} (${cn}last ${days} days, live).csv`,{type:'text/csv'});
     ST.files=ST.files.filter(f=>!/\(last \d+ days, live\)\.csv$/.test(f.name)||!f.name.includes((acct&&acct.name)||acc));
@@ -3890,8 +3997,9 @@ async function runMetaAudit(acc,days,btn,ids){
     try{const c=await api(`/api/meta/creatives?account=${encodeURIComponent(acc)}&days=${days}${cq}`);const m={};
       (c.ads||[]).forEach(a=>{const k=a.camp+'\u0001'+a.name;if(!m[k])m[k]=a});ST.crMeta=m}catch(e){ST.crMeta=null}
     btn.disabled=false;btn.textContent=t;
-    await addFiles([file]);
-  }catch(x){btn.disabled=false;btn.textContent=t;ST.acctMsg={t:x.message};renderAcct()}
+    ST.liveSrc={plat:'meta',acc,days,ids:ids||null};ST.liveToday=tdy;ST.liveAt=Date.now();
+    await addFiles([file]);if(opt.stay&&ST.page==='audit')setView('live');
+  }catch(x){btn.disabled=false;btn.textContent=t;if(opt.stay){toast(x.message);return}ST.acctMsg={t:x.message};renderAcct()}
 }
 
 /* ---------- campaign picker: account → period → campaigns → report ---------- */
@@ -3965,6 +4073,7 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())ret
 (async()=>{
   const q=new URLSearchParams(location.search),mm=q.get('meta'),gg=q.get('google'),sn=q.get('snap'),tk=q.get('tiktok'),vf=q.get('verified'),upg=q.get('upgrade'),rid=q.get('report'),rtok=location.pathname==='/reset'?q.get('token'):null,wantAcct=location.hash==='#account';
   if(API_OK)await loadMe();
+  const restored=API_OK&&!mm&&!gg&&!sn&&!tk&&!rid&&!rtok&&!upg&&!vf?await sessRestore():false;
   if(mm){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
@@ -3986,8 +4095,10 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())ret
   else if(upg){try{history.replaceState(null,'',location.pathname+'#pricing')}catch(e){}go('pricing');setTimeout(()=>toast(TR('Connecting ad accounts is part of Starter and Pro.','ربط الحسابات الإعلانية جزء من Starter وPro.'),5000),400)}
   else if(vf){try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}if(vf==='1'){try{localStorage.setItem('or_verified',String(Date.now()))}catch(e){}}openAcct(vf==='1'?{ok:true,t:TR('Email confirmed. If you started an audit in another tab, go back to it: it has updated on its own. Or start one here.','تم تأكيد بريدك. إذا بدأت تدقيقًا في تبويب آخر فارجع إليه: لقد تحدّث تلقائيًا. أو ابدأ تدقيقًا هنا.')}:{t:TR('That confirmation link has expired or was already used. Sign in and send a new one.','انتهت صلاحية رابط التأكيد أو استُخدم من قبل. سجّل الدخول واطلب رابطًا جديدًا.')})}
   else if(wantAcct)openAcct();
+  else if(restored&&/audit-report/.test(BOOT_HASH+BOOT_PATH)){const v=ST.view;go('audit');if(v&&v!=='overview')setView(v)}
   else if(wsUser()&&(!location.hash||['#top','#home','#my-reports'].includes(location.hash)))go('workspace');
   else if(wsUser()&&location.hash==='#live')openLive();
+  if(restored&&ST.page!=='audit'&&ST.page!=='workspace')setTimeout(()=>toast(TR('Your last report is still open. Find it under Report in the menu.','تقريرك الأخير ما زال مفتوحًا. تجده تحت «التقرير» في القائمة.'),6000),300);
 })();
 renderRegionSel();syncAcctUI();feedbackWidget();tipInit();if(ST.lang==='ar'){i18Doc();i18Apply(document.body)}if(CURRENCIES.includes(regionCur()))$('currency').value=regionCur();
 
@@ -4226,7 +4337,7 @@ function renderWizard(){
     W.marginIn=$('wzMargin').value.trim();W.margin=+W.marginIn||45;W.rev=$('wzRev').value;W.cur=$('wzCur').value;if($('wzDays'))W.days=+$('wzDays').value||30;
     $('margin').value=W.marginIn||'';$('revenue').value=W.rev||'';$('currency').value=W.cur;ST.userCur=true;if(W.days)$('days').value=W.days;
     const files=usable.map(it=>it.file);ST.platOver={};usable.filter(it=>it.plat&&it.plat!=='orders').forEach(it=>ST.platOver[it.file.name+'|'+it.file.size]=it.plat);
-    ST.files=[];ST.example=false;ST.claimed=false;$('wzGen').disabled=true;
+    ST.files=[];ST.example=false;ST.claimed=false;ST.liveSrc=null;ST.liveToday=null;$('wzGen').disabled=true;
     await addFiles(files);
     if(ST.page!=='audit'){$('wzGen')&&($('wzGen').disabled=false);return}
     ST.wz={step:1,plats:new Set(),orders:false,items:[],tab:null,fixes:0};
@@ -4351,7 +4462,7 @@ function renderKeepBar(){
   const el=$('keepBar');if(!el)return;
   if(ST.example||!ST.last){el.innerHTML='';return}
   const saved=ST.savedId&&ST.savedFp===ST.reportFp,us=ST.me&&ST.me.usage,free=!us||!us.unlimited;
-  el.innerHTML=`<div class="keep card"><div><b>${TR('Keep this report','احتفظ بهذا التقرير')}</b><span class="muted small">${saved?TR('Saved to your account. Progress you mark is synced there.','محفوظ في حسابك. يتم حفظ التقدم الذي تعلّمه هناك.'):TR('Files are cleared when you close or refresh this page. Save a PDF or keep the summary in your account.','تُمسح الملفات عند إغلاق الصفحة أو تحديثها. احفظ ملف PDF أو احتفظ بالملخص في حسابك.')}</span></div>
+  el.innerHTML=`<div class="keep card"><div><b>${TR('Keep this report','احتفظ بهذا التقرير')}</b><span class="muted small">${saved?TR('Saved to your account. Progress you mark is synced there.','محفوظ في حسابك. يتم حفظ التقدم الذي تعلّمه هناك.'):(ST.me&&ST.me.user?TR('This report stays open in this browser until you sign out or press Start over, even if you refresh. Save a PDF or keep the summary in your account to keep it longer.','يبقى هذا التقرير مفتوحًا في هذا المتصفح حتى تسجّل الخروج أو تضغط «ابدأ من جديد»، حتى لو حدّثت الصفحة. احفظه PDF أو احتفظ بالملخص في حسابك لتحتفظ به مدة أطول.'):TR('Files are cleared when you close or refresh this page. Save a PDF or keep the summary in your account.','تُمسح الملفات عند إغلاق الصفحة أو تحديثها. احفظ ملف PDF أو احتفظ بالملخص في حسابك.'))}</span></div>
     <div class="keepbtns"><details class="dlmenu"><summary class="btn quiet sm">${TR('Print / save as PDF','طباعة / حفظ PDF')} ▾</summary><div class="dlpop"><button type="button" data-tpl="plan" data-src="open"><b>${TR('Action plan','خطة العمل')}</b><span>${TR('One page for executives: priorities, impact, owner and due date','صفحة للإدارة: الأولويات والأثر والمسؤول والموعد')}${dlLeft('plan')}</span></button><button type="button" data-tpl="summary" data-src="open"><b>${TR('Full summary','الملخص الكامل')}</b><span>${TR('Score, key numbers and every recommendation','الدرجة والأرقام الرئيسية وكل التوصيات')}${dlLeft('summary')}</span></button></div></details><button class="btn quiet sm" type="button" id="kMail">${TR('Email it to me','أرسله إلى بريدي')}</button>${saved?`<button class="btn quiet sm" type="button" id="kOpen">${TR('View in my account','اعرضه في حسابي')}</button>`:`<button class="btn sm" type="button" id="kSave">${TR('Save to my account','احفظ في حسابي')}</button>`}</div>
     ${isFree()?`<p class="muted small keepnote">${TR('Free plan: your free audit is confirmed, so its files can’t be changed. You can save the action plan and the full summary as PDF once each, and reprint this same report as often as you need. Margin, currency and revenue can still be changed.','الخطة المجانية: تم تأكيد تدقيقك المجاني، لذا لا يمكن تغيير ملفاته. يمكنك حفظ خطة العمل والملخص الكامل كملف PDF مرة لكل منهما، وإعادة طباعة هذا التقرير نفسه متى احتجت. يمكن تغيير الهامش والعملة والإيرادات.')}</p>`:''}</div>`;
   el.querySelectorAll('[data-tpl]').forEach(b=>b.onclick=()=>{b.closest('details').open=false;gatedPrint(buildSummary(ST.last),b.dataset.tpl)});
