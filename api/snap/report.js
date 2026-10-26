@@ -9,6 +9,18 @@ const cell = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s
 const money = m => ((+m || 0) / 1e6).toFixed(2);
 const nice = s => String(s || '').toLowerCase().replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
 const FIELDS = 'impressions,swipes,spend,conversion_purchases,conversion_purchases_value,conversion_sign_ups,conversion_add_cart';
+const EXTRA = ',video_views,conversion_page_views,conversion_start_checkout'; // dropped if Snapchat refuses them
+// Each campaign is judged on its own objective (Snapchat's objective, or the newer objective type).
+const goalOf = c => {
+  const o = String(c.objective_v2_properties?.objective_v2_type || c.objective || '').toUpperCase();
+  if (/LEAD/.test(o)) return 'sign_up';
+  if (/SALES|CONVERSION|CATALOG/.test(o)) return 'purchase';
+  if (/TRAFFIC|WEB_VIEW/.test(o)) return 'link_click';
+  if (/APP/.test(o)) return 'link_click';
+  if (/VIDEO|ENGAGEMENT|REPLAY|STORIES/.test(o)) return 'video_view';
+  if (/AWARENESS|REACH/.test(o)) return 'impression';
+  return 'purchase';
+};
 
 // YYYY-MM-DD of "now" in the account's time zone.
 const localDay = (tz, d) => new Intl.DateTimeFormat('en-CA', { timeZone: tz || 'UTC' }).format(d);
@@ -28,7 +40,7 @@ export default async function handler(req, res) {
   if (!con[0]) return json(res, 409, { error: 'Connect Snapchat first.' });
   const tz = own[0].timezone || 'UTC', cur = own[0].currency || 'USD';
   const end = localDay(tz, new Date()), start = addDays(end, -days); // full days up to yesterday
-  let access, camps = new Map(), series = [];
+  let access, camps = new Map(), series = [], extra = true;
   try {
     const tok = await snapToken({ grant_type: 'refresh_token', refresh_token: decrypt(con[0].token_enc) });
     access = tok.access_token;
@@ -39,10 +51,12 @@ export default async function handler(req, res) {
     // Day-granularity stats in windows of up to 30 days.
     for (let s = start; s < end; s = addDays(s, 30)) {
       const e = addDays(s, 30) < end ? addDays(s, 30) : end;
-      const pages = await snapGet(access, `/adaccounts/${acc}/stats`, {
-        granularity: 'DAY', breakdown: 'campaign', fields: FIELDS, start_time: bound(s, tz), end_time: bound(e, tz),
+      const ask = f => snapGet(access, `/adaccounts/${acc}/stats`, {
+        granularity: 'DAY', breakdown: 'campaign', fields: f, start_time: bound(s, tz), end_time: bound(e, tz),
         swipe_up_attribution_window: '28_DAY', view_attribution_window: '1_DAY', omit_empty: 'true'
       });
+      let pages;
+      try { pages = await ask(extra ? FIELDS + EXTRA : FIELDS); } catch (x) { if (!extra || x.status === 401) throw x; extra = false; pages = await ask(FIELDS); }
       for (const j of pages) for (const t of (j.timeseries_stats || [])) {
         const st = t.timeseries_stat || {};
         const list = (st.breakdown_stats && st.breakdown_stats.campaign) || (st.type === 'CAMPAIGN' ? [st] : []);
@@ -57,11 +71,13 @@ export default async function handler(req, res) {
   }
   const ids = new Set(idsParam(q));
   const rows = series.filter(r => !ids.size || ids.has(r.id)).filter(r => (+r.s.spend || 0) > 0 || (+r.s.impressions || 0) > 0).sort((a, b) => a.day.localeCompare(b.day));
-  const lines = [['Date', 'Campaign Name', 'Campaign Status', 'Daily Budget', 'Currency', 'Paid Impressions', 'Swipe Ups', 'Spend', 'Purchases', 'Purchases Value', 'Sign Ups', 'Adds To Cart'].join(',')]
-    .concat(rows.map(r => { const c = camps.get(r.id) || {}, s = r.s;
-      return [r.day, c.name || r.id, nice(c.status), c.daily_budget_micro ? money(c.daily_budget_micro) : '', cur,
-        +s.impressions || 0, +s.swipes || 0, money(s.spend), +s.conversion_purchases || 0, money(s.conversion_purchases_value),
-        +s.conversion_sign_ups || 0, +s.conversion_add_cart || 0].map(cell).join(','); }));
+  const RES = { purchase: s => +s.conversion_purchases || 0, sign_up: s => +s.conversion_sign_ups || 0, link_click: s => +s.swipes || 0,
+    video_view: s => s.video_views != null ? +s.video_views || 0 : +s.impressions || 0, impression: s => +s.impressions || 0 };
+  const lines = [['Date', 'Campaign Name', 'Campaign Status', 'Campaign Objective', 'Daily Budget', 'Currency', 'Paid Impressions', 'Swipe Ups', 'Spend', 'Results', 'Result type', 'Purchases Value', 'Total purchases', 'Total sign ups', 'Adds To Cart', 'Checkouts initiated', 'Landing page views'].join(',')]
+    .concat(rows.map(r => { const c = camps.get(r.id) || {}, s = r.s; let g = goalOf(c); if (g === 'video_view' && s.video_views == null) g = 'impression';
+      return [r.day, c.name || r.id, nice(c.status), nice(c.objective_v2_properties?.objective_v2_type || c.objective), c.daily_budget_micro ? money(c.daily_budget_micro) : '', cur,
+        +s.impressions || 0, +s.swipes || 0, money(s.spend), RES[g](s), 'snap:' + g, g === 'purchase' ? money(s.conversion_purchases_value) : '0.00',
+        +s.conversion_purchases || 0, +s.conversion_sign_ups || 0, +s.conversion_add_cart || 0, +s.conversion_start_checkout || 0, +s.conversion_page_views || 0].map(cell).join(','); }));
   res.statusCode = 200;
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Cache-Control', 'no-store');
