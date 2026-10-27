@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, decrypt, logApi } from '../_lib/core.js';
 import { accessFromRefresh, discover } from '../_lib/google.js';
 
@@ -18,6 +19,6 @@ export default async function handler(req, res) {
     return json(res, 200, { ok: true, n: accts.length, note });
   } catch (e) {
     const expired = e.code === 'invalid_grant';
-    return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : `Google Ads: ${e.message}` });
+    return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : friendly('google', e.message).text, code: 'google' });
   }
 }

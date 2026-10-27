@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, decrypt, logApi } from '../_lib/core.js';
 import { accessFromRefresh, gaql } from '../_lib/google.js';
 import { idsParam } from '../_lib/camps.js';
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
   } catch (e) {
     await logApi(user.id, 'google:' + type, false);
     const expired = e.code === 'invalid_grant';
-    return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : `Google Ads: ${e.message}` });
+    return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : friendly('google', e.message).text, code: 'google' });
   }
   const cur = rows[0]?.customer?.currencyCode || own[0].currency || 'USD';
   let lines;

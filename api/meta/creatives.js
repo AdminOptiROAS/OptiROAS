@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, metaToken, graph, appSecretProof } from '../_lib/core.js';
 import { idsParam, daysParam, range } from '../_lib/camps.js';
 import { canConnect } from '../_lib/plan.js';
@@ -63,6 +64,6 @@ export default async function handler(req, res) {
     return json(res, 200, { ads });
   } catch (e) {
     const expired = e.meta && (e.meta.code === 190 || e.meta.type === 'OAuthException');
-    return json(res, expired ? 409 : 502, { error: expired ? 'Your Meta connection has expired. Reconnect Meta.' : `Meta: ${e.message}` });
+    return json(res, expired ? 409 : 502, { error: expired ? 'Your Meta connection has expired. Reconnect Meta.' : friendly('meta', (e.meta&&e.meta.code)+' '+e.message).text });
   }
 }

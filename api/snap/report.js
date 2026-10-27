@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, decrypt, encrypt, logApi } from '../_lib/core.js';
 import { snapToken, snapGet, tzOffset } from '../_lib/snap.js';
 import { idsParam } from '../_lib/camps.js';
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
   } catch (e) {
     await logApi(user.id, 'snap:report', false);
     const expired = e.code === 'invalid_grant' || e.status === 401;
-    return json(res, expired ? 409 : 502, { error: expired ? 'Your Snapchat connection has expired. Reconnect Snapchat.' : `Snapchat: ${e.message}` });
+    return json(res, expired ? 409 : 502, { error: expired ? 'Your Snapchat connection has expired. Reconnect Snapchat.' : friendly('snap', (e.status||'')+' '+e.message).text });
   }
   const ids = new Set(idsParam(q));
   const rows = series.filter(r => !ids.size || ids.has(r.id)).filter(r => (+r.s.spend || 0) > 0 || (+r.s.impressions || 0) > 0).sort((a, b) => a.day.localeCompare(b.day));

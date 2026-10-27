@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, logApi } from '../_lib/core.js';
 import { tokenFor, ttGet } from '../_lib/tiktok.js';
 import { idsParam } from '../_lib/camps.js';
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
   } catch (e) {
     await logApi(user.id, 'tiktok:report', false);
     const expired = e.code === 40105 || e.code === 40104 || e.status === 401;
-    return json(res, expired ? 409 : 502, { error: expired ? 'Your TikTok connection has expired. Reconnect TikTok.' : `TikTok: ${e.message}` });
+    return json(res, expired ? 409 : 502, { error: expired ? 'Your TikTok connection has expired. Reconnect TikTok.' : friendly('tiktok', (e.code||'')+' '+e.message).text });
   }
   const out = rows.map(r => { const m = r.metrics || {}, d = r.dimensions || {}, spend = n(m.spend), cp = n(m.complete_payment);
       const value = n(m.complete_payment_roas) > 0 ? n(m.complete_payment_roas) * spend : n(m.value_per_complete_payment) * cp;

@@ -1,3 +1,4 @@
+import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, logApi } from '../_lib/core.js';
 import { tokenFor, ttGet } from '../_lib/tiktok.js';
 import { STATUS, daysParam } from '../_lib/camps.js';
@@ -33,6 +34,6 @@ export default async function handler(req, res) {
     return json(res, 200, { currency: own[0].currency, since: start, until: end, campaigns: [...m.values()] });
   } catch (e) {
     await logApi(user.id, 'tiktok:campaigns', false);
-    return json(res, 502, { error: `TikTok: ${e.message}` });
+    return json(res, 502, { error: friendly('tiktok', (e.code||'')+' '+e.message).text });
   }
 }
