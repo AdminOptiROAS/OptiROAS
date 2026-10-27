@@ -1560,7 +1560,13 @@ const FIELDS=[
   {k:'conv',nz:true,c:['purchases','website purchases','conversion purchases','swipe up purchases','complete payment','conversions','conv.','results','leads','total conversions','conversion','sign ups','installs','app installs'],x:['value','roas','cost','per','rate','/','all conv','indicator','type','initial','view','click-through','ctr','%']},
   {k:'value',nz:true,c:['purchases conversion value','website purchases conversion value','purchase conversion value','conversion purchases value','purchases value','purchase value','total purchase value','total complete payment value','complete payment value','conv. value','conversion value','conversions value','total conversion value','revenue','total revenue','sales'],x:['per','cost','/','roas','all conv','by conv']},
   {k:'roas',c:['purchase roas','website purchase roas','roas','complete payment roas','conv. value / cost','return on ad spend','purchases roas'],x:['cost']},
-  {k:'cpr',c:['cost per result','cost per results','cost / conv.','cost per conversion','cost per purchase','cpa','ecpa'],x:['all']}
+  {k:'cpr',c:['cost per result','cost per results','cost / conv.','cost per conversion','cost per purchase','cpa','ecpa'],x:['all']},
+  // other result columns, so the owner can choose a different main objective than the export's Results
+  {k:'altmsg',c:['conversations started','messaging conversations started','messaging conversations','new messaging contacts','messaging contacts','conversations'],x:['cost','per','rate','/','%']},
+  {k:'altlead',c:['total leads','leads','meta leads','on-facebook leads','website leads','instant form leads','sign ups','total sign ups'],x:['cost','per','rate','/','%','value']},
+  {k:'altpur',c:['total purchases','purchases','website purchases','total complete payment','complete payment'],x:['cost','per','rate','/','%','value','roas']},
+  {k:'alteng',c:['post engagements','post engagement','engagements'],x:['cost','per','rate','/','%']},
+  {k:'altv3',c:['3-second video plays','video plays','thruplays','video views'],x:['cost','per','rate','/','%','100','75','50','25']},
 ];
 function mapColumns(header,body,fields){fields=fields||FIELDS;
   const H=header.map(h=>({a:n0(h),b:n1(h)}));const used=new Set(),map={};
@@ -1647,18 +1653,19 @@ function buildFile(name,grid){
     if(map.value==null&&map.roas!=null)value=toNum(g('roas'))*spend;
     if(map.reach==null&&map.freq!=null){const f=toNum(g('freq'));reach=f>0?impr/f:0}
     if(!spend&&!impr&&!clicks&&!conv)return;
+    const alt={};[['altmsg','conversation'],['altlead','lead'],['altpur','purchase'],['alteng','engagement'],['altv3','video view']].forEach(([k,u])=>{if(map[k]!=null)alt[u]=toNum(g(k))});
     rows.push({date:dates?dates[i]:null,campaign:camp||'(all campaigns)',adgroup:s('adgroup'),ad:s('ad'),keyword:s('keyword'),searchterm:s('searchterm'),
       matchtype:s('matchtype'),qs:map.qs!=null?toNum(g('qs')):0,lostb:map.lostb!=null?toPct(g('lostb')):null,
       lpv:toNum(g('lpv')),atc:toNum(g('atc')),ic:toNum(g('ic')),budget:toNum(g('budget')),btype:s('btype'),attr:s('attr'),blvl:map.budget!=null&&/ad set|ad group|squad/i.test(header[map.budget])?'g':'c',
       device:s('device'),place:placeKey(s('pub'),s('placement')),age:s('age'),gender:s('gender'),country:s('country'),rtype:s('rtype'),
-      spend,impr,reach,clicks,conv,value});
+      spend,impr,reach,clicks,conv,value,alt});
   });
   if(!rows.length)throw new Error('No campaign rows with spend or impressions were found after removing total rows.');
   let unit=map.conv!=null?unitFromHeader(header[map.conv]):(map.cpr!=null?unitFromHeader(header[map.cpr]):'conversion');
   const types=new Map();rows.filter(r=>r.rtype&&(r.conv>0||r.spend>0)).forEach(r=>{const u=unitFromType(r.rtype);types.set(u,(types.get(u)||0)+r.spend)});
   if(types.size){unit=[...types].sort((a,b)=>b[1]-a[1])[0][0]}
   const ds=rows.map(r=>r.date).filter(Boolean).sort();
-  const detected=Object.entries(map).filter(([k])=>!['currency','rtype','roas','cpr','freq'].includes(k)).map(([k,i])=>[k,header[i]]);
+  const detected=Object.entries(map).filter(([k])=>!['currency','rtype','roas','cpr','freq'].includes(k)&&!k.startsWith('alt')).map(([k,i])=>[k,header[i]]);
   return {name,plat,detectedPlat:plat,cur,rows,map,header,detected,unit,mixedTypes:types.size>1?[...types.keys()]:null,
     isDetail:map.searchterm!=null||map.keyword!=null,totals,
     first:ds[0]||null,last:ds[ds.length-1]||null,spend:rows.reduce((t,r)=>t+r.spend,0),
@@ -2349,7 +2356,7 @@ function auditPlatform(pk,all,ctx){
       ogSpend+=a.spend;camps.push(a)}
     const gs=[...new Set(ogRows.map(goalOf))];
     notes.push(A(`${P.short}: the main objective here is ${Us} (most of the spend). ${money(ogSpend,0)} on campaigns optimised for ${(l=>l.length>1?l.slice(0,-1).join(', ')+' or '+l[l.length-1]:l[0])(gs.map(plural))} appears in the campaign table with its own results and isn’t judged against ${Us}.`,`${P.short}: الهدف الرئيسي هنا ${Usa} (معظم الإنفاق). أما ${money(ogSpend,0)} على حملات مُحسَّنة لـ ${gs.map(USA).join('، ')} فتظهر في جدول الحملات بنتائجها الخاصة، ولا تُقيَّم مقابل ${Usa}.`))}
-  return {pk,P,mode,U,Us,acc,accEff,be,camps,ogSpend,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,live,evidence,crBase,goal:{auto:ctx.goalAuto||U,set:!!ctx.goalSet,units:ctx.units||[U]},score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
+  return {pk,P,mode,U,Us,acc,accEff,be,camps,ogSpend,checks,cov,scoreRaw:Math.round(scoreRaw),plan:plan||null,marginAssumed:mA,marginMissing:noM,segs:segs||{},F,notes,T,D,mo,daily,series,live,evidence,crBase,goal:{auto:ctx.goalAuto||U,set:!!ctx.goalSet,units:[...(ctx.units||[U]),...(ctx.altUnits||[])]},score,pcurve,trend,dow,funnel,creatives,crBest,crWorst,crLearning,crStats,forecast,pacing,
     waste:(plan?plan.cut:0)+F.filter(f=>f.direct&&!(f.wcamp||[]).some(n=>camps.some(c=>c.name===n&&c.cutK))).reduce((t,f)=>t+f.impact,0),monthlySpend:acc.spend*mo,files:ctx.files||[]};
 }
 function ctxMixed(ctx){return ctx.mixed&&ctx.mixed.length>1}
@@ -2437,8 +2444,28 @@ function auditAll(files,S){
     const auto=[...uw].sort((a,b)=>b[1]-a[1])[0]?.[0]||'conversion';
     const mixed=[...new Set(fs.flatMap(f=>f.mixedTypes||[]))],units=mixed.length?mixed:[auto];
     // the owner can choose the main objective; it applies only when this platform has campaigns with that result
-    const unit=S.goal&&units.includes(S.goal)?S.goal:auto;
-    plats.push(auditPlatform(pk,rows,{seasonGrp:seasonGroup(S.bench),goalAuto:auto,goalSet:unit!==auto,units,crMeta:pk==='meta'?S.crMeta:null,margin:S.margin,marginMissing:!!S.marginMissing,fallbackDays:S.days,unit,mixed,files:fs}));
+    // objectives available from other columns (conversations, leads, purchases, engagements, video plays, clicks, page views)
+    const main=rows.filter(r=>!r.detail),altSum=u=>main.reduce((t,r)=>t+(u==='click'?r.clicks:u==='landing page view'?(r.lpv||0):((r.alt||{})[u]||0)),0);
+    const altUnits=['conversation','lead','purchase','engagement','video view','landing page view','click'].filter(u=>!units.includes(u)&&altSum(u)>0);
+    let unit=auto,prow=rows,autoAlt=null;
+    // Results that count engagements, clicks or reach while the same campaigns record conversations, leads or purchases:
+    // the business result is the main objective (most of the spend), unless the owner chose otherwise.
+    if(!S.goal&&['engagement','click','person reached','impression','video view','landing page view','like'].includes(auto)){
+      const ms=main.reduce((t,r)=>t+r.spend,0);
+      for(const u of ['purchase','conversation','lead'])if(altUnits.includes(u)){const cs=new Set(main.filter(r=>((r.alt||{})[u]||0)>0).map(r=>r.campaign));
+        if(ms&&main.filter(r=>cs.has(r.campaign)).reduce((t,r)=>t+r.spend,0)>=.5*ms){autoAlt=u;break}}
+    }
+    const want=S.goal||autoAlt;
+    if(want&&units.includes(want))unit=want;
+    else if(want&&altUnits.includes(want)){
+      // judge on the chosen column: campaigns that recorded it are re-scored on it; the rest are kept as other goals
+      const g=want,val=r=>g==='click'?r.clicks:g==='landing page view'?(r.lpv||0):((r.alt||{})[g]||0);
+      const has=new Set(main.filter(r=>val(r)>0).map(r=>r.campaign)),fileUnit=new Map();fs.forEach(f=>f.rows.forEach(r=>fileUnit.set(r,f.unit)));
+      prow=rows.map(r=>{if(r.detail)return r;if(has.has(r.campaign))return Object.assign({},r,{conv:val(r),value:g==='purchase'?r.value:0,rtype:'goal:'+typeKey(g)});
+        return r.rtype?r:Object.assign({},r,{rtype:'goal:'+typeKey(fileUnit.get(r)||auto)})});
+      unit=g;
+    }
+    plats.push(auditPlatform(pk,prow,{altUnits,seasonGrp:seasonGroup(S.bench),goalAuto:autoAlt||auto,goalSet:!!S.goal&&unit!==(autoAlt||auto),units,crMeta:pk==='meta'?S.crMeta:null,margin:S.margin,marginMissing:!!S.marginMissing,fallbackDays:S.days,unit,mixed,files:fs}));
   }
   plats.sort((a,b)=>b.acc.spend-a.acc.spend);
   if(S.bench)for(const p of plats)p.bench=benchCompare(p,S.bench,S.currency||'USD'); // shown for context only; no recommendations are based on them
@@ -2815,6 +2842,7 @@ for(const y of [2025,2026,2027])SEASONS.push(...[['Back-to-school enrolment',`${
 function seasonGroup(sub){if(!sub)return 'general';const f=benchFind(sub);if(!f)return 'general';const id=f.s.id;
   if(['education','courses'].includes(id))return 'education';if(['physicians','dentists','aesthetics'].includes(id))return 'clinic';if(id==='travel')return 'travel';if(id==='restaurants')return 'food';if(id==='fitness')return 'fitness';
   return f.s.kind==='shop'?'retail':'services'}
+const typeKey=u=>({conversation:'msg',lead:'lead',purchase:'purchase',engagement:'eng','video view':'video',click:'click','landing page view':'landing_page_view','sign-up':'sign_up',call:'call',booking:'booking',contact:'contact',impression:'impression','person reached':'reach',conversion:'conversion',install:'install'})[u]||u;
 function seasonsIn(a,b){return SEASONS.filter(x=>x.s<=b&&x.e>=a)}
 function seasonsAhead(today,days,grp){const lim=isoDay(Date.parse(today)+days*DAY),ok=SEAS_GROUP[grp||'retail']||SEAS_GROUP.general;return SEASONS.filter(x=>ok.includes(x.n)&&x.s>today&&x.s<=lim).sort((a,b)=>a.s<b.s?-1:1)}
 </script>
@@ -2915,7 +2943,7 @@ $('goal').addEventListener('change',e=>{ST.goal=e.target.value||'';render()});
 // objectives found in the data, across platforms; 'Auto' keeps the detected one (most of the spend)
 function goalFill(A){const g=$('goal');if(!g||!A)return;const units=[...new Set(A.plats.flatMap(p=>(p.goal&&p.goal.units)||[p.U]))].filter(u=>u&&u!=='result'),auto=A.plats[0]&&A.plats[0].goal?A.plats[0].goal.auto:'';
   const nm=u=>{const x=LANG==='ar'?USA(u):plural(u);return x[0].toUpperCase()+x.slice(1)};
-  g.innerHTML=`<option value="">${TR('Auto','تلقائي')}${auto?` · ${nm(auto)}`:''}</option>`+units.map(u=>`<option value="${esc(u)}"${ST.goal===u?' selected':''}>${nm(u)}</option>`).join('');g.disabled=units.length<2&&!ST.goal}
+  g.innerHTML=`<option value="">${TR('Auto','تلقائي')}${auto?` · ${nm(auto)}`:''}</option>`+units.map(u=>`<option value="${esc(u)}"${ST.goal===u?' selected':''}>${nm(u)}</option>`).join('');g.disabled=false;g.title=units.length<2?TR('Only one kind of result was found in these files. Add a column such as Conversations started or Leads to choose another.','وُجد نوع واحد فقط من النتائج في هذه الملفات. أضف عمودًا مثل بدء المحادثات أو العملاء المحتملين لاختيار نوع آخر.'):''}
 $('currency').addEventListener('change',()=>{ST.userCur=true;render()});
 
 function scoreColor(s){return s>=80?'var(--good)':s>=60?'var(--warn)':'var(--bad)'}

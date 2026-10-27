@@ -95,6 +95,9 @@ export default async function handler(req, res) {
   }));
   // rows Meta didn't tag with a goal: take the result type that has any value
   recs.forEach(r => { if (!r.goal) r.goal = r.pur || r.val ? 'purchase' : r.msg ? 'msg' : r.lead ? 'lead' : 'click'; });
+  // Meta sometimes omits the optimisation goal; an engagement-objective campaign that starts conversations is a messaging campaign
+  { const byCamp = new Map(); recs.forEach(r => { const c = byCamp.get(r.camp) || { msg: 0, lead: 0, pur: 0 }; c.msg += r.msg; c.lead += r.lead; c.pur += r.pur; byCamp.set(r.camp, c); });
+    recs.forEach(r => { if (r.goalRaw) return; const c = byCamp.get(r.camp); if (r.goal === 'eng' || r.goal === 'click' || r.goal === 'reach') r.goal = c.msg > 0 ? 'msg' : c.lead > 0 ? 'lead' : c.pur > 0 ? 'purchase' : r.goal; }); }
   const RES = { purchase: r => r.pur, lead: r => r.lead, msg: r => r.msg, click: r => r.clicks, lpv: r => r.lpv, video: r => r.v3, eng: r => r.eng, reach: r => r.reach };
   const head = ['Day', 'Campaign name', 'Ad set name', 'Ad name', 'Campaign objective', 'Optimisation goal', `Amount spent (${cur})`, 'Impressions', 'Reach', 'Link clicks', 'Landing page views', 'Adds to cart', 'Checkouts initiated',
     'Results', 'Result indicator', 'Purchases conversion value', 'Total purchases', 'Total leads', 'Conversations started', '3-second video plays', 'Post engagements'];
