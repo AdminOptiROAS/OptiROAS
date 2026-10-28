@@ -10,6 +10,7 @@ export function cleanSummary(d) {
   const plan = (Array.isArray(d.plan) ? d.plan : []).slice(0, 30).map(p => ({ h: S(p.h, 40), t: S(p.t, 300), tag: S(p.tag, 20) }));
   return { label: S(d.label, 160), period: S(d.period, 80), cur: S(d.cur, 8), score: d.score == null || d.score === '' ? null : Math.round(N(d.score)), band: S(d.band, 60),
     total: N(d.total), monthly: N(d.monthly), waste: N(d.waste), roas: N(d.roas), margin: N(d.margin), marginSet: !!d.marginSet, by: S(d.by, 120), upside: S(d.upside, 80), bench: S(d.bench, 40), slug: S(d.slug, 120), files: S(d.files, 160), ref: S(d.ref, 64), dProfit: d.dProfit == null ? null : N(d.dProfit), moved: N(d.moved), saved: N(d.saved), plats: (Array.isArray(d.plats) ? d.plats : []).slice(0, 10).map(x => S(x, 30)),
+    kpi: (Array.isArray(d.kpi) ? d.kpi : []).slice(0, 8).map(k => ({ pk: S(k.pk, 20), short: S(k.short, 30), U: S(k.U, 40), Us: S(k.Us, 40), spend: N(k.spend), conv: N(k.conv), value: N(k.value), first: S(k.first, 10), last: S(k.last, 10), camps: N(k.camps) })),
     findings, plan, lang: d.lang === 'ar' ? 'ar' : 'en' };
 }
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

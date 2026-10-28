@@ -386,6 +386,8 @@ tr.cur td{background:var(--accent-soft);font-weight:600}
 .calc.how ol{margin:4px 0 0;padding-inline-start:18px}.dofirst{margin-bottom:6px}
 .chealth{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--muted);border-inline-start:3px solid var(--good);padding-inline-start:8px}.chealth.bad{border-color:var(--bad);color:var(--ink)}
 .gl{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.cmode{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-bottom:8px}.cmode button{font:inherit;font-size:13px;padding:5px 12px;border:0;background:transparent;color:var(--muted);cursor:pointer}.cmode button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.calc-base{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--sunk);border-radius:10px;margin:10px 0}
 .alist{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
 .alist li{display:flex;align-items:center;gap:8px}
 .adot{width:8px;height:8px;border-radius:50%;flex:none}.adot.g{background:var(--good)}.adot.b{background:var(--bad)}
@@ -1073,6 +1075,7 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
       <div class="vitals" id="vitals"></div>
       <div id="banners" style="display:flex;flex-direction:column;gap:10px"></div>
       <div id="top3"></div>
+      <div id="changes"></div>
       <div>
         <div class="sechead" style="margin-bottom:12px"><h3 style="font-size:20px">Channels</h3><span class="muted small">Each platform's own reported results</span></div>
         <div class="tablewrap"><table class="wide" id="chanTbl"></table></div>
@@ -2368,7 +2371,7 @@ function auditPlatform(pk,all,ctx){
     let b=fit.fitted?fit.b:(pB??.7);const src=fit.fitted?'campaign':pB!=null?'platform':'assumed';let note=null;
     if(c.l7&&c.l7.freq>=2){b=Math.min(b,.6);note='saturating'}
     const capK=c.lostb!=null&&c.lostb>=.1?c.lostb/(1-c.lostb):0;
-    c.curve={b,src,r2:fit.r2,n:fit.n,note,capK,capB:capK?Math.max(b,.9):b,S0:c.spend*mo,Y0:yv(c)*mo,value:mode==='value'};
+    c.curve={b,src,r2:fit.r2,n:fit.n,cv:fit.cv||null,note,capK,capB:capK?Math.max(b,.9):b,S0:c.spend*mo,Y0:yv(c)*mo,value:mode==='value'};
   }
   const pcurve={b:pB??.7,src:pB!=null?'platform':'assumed',S0:acc.spend*mo,Y0:yv(acc)*mo,value:mode==='value',capK:0};
   let series=[];
@@ -2376,6 +2379,7 @@ function auditPlatform(pk,all,ctx){
     const byD=groupBy(rows,r=>r.date),t0=Date.parse(T.first);
     for(let t=t0;t<=T.endMs;t+=DAY){const d=isoDay(t),a=agg(byD.get(d)||[]);series.push({d,spend:a.spend,value:a.value,conv:a.conv,impr:a.impr,clicks:a.clicks})}
     series.forEach((p,i)=>{const w=series.slice(Math.max(0,i-6),i+1),s=w.reduce((t,x)=>t+x.spend,0),v=w.reduce((t,x)=>t+x.value,0),n=w.reduce((t,x)=>t+x.conv,0);p.roas7=s?v/s:null;p.cpa7=n?s/n:null});
+    {const sp=series.filter(x=>x.spend>0).map(x=>x.spend),m=sp.reduce((t,v)=>t+v,0)/Math.max(1,sp.length);pcurve.cv=m?Math.sqrt(sp.reduce((t,v)=>t+(v-m)**2,0)/Math.max(1,sp.length))/m:null}
     let cur=0,mx=0;series.forEach(p=>{if(p.spend===0){cur++;mx=Math.max(mx,cur)}else cur=0});
     if(mx>=7)notes.push(A(`${P.short}: spend paused for ${mx} days in a row. Monthly figures use the ${D} days with delivery.`,`${P.short}: توقف الإنفاق ${mx} ${mx<=10?'أيام':'يومًا'} متتالية. الأرقام الشهرية تعتمد على ${D} يومًا من العرض الفعلي.`));
   }
@@ -3128,6 +3132,40 @@ function howTo(f){const pk=f.plat;if(!['meta','google','tiktok','snap'].includes
   const k=f.rule==='newcamp'?'newcamp':/tracking|pixel|conversion tag/i.test(f.act)&&f.kind==='none'?'tracking':f.cutK===1||/^Pause|pause this/i.test(f.act)?'pause':(f.kind==='plan'||/budget|cut its|trim|move ≈|raise/i.test(t))?'budget':(f.rule==='fatigue'||f.pil===5)?'creative':null;
   if(!k||!HOW[k][pk])return null;return {pk,steps:HOW[k][pk].map(x=>LANG==='ar'?x:x)}}
 // Overview: one-sentence verdict with confidence and freshness, then at most three priority actions
+/* ---------- what changed: the latest week in the data, and since the last saved report ---------- */
+function renderChanges(A){const el=$('changes');if(!el)return;
+  const eff=(sp,cv,val,V)=>V?(sp?val/sp:null):(cv?sp/cv:null),fE=(v,V)=>v==null?'—':V?x2(v):money(v);
+  const chg=(a,b,upGood)=>{if(a==null||!b)return '';const c=a/b-1;return `<span class="chg ${Math.abs(c)<.05?'':(upGood?c>0:c<0)?'pos':'neg'}">${c>=0?'▲':'▼'} ${pct(Math.abs(c),0)}</span>`};
+  const wk=A.plats.filter(p=>p.daily&&p.series&&p.series.length>=14).map(p=>{const S=p.series,L=S.slice(-7),P=S.slice(-14,-7),sum=(a,k)=>a.reduce((t,x)=>t+(x[k]||0),0),V=p.mode==='value';
+    const a={sp:sum(L,'spend'),cv:sum(L,'conv'),val:sum(L,'value')},b={sp:sum(P,'spend'),cv:sum(P,'conv'),val:sum(P,'value')};
+    const mov=p.camps.filter(c=>c.l7&&c.l14&&c.verdict!=='Other goal').map(c=>{const pv={spend:c.l14.spend-c.l7.spend,conv:c.l14.conv-c.l7.conv,value:c.l14.value-c.l7.value};const e1=eff(c.l7.spend,c.l7.conv,c.l7.value,V),e0=eff(pv.spend,pv.conv,pv.value,V);return {c,e1,e0,d:e1!=null&&e0?e1/e0-1:null}}).filter(x=>x.d!=null&&x.c.l7.spend>=.05*a.sp).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,3);
+    return `<tr><td class="lbl">${dot(p.pk)} ${p.P.short}<br><span class="muted small">${fmtDate(L[0].d)} – ${fmtDate(L[L.length-1].d)} ${TR('vs','مقابل')} ${fmtDate(P[0].d)} – ${fmtDate(P[P.length-1].d)}</span></td><td>${money(a.sp,0)} ${chg(a.sp,b.sp,true)}</td><td>${fmtInt(Math.round(a.cv))} ${UsL(p)} ${chg(a.cv,b.cv,true)}</td><td>${fE(eff(a.sp,a.cv,a.val,V),V)} ${chg(eff(a.sp,a.cv,a.val,V),eff(b.sp,b.cv,b.val,V),V)}</td><td class="small">${mov.map(x=>`${esc(x.c.name)}: ${V?'ROAS':cpu(p)} ${fE(x.e1,V)} ${chg(x.e1,x.e0,V)}`).join('<br>')||'—'}</td></tr>`}).join('');
+  const hist=ST.histCmp&&ST.histCmp.ref===ST.reportRef?ST.histCmp:null;
+  el.innerHTML=(wk?`<div class="sechead" style="margin-bottom:10px"><h3 style="font-size:20px">${TR('What changed','ما الذي تغيّر')}</h3><span class="muted small">${TR('Last 7 days of the data vs the 7 before. Same campaigns, same files.','آخر 7 أيام من البيانات مقابل الأيام السبعة قبلها. الحملات والملفات نفسها.')}</span></div>
+    <div class="tablewrap"><table class="wide"><thead><tr><th>${TR('Platform and dates','المنصة والتواريخ')}</th><th>${TR('Spend','الإنفاق')}</th><th>${TR('Results','النتائج')}</th><th>${TR('Cost per result or ROAS','التكلفة لكل نتيجة أو ROAS')}</th><th>${TR('Biggest movers','الأكثر تغيرًا')}</th></tr></thead><tbody>${wk}</tbody></table></div>`:'')+(hist?hist.html:'');
+  if(!ST.example&&ST.me&&ST.me.user&&(!ST.histCmp||ST.histCmp.ref!==ST.reportRef))loadHistCmp(A);
+}
+async function loadHistCmp(A){const ref=ST.reportRef;ST.histCmp={ref,html:''};
+  try{const L=await api('/api/reports/list');const mine=new Set(A.plats.map(p=>p.P.short));
+    const prev=(L.reports||[])[0];if(!prev)return;
+    const g=await api('/api/reports/get?id='+prev.id),d=g.report&&g.report.data;if(!d||d.ref===ref)return;
+    if(!(d.plats||[]).some(x=>mine.has(x)))return;
+    const cur=buildSummary(A),oldK=new Map((d.findings||[]).map(f=>[f.k,f])),newK=new Set(cur.findings.map(f=>f.k));
+    const gone=(d.findings||[]).filter(f=>!newK.has(f.k)),done=(d.findings||[]).filter(f=>f.done),fresh=cur.findings.filter(f=>!oldK.has(f.k));
+    const k0=d.kpi||[],rows=cur.kpi.map(k=>{const o=k0.find(x=>x.pk===k.pk);if(!o)return '';const V=k.value>0&&o.value>0,e=x=>V?(x.spend?x.value/x.spend:null):(x.conv?x.spend/x.conv:null);
+      return `<li>${k.short}: ${V?'ROAS':TR(`cost per ${k.U}`,`التكلفة لكل ${UA(k.U)}`)} ${e(o)==null?'—':V?x2(e(o)):money(e(o))} → <b>${e(k)==null?'—':V?x2(e(k)):money(e(k))}</b>${k.U!==o.U?TR(` <span class="muted">(results counted as ${o.Us} before, ${k.Us} now)</span>`,''):''}${o.camps!==k.camps?TR(` <span class="muted">(${o.camps} campaigns then, ${k.camps} now)</span>`,` <span class="muted">(${o.camps} حملات سابقًا، ${k.camps} الآن)</span>`):''}</li>`}).join('');
+    const when=new Date(g.report.created_at).toLocaleDateString(LANG==='ar'?'ar-AE-u-nu-latn':'en-GB',{day:'numeric',month:'short',year:'numeric'});
+    ST.histCmp={ref,html:`<div class="card" style="padding:14px 16px;margin-top:12px"><h4 style="margin:0 0 4px">${TR(`Since your report saved on ${when}`,`منذ تقريرك المحفوظ في ${when}`)}</h4>
+      <p class="muted small" style="margin:0 0 8px">${TR(`That report covered ${esc(d.period||'—')}; this one covers ${esc(cur.period)}.${d.period===cur.period?' Same dates, so differences come from the files or settings, not from performance.':''}`,`غطّى ذلك التقرير ${esc(d.period||'—')}؛ وهذا يغطي ${esc(cur.period)}.`)}</p>
+      ${rows?`<ul class="small" style="margin:0 0 8px">${rows}</ul>`:''}
+      <ul class="small" style="margin:0">
+        <li><b>${TR('Actions you marked done','إجراءات علّمتها كمنفّذة')}:</b> ${done.length}</li>
+        <li><b>${TR('Issues no longer detected','مشكلات لم تعد مرصودة')}:</b> ${gone.length}${gone.length?' · '+gone.slice(0,3).map(f=>esc(f.title)).join(' · '):''}</li>
+        <li><b>${TR('New issues','مشكلات جديدة')}:</b> ${fresh.length}${fresh.length?' · '+fresh.slice(0,3).map(f=>esc(f.title)).join(' · '):''}</li></ul>
+      <p class="muted small" style="margin:8px 0 0">${TR('An issue that is no longer detected is not proof of savings: performance changes for many reasons, and only a controlled test measures what an action did.','المشكلة التي لم تعد مرصودة ليست دليلًا على التوفير: يتغيّر الأداء لأسباب كثيرة، والاختبار المضبوط وحده يقيس أثر الإجراء.')}</p></div>`};
+    renderChanges(A);afterRender();
+  }catch(e){}
+}
 function renderTop3(A,PRI){
   const p=A.plats[0],cpr=p&&p.acc.conv?p.acc.spend/p.acc.conv:null,ago=A.last?Math.max(0,Math.floor((Date.now()-Date.parse(A.last+'T23:59:59Z'))/864e5)):null;
   const res=A.plats.reduce((t,x)=>t+x.acc.conv,0),conf=!A.scoreOk?'Low':res>=100?'High':'Medium';
@@ -3179,6 +3217,8 @@ function render(scroll){
   if(!ok.length){if(scroll)go('audit');afterRender();return}
 
   const A=auditAll(ST.files,S);ST.last=A;
+  // finding keys (done, dismissed, saved reports) come from the English wording, so they survive a language switch
+  if(LANG==='ar'){const L0=LANG;LANG='en';try{const E=auditAll(ST.files,S);A.F.forEach((f,i)=>{if(E.F[i]&&E.F[i].plat===f.plat&&E.F[i].pil===f.pil)f.kid=fkeyRaw(E.F[i])})}catch(e){}finally{LANG=L0}}
   $('rangeLbl').textContent=(A.first?`${fmtDate(A.first)} – ${fmtDate(A.last)} · `:'')+TR(`${A.plats.length} platform${A.plats.length>1?'s':''} · ${ok.length} file${ok.length>1?'s':''}`,`المنصات: ${A.plats.length} · الملفات: ${ok.length}`);
   const evTxt=A.evidence.plats.filter(e=>!e.ok).map(e=>{const r=Number.isInteger(e.results)?fmtInt(e.results):cnt(e.results),nd=[e.days<e.minDays?TR(`${e.minDays} days`,`${e.minDays} يومًا`):'',e.results<e.minResults?TR(`${e.minResults} ${e.Us}`,`${e.minResults} ${USA(e.U)}`):''].filter(Boolean).join(TR(' and ',' و'));
     return TR(`${e.short}: ${e.days} day${e.days===1?'':'s'} with delivery and ${r} ${e.Us} (needs ${nd})`,`${e.short}: ${e.days} يومًا من العرض و${r} ${USA(e.U)} (المطلوب ${nd})`)}).join(' · ');
@@ -3250,7 +3290,7 @@ function render(scroll){
     return `<div class="f fa${LD[fkey(f)]?' isdone':''}" id="f-${A.F.indexOf(f)}"><div class="rank">${String(n).padStart(2,'0')}</div>
     <div class="body"><div class="tl">${f.newc?`<span class="ptag New">${TR('New','جديد')}</span>`:''}<span class="ptag ${tag}">${TAGL(tag)}</span><span class="ftype ${f.type}" title="${f.type==='observed'?TR('Seen directly in your data','مرصود مباشرة في بياناتك'):f.type==='estimate'?TR('A projection from your data, not a measured result','تقدير من بياناتك، وليس نتيجة مقيسة'):TR('An idea to test with a small budget','فكرة للاختبار بميزانية صغيرة')}">${f.type==='observed'?TR('Observed','مرصود'):f.type==='estimate'?TR('Estimate','تقدير'):TR('Test idea','فكرة اختبار')}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
     <h3 class="fah">${nameWrap(headline(f))}</h3>${f.sst?`<p class="fap">${nameWrap(f.title)}</p>`:''}
-    <p class="fmeta small">${w?`<span><b>${TR('Where','أين')}:</b> ${nameWrap(w)}</span>`:''}${p&&p.T&&p.T.first?`<span><b>${TR('Data','البيانات')}:</b> ${fmtDate(p.T.first)} – ${fmtDate(p.T.last)}</span>`:''}<span><b>${TR('Check again','راجع مجددًا')}:</b> ${rc}</span></p>
+    <p class="fmeta small">${w?`<span><b>${TR('Where','أين')}:</b> ${nameWrap(w)}</span>`:''}${p&&p.T&&p.T.first?`<span><b>${TR('Data','البيانات')}:</b> ${fmtDate(p.T.first)} – ${fmtDate(p.T.last)}</span>`:''}<span><b>${TR('Check again','راجع مجددًا')}:</b> ${rc}</span>${LD[fkey(f)]&&LD[fkey(f)].doneAt?`<span class="pos"><b>${TR('Marked done','عُلّم كمنفّذ')}:</b> ${new Date(LD[fkey(f)].doneAt).toLocaleDateString(LANG==='ar'?'ar-AE-u-nu-latn':'en-GB',{day:'numeric',month:'short'})}${LD[fkey(f)].verifiedAt?TR(' · no longer detected in a later audit (not a measured result)',' · لم يعد مرصودًا في تدقيق لاحق (ليست نتيجة مقيسة)'):''}</span>`:''}</p>
     <details class="fx"><summary>${TR('Why, what to do, and how','السبب وما يجب فعله وكيف')}</summary>
       <p class="ev"><b>${TR('Evidence','الدليل')}:</b> ${f.ev}</p><p class="act"><b>${TR('What to do','ما يجب فعله')}:</b> ${esc(f.act)}</p>
       ${pre.length?`<div class="calc"><b>${TR('Before you start','قبل أن تبدأ')}</b><ul>${pre.map(x=>`<li>${x}</li>`).join('')}</ul></div>`:''}
@@ -3280,7 +3320,7 @@ function render(scroll){
   AP.querySelectorAll('#doFirst [data-done],#findings [data-done],#tests [data-done]').forEach(b=>{const f=A.F[+b.dataset.done];if(LD[fkey(f)])b.closest('.f').classList.add('isdone');b.onclick=()=>ledgerToggle(f)});
   AP.querySelectorAll('[data-dismiss]').forEach(sl=>sl.onchange=()=>{if(!sl.value)return;dismissSet(fkey(A.F[+sl.dataset.dismiss]),sl.value);render()});
   AP.querySelectorAll('[data-undismiss]').forEach(b=>b.onclick=()=>{dismissSet(fkey(A.F[+b.dataset.undismiss]),null);render()});
-  renderTop3(A,PRI);
+  renderTop3(A,PRI);renderChanges(A);
   renderBudgetPlan(A);renderPlan(A);renderDelivered(A);renderSeason(A);renderCalc(A);lockCalc();renderTabs(A);renderLive(A);goalFill(A);sessSave();
   if(ST.wantLive){ST.wantLive=false;setTimeout(()=>{setView('live')},50)}
   ST.reportFp=ST.files.filter(f=>!f.err).map(f=>f.name+':'+f.size).sort().join('|');ST.reportRef=refOf(ST.reportFp);renderKeepBar();renderUpsell();
@@ -3578,7 +3618,7 @@ function lockCalc(){
 function renderCalc(A){
   const el=$('calc');
   if(!A.scoreOk){el.innerHTML=`<div class="card lock"><h3>${TR('Not enough data for scenarios yet','البيانات غير كافية للسيناريوهات بعد')}</h3><p class="muted">${TR('The calculator projects what a budget change would do, which needs at least 14 days with delivery and 30 results per platform. With less, any number it showed would look precise without being reliable.','تتوقّع الحاسبة أثر تغيير الميزانية، وهذا يحتاج إلى 14 يومًا على الأقل من العرض و30 نتيجة لكل منصة. بأقل من ذلك، سيبدو أي رقم دقيقًا دون أن يكون موثوقًا.')}</p><p class="muted small">${TR('Export a longer period (30 to 90 days) to unlock it. Until then, change budgets in steps of 15–20% and review after a week.','صدّر فترة أطول (30 إلى 90 يومًا) لفتحها. حتى ذلك الحين، غيّر الميزانيات بخطوات 15–20% وراجعها بعد أسبوع.')}</p></div>`;return}
-  if(!ST.calc||!A.plats.some(p=>p.pk===ST.calc.p))ST.calc={p:A.plats[0].pk,c:'__all',k:20,del:false};
+  if(!ST.calc||!A.plats.some(p=>p.pk===ST.calc.p))ST.calc={p:A.plats[0].pk,c:'__all',k:20,del:false,mode:'pct'};
   const C=ST.calc,p=A.plats.find(p=>p.pk===C.p),camps=p.camps.filter(c=>c.spend>0&&c.curve&&c.curve.Y0>0);
   if(C.c!=='__all'&&!camps.some(c=>c.name===C.c))C.c='__all';
   const tgt=C.c==='__all'?{name:TR('All '+p.P.short+' campaigns','جميع حملات '+p.P.short),curve:p.pcurve,store:p.store,roas:p.acc.roas,lostb:null}:camps.find(c=>c.name===C.c);
@@ -3586,7 +3626,11 @@ function renderCalc(A){
   const canDel=cv.value&&tgt.store&&tgt.store.n>=5&&tgt.roas>0;
   if(!canDel)C.del=false;
   if(C.del&&canDel)cv.Y0=cv.Y0*(tgt.store.eroas/tgt.roas);
-  const V=cv.value,k=C.k/100;
+  const V=cv.value;if(C.mode==='amt'&&cv.S0>0){C.k=Math.max(-90,Math.min(200,Math.round((+C.amt||0)/cv.S0*100)))}const k=C.k/100;
+  // what the data can support: spend changes inside the range the daily spend actually moved; uncertainty from elasticity ±0.15
+  const spread=cv.cv!=null?Math.max(.1,Math.min(.5,2*cv.cv)):.2,inRange=k>=-spread-1e-9&&k<=spread+1e-9;
+  const lo=whatIf(Object.assign({},cv,{b:Math.max(.2,cv.b-.15),capB:Math.max(.2,(cv.capB||cv.b)-.15)}),k,A.margin),hi=whatIf(Object.assign({},cv,{b:Math.min(1,cv.b+.15),capB:Math.min(1,(cv.capB||cv.b)+.15)}),k,A.margin);
+  const ago=p.T&&p.T.last?Math.floor((Date.now()-Date.parse(p.T.last+'T23:59:59Z'))/864e5):0,stale=ago>14&&!ST.example;
   if(!(cv.Y0>0)){el.innerHTML=`<div class="card" style="padding:18px"><p class="muted">${TR(`This ${C.c==='__all'?'platform':'campaign'} has no ${V?'revenue':'results'} in the export, so the calculator can't project it.`,`${C.c==='__all'?'هذه المنصة':'هذه الحملة'} بلا ${V?'إيرادات':'نتائج'} في الملف، لذا لا يمكن للحاسبة إسقاطها.`)}</p></div>`;return}
   const r=whatIf(cv,k,A.margin),unit=UsL(p);
   const srcTxt=LANG==='ar'?{campaign:'مُعايَرة على الإنفاق والنتائج اليومية لهذه الحملة',platform:`مأخوذة من منحنى ${p.P.short}، لأن الإنفاق اليومي لهذه الحملة تغيّر قليلًا جدًا`,assumed:'مفترضة، لأن الإنفاق اليومي تغيّر قليلًا جدًا لحساب منحنى'}[cv.src]:{campaign:`fitted to this campaign's daily spend and results`,platform:`taken from the ${p.P.short} curve, because this campaign's daily spend varied too little to fit its own`,assumed:`assumed, because daily spend varied too little to fit a curve`}[cv.src];
@@ -3609,24 +3653,35 @@ function renderCalc(A){
     <div class="calc-in">
       <div class="fld"><label for="cP">Platform</label><select id="cP">${A.plats.map(q=>`<option value="${q.pk}"${q.pk===C.p?' selected':''}>${q.P.name}</option>`).join('')}</select></div>
       <div class="fld"><label for="cC">Campaign</label><select id="cC"><option value="__all">${TR('All '+esc(p.P.short)+' campaigns','جميع حملات '+esc(p.P.short))}</option>${camps.map(c=>`<option value="${esc(c.name)}"${c.name===C.c?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div>
-      <div class="fld wide"><label for="cK">${TR('Change in spend:','التغيير في الإنفاق:')} <b class="num" id="cKv">${C.k>0?'+':''}${C.k}%</b></label><input type="range" id="cK" min="-50" max="100" step="5" value="${C.k}"></div>
+      <div class="fld wide"><div class="cmode" role="group"><button type="button" data-cmode="pct" aria-pressed="${C.mode!=='amt'}">${TR('By percentage','بالنسبة المئوية')}</button><button type="button" data-cmode="amt" aria-pressed="${C.mode==='amt'}">${TR(`By amount (${CUR} a month)`,`بالمبلغ (${CUR} شهريًا)`)}</button></div>
+        ${C.mode==='amt'?`<label for="cA">${TR('Change in monthly spend','التغيير في الإنفاق الشهري')} <span class="muted small">(${TR('use a minus sign to cut','استخدم علامة السالب للخفض')})</span></label><input type="number" id="cA" step="50" value="${C.amt||Math.round(cv.S0*.2)}"><span class="hint">= ${C.k>0?'+':''}${C.k}% ${TR('of','من')} ${money(cv.S0,0)}</span>`
+        :`<label for="cK">${TR('Change in spend:','التغيير في الإنفاق:')} <b class="num" id="cKv">${C.k>0?'+':''}${C.k}%</b></label><input type="range" id="cK" min="-50" max="100" step="5" value="${C.k}">`}</div>
       ${canDel?`<label class="toggle"><input type="checkbox" id="cD"${C.del?' checked':''}> ${TR('Use delivered revenue instead of reported','استخدم الإيرادات المُسلَّمة بدل المُبلَّغ عنها')}</label>`:''}
     </div>
     <div class="calc-out">
       <div class="co"><span class="eyebrow">Monthly spend</span><span class="num">${money(cv.S0,0)} → <b>${money(r.S1,0)}</b></span><span class="chg">${r.dS>=0?'+':''}${money(r.dS,0)}</span></div>
-      <div class="co"><span class="eyebrow">${V?(C.del?TR('Delivered revenue','الإيرادات المُسلَّمة'):TR('Revenue','الإيرادات')):unit[0].toUpperCase()+unit.slice(1)}</span><span class="num">${V?money(cv.Y0,0):cnt(cv.Y0)} → <b>${V?money(r.Y1,0):cnt(r.Y1)}</b></span><span class="chg">${r.dY>=0?'+':''}${V?money(r.dY,0):cnt(r.dY)} (${pct(r.dY/cv.Y0,1)})</span></div>
+      <div class="co"><span class="eyebrow">${V?(C.del?TR('Delivered revenue','الإيرادات المُسلَّمة'):TR('Revenue','الإيرادات')):unit[0].toUpperCase()+unit.slice(1)}</span><span class="num">${V?money(cv.Y0,0):cnt(cv.Y0)} → <b>${V?money(r.Y1,0):cnt(r.Y1)}</b></span><span class="chg">${k===0?'':TR(`likely ${V?money(Math.min(lo.Y1,hi.Y1),0):cnt(Math.min(lo.Y1,hi.Y1))} to ${V?money(Math.max(lo.Y1,hi.Y1),0):cnt(Math.max(lo.Y1,hi.Y1))}`,`على الأرجح ${V?money(Math.min(lo.Y1,hi.Y1),0):cnt(Math.min(lo.Y1,hi.Y1))} إلى ${V?money(Math.max(lo.Y1,hi.Y1),0):cnt(Math.max(lo.Y1,hi.Y1))}`)}</span></div>
       <div class="co hl"><span class="eyebrow">${effL}</span><span class="num">${fmtE(r.e0)} → <b>${fmtE(r.e1)}</b></span><span class="chg ${Math.abs(r.chg)<.005?'':chgGood?'pos':'neg'}">${r.chg>=0?'+':''}${pct(r.chg,1)}</span></div>
       <div class="co"><span class="eyebrow">${V?TR('Return on the spend added or cut','العائد على الإنفاق المضاف أو المُخفَّض'):TR('Cost of each '+UL(p)+' added or lost','تكلفة كل '+UA(p.U)+' مضافة أو مفقودة')}</span><span class="num ${r.marg==null?'':good?'pos':'neg'}"><b>${r.marg==null?'—':fmtE(r.marg)}</b></span><span class="chg">${r.marg==null?TR('move the slider','حرّك المؤشر'):V?(LANG==='ar'?(r.marg>=A.be?'أعلى من':'أقل من')+' نقطة التعادل '+x2(A.be):(r.marg>=A.be?'above':'below')+' break-even '+x2(A.be)):TR('vs '+money(r.e0)+' today','مقابل '+money(r.e0)+' اليوم')}</span></div>
       ${V?`<div class="co"><span class="eyebrow">Contribution profit</span><span class="num ${r.dProfit>=0?'pos':'neg'}"><b>${r.dProfit>=0?'+':''}${money(r.dProfit,0)}</b></span><span class="chg">${LANG==='ar'?`شهريًا عند هامش ${Math.round(A.margin*100)}%`:`per month at ${Math.round(A.margin*100)}% margin`}</span></div>`:''}
     </div>
+    ${!inRange||stale?`<div class="wzmsg warn"><span>${!inRange?TR(`A ${C.k>0?'+':''}${C.k}% change is outside what your data has seen (daily spend moved about ±${Math.round(spread*100)}%). The projection below is a rough guess, not a forecast; test in smaller steps instead.`,`تغيير ${C.k>0?'+':''}${C.k}% خارج ما شهدته بياناتك (تحرّك الإنفاق اليومي نحو ±${Math.round(spread*100)}%). الإسقاط أدناه تخمين تقريبي وليس توقعًا؛ اختبر بخطوات أصغر.`):''} ${stale?TR(`This data ended ${ago} days ago, so today’s results may differ.`,`انتهت هذه البيانات قبل ${ago} يومًا، لذا قد تختلف نتائج اليوم.`):''}</span></div>`:''}
+    <div class="calc-base small"><div><b>${TR('Based on','بناءً على')}</b> ${p.T&&p.T.first?`${fmtDate(p.T.first)} – ${fmtDate(p.T.last)}`:TR('the period in your files','الفترة في ملفاتك')} · ${fmtInt(Math.round(C.c==='__all'?p.acc.conv:(tgt.conv||0)))} ${p.Us} · ${TR('monthly baseline','الأساس الشهري')} ${money(cv.S0,0)} ${TR('spend','إنفاق')}, ${V?money(cv.Y0,0):cnt(cv.Y0)} ${V?TR('revenue','إيراد'):unit}</div>
+      <div><b>${TR('Assumes','يفترض')}</b> ${TR(`each extra 10% of spend brings about ${(Math.pow(1.1,cv.b)*100-100).toFixed(1)}% more ${V?'revenue':unit} (elasticity ${cv.b.toFixed(2)}, ${cv.src==='campaign'||cv.src==='platform'?'from your daily data':'a typical value, because spend barely varied'}); the range uses ${Math.max(.2,cv.b-.15).toFixed(2)} to ${Math.min(1,cv.b+.15).toFixed(2)}. Supported range: about ±${Math.round(spread*100)}%.`,`كل 10% إضافية من الإنفاق تجلب نحو ${(Math.pow(1.1,cv.b)*100-100).toFixed(1)}% ${V?'إيرادات':unit} إضافية (المرونة ${cv.b.toFixed(2)}، ${cv.src==='campaign'||cv.src==='platform'?'من بياناتك اليومية':'قيمة نموذجية لأن الإنفاق تغيّر قليلًا'})؛ والنطاق يستخدم ${Math.max(.2,cv.b-.15).toFixed(2)} إلى ${Math.min(1,cv.b+.15).toFixed(2)}. النطاق المدعوم: نحو ±${Math.round(spread*100)}%.`)}</div>
+      ${k>0?`<div><b>${TR('Downside','أسوأ احتمال')}</b> ${TR(`if returns fall faster than expected, the extra ${money(r.dS,0)} could bring only ${V?money(Math.max(0,lo.dY),0):cnt(Math.max(0,lo.dY))} more ${V?'revenue':unit}${V?'':`, about ${lo.dY>0?money(r.dS/lo.dY):'—'} each`}.`,`إن تراجع العائد أسرع من المتوقع، فقد يجلب الإنفاق الإضافي ${money(r.dS,0)} ${V?money(Math.max(0,lo.dY),0):cnt(Math.max(0,lo.dY))} فقط${V?'':`، بنحو ${lo.dY>0?money(r.dS/lo.dY):'—'} لكل منها`}.`)}${!V&&p.resValue?TR(` At your numbers each ${p.U} is worth about ${money(p.resValue)}.`,` بأرقامك تساوي كل ${UA(p.U)} نحو ${money(p.resValue)}.`):''}</div>`:k<0?`<div><b>${TR('Downside','أسوأ احتمال')}</b> ${TR(`cutting could lose up to ${V?money(Math.abs(Math.min(lo.dY,hi.dY)),0):cnt(Math.abs(Math.min(lo.dY,hi.dY)))} ${V?'revenue':unit} a month if this spend was doing more than it looks.`,`قد يُفقد الخفض حتى ${V?money(Math.abs(Math.min(lo.dY,hi.dY)),0):cnt(Math.abs(Math.min(lo.dY,hi.dY)))} شهريًا إن كان هذا الإنفاق يحقق أكثر مما يبدو.`)}</div>`:''}
+      ${k!==0?`<div><b>${TR('Test plan','خطة الاختبار')}</b> ${(()=>{const step=Math.sign(k)*Math.min(Math.abs(k),.2),d1=new Date(Date.now()+7*864e5),d2=new Date(Date.now()+14*864e5),fd=d=>d.toLocaleDateString(LANG==='ar'?'ar-AE-u-nu-latn':'en-GB',{day:'numeric',month:'short'});
+        return TR(`change the budget by ${step>0?'+':''}${Math.round(step*100)}% now${Math.abs(k)>.2?`, then another step on ${fd(d1)} if the ${V?'ROAS':cpu(p)} holds`:''}, and review on ${fd(d2)}. Stop or reverse if ${V?'ROAS falls below':cpu(p)+' rises above'} ${V?x2(r.e0*.85):money(r.e0*1.2)}.${V&&ST.marginSet&&r.e0<A.be&&k>0?' It is already below break-even, so fix efficiency before adding budget.':''}`,`غيّر الميزانية ${step>0?'+':''}${Math.round(step*100)}% الآن${Math.abs(k)>.2?`، ثم خطوة أخرى في ${fd(d1)} إن ثبت ${V?'ROAS':cpu(p)}`:''}، وراجع في ${fd(d2)}. توقّف أو تراجع إن ${V?'انخفض ROAS عن':'ارتفعت '+cpu(p)+' عن'} ${V?x2(r.e0*.85):money(r.e0*1.2)}.${V&&ST.marginSet&&r.e0<A.be&&k>0?' هو أقل من نقطة التعادل أصلًا، فحسّن الكفاءة قبل إضافة ميزانية.':''}`)})()}</div>`:''}
+    </div>
     <div class="calc-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${effL}">${grid}${be}<path d="${path}" fill="none" stroke="${pc(p.pk)}" stroke-width="2.2"/>
       <line x1="${X(0)}" x2="${X(0)}" y1="${t}" y2="${t+ih}" stroke="var(--faint)" stroke-dasharray="2 3"/><circle cx="${X(0)}" cy="${Y(r.e0)}" r="4.5" fill="var(--surface)" stroke="${pc(p.pk)}" stroke-width="2"><title>${TR('Today','اليوم')}: ${fmtE(r.e0)}</title></circle>
       <circle cx="${X(k)}" cy="${Y(r.e1)}" r="6" fill="${pc(p.pk)}" stroke="var(--surface)" stroke-width="2"><title>${C.k>0?'+':''}${C.k}%: ${fmtE(r.e1)}</title></circle>${xt}</svg></div>
-    <p class="muted small">${LANG==='ar'?`يُتوقع أن تجلب كل زيادة 10% في الإنفاق نحو ${(Math.pow(1.1,cv.b)*100-100).toFixed(1)}% ${V?'إيرادات':unit} إضافية (المرونة ${cv.b.toFixed(2)}، ${srcTxt}). ${extras.join(' ')} هذا إسقاط من بيانات سابقة لا ضمان؛ غيّر الميزانيات بخطوات 15–20% وأعد التحقق بعد أسبوع.`:`Each 10% more spend is projected to bring about ${(Math.pow(1.1,cv.b)*100-100).toFixed(1)}% more ${V?'revenue':unit} (elasticity ${cv.b.toFixed(2)}, ${srcTxt}). ${extras.join(' ')} A projection from past data, not a guarantee; change budgets in steps of 15–20% and recheck after a week.`}</p>
+
   </div>`;
   $('cP').onchange=e=>{C.p=e.target.value;C.c='__all';renderCalc(A);afterRender()};
   $('cC').onchange=e=>{C.c=e.target.value;renderCalc(A);afterRender()};
-  $('cK').oninput=e=>{C.k=+e.target.value;renderCalc(A);afterRender();const s=$('cK');if(s)s.focus()};
+  if($('cK'))$('cK').oninput=e=>{C.k=+e.target.value;renderCalc(A);afterRender();const s=$('cK');if(s)s.focus()};
+  if($('cA'))$('cA').onchange=e=>{C.amt=+e.target.value||0;renderCalc(A);afterRender()};
+  el.querySelectorAll('[data-cmode]').forEach(b=>b.onclick=()=>{C.mode=b.dataset.cmode;if(C.mode==='amt'&&C.amt==null)C.amt=Math.round(cv.S0*C.k/100);renderCalc(A);afterRender()});
   if($('cD'))$('cD').onchange=e=>{C.del=e.target.checked;renderCalc(A);afterRender()};
 }
 
@@ -3634,7 +3689,8 @@ function renderCalc(A){
 const LKEY='optiroas-ledger-v1';
 function ledgerLoad(){try{return JSON.parse(localStorage.getItem(LKEY)||'{}')||{}}catch(e){return ST.memLedger||(ST.memLedger={})}}
 function ledgerSave(L){ST.memLedger=L;try{localStorage.setItem(LKEY,JSON.stringify(L))}catch(e){}}
-const fkey=f=>f.plat+'|'+f.pil+'|'+String(f.title).replace(/[0-9][0-9.,]*/g,'#').replace(/\b(AED|USD|SAR|EUR|GBP|KWD|QAR|EGP)\b|[$€£%×]/g,'').replace(/\s+/g,' ').trim();
+const fkey=f=>f.kid||fkeyRaw(f);
+const fkeyRaw=f=>f.plat+'|'+f.pil+'|'+String(f.title).replace(/[0-9][0-9.,]*/g,'#').replace(/\b(AED|USD|SAR|EUR|GBP|KWD|QAR|EGP)\b|[$€£%×]/g,'').replace(/\s+/g,' ').trim();
 function ledgerSync(A){
   if(ST.example)return;
   const L=ledgerLoad(),now=new Date().toISOString(),present=new Set(A.F.map(fkey)),plats=new Set(A.plats.map(p=>p.pk).concat(['cross']));
@@ -4237,7 +4293,7 @@ async function renderWorkspace(){
       <div class="wsgrid">${accs.map(({pk,a})=>`<div class="card wsacc" style="border-top-color:${pc(pk)}"><div class="an"><span class="eyebrow">${dot(pk)} ${PK[pk].name}</span><b class="notr">${esc(a.name||a.id)}</b><span class="muted small notr">${esc(a.id)}${a.currency?' · '+esc(a.currency):''}</span></div>
         <div class="row"><button class="btn sm" type="button" data-wsrun="${pk}" data-acc="${esc(a.id)}">${TR('Audit','دقّق')}</button><button class="btn quiet sm" type="button" data-wslive="${pk}" data-acc="${esc(a.id)}">${TR('Live view','العرض المباشر')}</button></div></div>`).join('')}
         ${['meta','google','snap','tiktok'].filter(k=>!conn.includes(k)).map(k=>`<div class="card wsacc" style="border-top-color:var(--line)"><div class="an"><span class="eyebrow">${dot(k)} ${PK[k].name}</span><span class="muted small">${TR('Not connected yet','غير مربوط بعد')}</span></div><div class="row"><button class="btn quiet sm" type="button" data-wsconn="${k}">${TR(`Connect ${PK[k].name}`,`اربط ${PK[k].name}`)}</button></div></div>`).join('')}</div></div>
-    <div class="wssec"><h2>${TR('Saved reports','التقارير المحفوظة')}</h2><div id="wsSaved"><p class="muted small">${TR('Loading…','جارٍ التحميل…')}</p></div></div>`;
+    <div class="wssec"><h2>${TR('Saved reports','التقارير المحفوظة')}</h2><p class="muted small" style="margin:0">${TR('Saved reports keep the summary, your actions and their dates (never your ad data or files) for as long as your account is open.','تحتفظ التقارير المحفوظة بالملخص وإجراءاتك وتواريخها (وليس بياناتك الإعلانية أو ملفاتك أبدًا) ما دام حسابك مفتوحًا.')}</p><div id="wsSaved"><p class="muted small">${TR('Loading…','جارٍ التحميل…')}</p></div></div>`;
   el.querySelectorAll('[data-ws]').forEach(b=>b.onclick=()=>{const k=b.dataset.ws;
     if(k==='audit'){ST.wantLive=false;$('wsAccs').scrollIntoView({behavior:'smooth',block:'start'})}
     if(k==='live')openLive();if(k==='upload')wzStart(1);if(k==='open')go('audit');if(k==='openlive'){go('audit');setView('live')}});
@@ -4725,6 +4781,7 @@ function buildSummary(A){
   const nm=reportName(A);
   return {bench:benchGet(),label:(ST.reportLabel||nm.label).slice(0,150),slug:nm.slug,files:names.slice(0,3).join(' · ').slice(0,150),ref:ST.reportRef||'',dProfit:A.plan&&A.plan.dP!=null?A.plan.dP:null,moved:A.plan?A.plan.moved:0,saved:A.plan?A.plan.saved:0,marginAssumed:!!A.marginAssumed,period:ds.length?`${fmtDate(ds[0])} – ${fmtDate(ds[ds.length-1])}`:TR('Dates not stated','التواريخ غير محددة'),cur:CUR,score:A.scoreOk?A.score:null,
     total:A.total,monthly:A.monthly,waste:A.waste,upside:'',plats:A.plats.map(p=>p.P.short),lang:LANG,
+    kpi:A.plats.map(p=>({pk:p.pk,short:p.P.short,U:p.U,Us:p.Us,spend:p.acc.spend,conv:p.acc.conv,value:p.acc.value,first:p.T&&p.T.first||'',last:p.T&&p.T.last||'',camps:p.camps.length})),
     roas:A.blendedRoas||0,margin:A.margin,marginSet:!!ST.marginSet,by:ST.me&&ST.me.user?(ST.me.user.name||ST.me.user.email):'',
     findings:A.F.map(f=>({k:fkey(f),title:f.sst||f.title,problem:f.title,plat:f.plat,sev:f.sev,pil:pilN(f.pil),act:f.act,impact:impactText(f,A),bucket:f.bucket,h:f.h,done:!!L[fkey(f)],doneAt:L[fkey(f)]?L[fkey(f)].doneAt:null}))};
 }
@@ -4853,7 +4910,7 @@ function renderUpsell(){
 async function renderSavedList(){
   const el=$('savedList');if(!el)return;
   try{const r=await api('/api/reports/list');const R=r.reports||[];
-    el.innerHTML=`<div class="mcard"><div class="mhead2"><b>${TR('Saved reports','التقارير المحفوظة')}</b><span class="muted small">${R.length}</span></div>
+    el.innerHTML=`<div class="mcard"><div class="mhead2"><b>${TR('Saved reports','التقارير المحفوظة')}</b><span class="muted small">${R.length}</span></div><p class="muted small" style="margin:0">${TR('Saved reports keep the summary, your actions and their dates (never your ad data or files) for as long as your account is open.','تحتفظ التقارير المحفوظة بالملخص وإجراءاتك وتواريخها (وليس بياناتك الإعلانية أو ملفاتك أبدًا) ما دام حسابك مفتوحًا.')}</p>
       ${R.length?`<div class="alist2">${R.map(x=>`<div class="arow2"><div class="an"><b class="notr">${esc(x.label||TR('Audit','تدقيق'))}</b><span class="muted small">${fmtDate(String(x.created_at).slice(0,10))} · ${x.score==null?'':`${TR('score','الدرجة')} ${x.score} ·`} ${TR(`${x.done} of ${x.total} done`,`${x.done} من ${x.total} منفّذة`)}${x.followup_at&&!x.followup_sent_at?TR(' · follow-up due ',' · المتابعة في ')+fmtDate(String(x.followup_at).slice(0,10)):''}</span></div><div class="ar"><button class="btn quiet sm" type="button" data-open="${x.id}">${TR('Open','افتح')}</button></div></div>`).join('')}</div>`
       :`<p class="muted small" style="margin:0">${TR('After an audit, choose “Save to my account” to keep the summary here and track your progress.','بعد التدقيق، اختر «احفظ في حسابي» للاحتفاظ بالملخص هنا ومتابعة تقدمك.')}</p>`}</div>`;
     el.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openSaved(b.dataset.open));
