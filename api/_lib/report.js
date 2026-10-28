@@ -5,11 +5,12 @@ const N = v => { const x = +v; return Number.isFinite(x) ? x : 0; };
 export function cleanSummary(d) {
   d = d && typeof d === 'object' ? d : {};
   const findings = (Array.isArray(d.findings) ? d.findings : []).slice(0, 80).map(f => ({
-    k: S(f.k, 300), title: S(f.title, 300), problem: S(f.problem, 300), plat: S(f.plat, 20), sev: S(f.sev, 20), pil: S(f.pil, 60), act: S(f.act, 800),
+    k: S(f.k, 300), type: S(f.type, 12), conf: S(f.conf, 10), title: S(f.title, 300), problem: S(f.problem, 300), plat: S(f.plat, 20), sev: S(f.sev, 20), pil: S(f.pil, 60), act: S(f.act, 800),
     impact: S(f.impact, 120), bucket: S(f.bucket, 20), h: S(f.h, 10), done: !!f.done, doneAt: f.done ? S(f.doneAt || new Date().toISOString(), 40) : null }));
   const plan = (Array.isArray(d.plan) ? d.plan : []).slice(0, 30).map(p => ({ h: S(p.h, 40), t: S(p.t, 300), tag: S(p.tag, 20) }));
   return { label: S(d.label, 160), period: S(d.period, 80), cur: S(d.cur, 8), score: d.score == null || d.score === '' ? null : Math.round(N(d.score)), band: S(d.band, 60),
     total: N(d.total), monthly: N(d.monthly), waste: N(d.waste), roas: N(d.roas), margin: N(d.margin), marginSet: !!d.marginSet, by: S(d.by, 120), upside: S(d.upside, 80), bench: S(d.bench, 40), slug: S(d.slug, 120), files: S(d.files, 160), ref: S(d.ref, 64), dProfit: d.dProfit == null ? null : N(d.dProfit), moved: N(d.moved), saved: N(d.saved), plats: (Array.isArray(d.plats) ? d.plats : []).slice(0, 10).map(x => S(x, 30)),
+    goal: S(d.goal, 20), target: N(d.target), conf: S(d.conf, 10), review: S(d.review, 10),
     kpi: (Array.isArray(d.kpi) ? d.kpi : []).slice(0, 8).map(k => ({ pk: S(k.pk, 20), short: S(k.short, 30), U: S(k.U, 40), Us: S(k.Us, 40), spend: N(k.spend), conv: N(k.conv), value: N(k.value), first: S(k.first, 10), last: S(k.last, 10), camps: N(k.camps) })),
     findings, plan, lang: d.lang === 'ar' ? 'ar' : 'en' };
 }
