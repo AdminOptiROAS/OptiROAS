@@ -10,7 +10,8 @@ export default async function handler(req, res) {
     users = (await sql`select count(*)::int as n from users`)[0].n;
     // Meta Graph calls only (paths start with the API version, e.g. /v26.0/...); ad account ids are masked
     calls = (await sql`select count(*) filter (where ok)::int as ok, count(*)::int as total from api_log where at > now() - interval '15 days' and endpoint like '/v%'`)[0];
-    calls.byEndpoint = await sql`select regexp_replace(regexp_replace(endpoint,'act_[0-9]+','act_*','g'),'/[0-9]{6,}','/*','g') as endpoint, count(*) filter (where ok)::int as ok, count(*)::int as total
+    calls.byEndpoint = await sql`select regexp_replace(regexp_replace(endpoint,'act_[0-9]+','act_*','g'),'/[0-9]{6,}','/*','g') as endpoint, count(*) filter (where ok)::int as ok, count(*)::int as total,
+        (array_agg(left(regexp_replace(coalesce(err,''),'act_[0-9]+|[0-9]{8,}','*','g'),160) order by at desc) filter (where not ok))[1] as last_error
       from api_log where at > now() - interval '15 days' and endpoint like '/v%' group by 1 order by 3 desc limit 20`;
     // Google, Snapchat and TikTok calls (endpoint names like 'google:campaigns'), with the latest error text
     calls.otherPlatforms = await sql`select split_part(endpoint, ':', 1) as platform, count(*) filter (where ok)::int as ok, count(*)::int as total,
