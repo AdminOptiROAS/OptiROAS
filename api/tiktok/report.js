@@ -69,7 +69,7 @@ export default async function handler(req, res) {
       await logApi(user.id, 'tiktok:report', true);
     }
   } catch (e) {
-    await logApi(user.id, 'tiktok:report', false);
+    await logApi(user.id, 'tiktok:report', false, String((e && (e.code || e.status || '')) + ' ' + (e && e.message || '')).slice(0, 280));
     const expired = e.code === 40105 || e.code === 40104 || e.status === 401;
     return json(res, expired ? 409 : 502, { error: expired ? 'Your TikTok connection has expired. Reconnect TikTok.' : friendly('tiktok', (e.code||'')+' '+e.message).text });
   }

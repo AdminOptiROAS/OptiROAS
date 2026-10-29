@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     await logApi(user.id, 'snap:campaigns', true);
     return json(res, 200, { currency: own[0].currency, since: start, until: addDays(end, -1), campaigns: [...m.values()] });
   } catch (e) {
-    await logApi(user.id, 'snap:campaigns', false);
+    await logApi(user.id, 'snap:campaigns', false, String((e && (e.code || e.status || '')) + ' ' + (e && e.message || '')).slice(0, 280));
     const expired = e.code === 'invalid_grant' || e.status === 401;
     return json(res, expired ? 409 : 502, { error: expired ? 'Your Snapchat connection has expired. Reconnect Snapchat.' : friendly('snap', (e.status||'')+' '+e.message).text });
   }

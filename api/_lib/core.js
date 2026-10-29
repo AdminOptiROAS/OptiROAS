@@ -176,7 +176,7 @@ export async function graph(path, params = {}, { userId, method = 'GET' } = {}) 
 async function logCall(userId, endpoint, ok, err) {
   try { await sql`insert into api_log(user_id,endpoint,ok,err) values(${userId || null},${String(endpoint).slice(0, 200)},${ok},${err ? String(err).slice(0, 300) : null})`; } catch {}
 }
-export async function logApi(userId, endpoint, ok) { return logCall(userId, endpoint, ok); }
+export async function logApi(userId, endpoint, ok, err) { return logCall(userId, endpoint, ok, err); }
 export async function metaToken(userId) {
   const r = await sql`select token_enc from meta_connections where user_id=${userId}`;
   return r[0] ? decrypt(r[0].token_enc) : null;

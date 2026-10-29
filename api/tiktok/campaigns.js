@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     await logApi(user.id, 'tiktok:campaigns', true);
     return json(res, 200, { currency: own[0].currency, since: start, until: end, campaigns: [...m.values()] });
   } catch (e) {
-    await logApi(user.id, 'tiktok:campaigns', false);
+    await logApi(user.id, 'tiktok:campaigns', false, String((e && (e.code || e.status || '')) + ' ' + (e && e.message || '')).slice(0, 280));
     return json(res, 502, { error: friendly('tiktok', (e.code||'')+' '+e.message).text });
   }
 }

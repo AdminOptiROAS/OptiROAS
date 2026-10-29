@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       c.spend += (+x.metrics.costMicros || 0) / 1e6; c.impr += +x.metrics.impressions || 0; m.set(id, c); }
     return json(res, 200, { currency: own[0].currency, since: r.since, until: r.until, campaigns: [...m.values()] });
   } catch (e) {
-    await logApi(user.id, 'google:campaigns', false);
+    await logApi(user.id, 'google:campaigns', false, String((e && (e.code || '')) + ' ' + (e && e.message || '')).slice(0, 280));
     const expired = e.code === 'invalid_grant';
     return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : friendly('google', e.message).text, code: 'google' });
   }

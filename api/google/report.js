@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     }
     await logApi(user.id, 'google:' + type, true);
   } catch (e) {
-    await logApi(user.id, 'google:' + type, false);
+    await logApi(user.id, 'google:' + type, false, String((e && (e.code || '')) + ' ' + (e && e.message || '')).slice(0, 280));
     const expired = e.code === 'invalid_grant';
     return json(res, expired ? 409 : 502, { error: expired ? 'Your Google connection has expired. Reconnect Google Ads.' : friendly('google', e.message).text, code: 'google' });
   }
