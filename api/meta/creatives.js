@@ -42,12 +42,16 @@ export default async function handler(req, res) {
     rows.sort((a, b) => (+b.spend || 0) - (+a.spend || 0));
     const top = rows.slice(0, 150), meta = {};
     for (let i = 0; i < top.length; i += 50) {
-      const batch = top.slice(i, i + 50).map(x => x.ad_id).join(',');
+      const batch = top.slice(i, i + 50).map(x => String(x.ad_id));
       const C = '{thumbnail_url,image_url,image_hash,video_id,object_type,title,body,call_to_action_type,product_set_id,asset_feed_spec{videos{video_id},images{hash}},object_story_spec{video_data{video_id},link_data{image_hash,picture,child_attachments{name}}}}';
       let r = {};
       // larger previews first; fall back to Meta's default size, then to no creative details at all
       for (const f of ['creative.thumbnail_width(480).thumbnail_height(480)' + C, 'creative' + C, 'creative{thumbnail_url,video_id,object_type}']) {
-        try { r = await graph('/', { ids: batch, fields: 'created_time,effective_status,' + f, access_token: token, appsecret_proof: proof }, { userId: user.id }); break; } catch (e) { r = {}; }
+        // the ?ids= lookup was removed in Graph v26; read the same ads through the account's /ads edge instead
+        try {
+          const j = await graph(`/${account}/ads`, { filtering: [{ field: 'id', operator: 'IN', value: batch }], limit: 50, fields: 'id,created_time,effective_status,' + f, access_token: token, appsecret_proof: proof }, { userId: user.id });
+          r = {}; for (const a of (j.data || [])) r[a.id] = a; break;
+        } catch (e) { r = {}; }
       }
       Object.assign(meta, r);
     }
