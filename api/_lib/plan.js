@@ -23,7 +23,9 @@ export const PLAN_RULES = {
 };
 export const rulesFor = u => {
   if (u && (isAdmin(u) || isReviewer(u))) return { ...PLAN_RULES.pro, platforms: 7, full: true };
-  const r = PLAN_RULES[(u && u.plan) || 'free'] || PLAN_RULES.free;
+  const pl = (u && u.plan) || 'free';
+  // a paid plan whose Stripe product isn't recognised yet ('paid') gets Starter rules, never the free ones
+  const r = PLAN_RULES[pl] || (pl === 'free' ? PLAN_RULES.free : PLAN_RULES.starter);
   return r.audits === 1 ? { ...r, audits: freeLimit() } : { ...r };
 };
 const PLATS = ['meta', 'google', 'snap', 'tiktok'];
