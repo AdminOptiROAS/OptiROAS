@@ -19,7 +19,9 @@ export default async function handler(req, res) {
       count(*) filter (where created_at > now() - interval '24 hours')::int as new24,
       count(*) filter (where created_at > now() - interval '7 days')::int as new7
     from users where lower(email) <> all(${ext})`);
-  const newList = await sql`select email, name, created_at, email_verified_at is not null as verified from users
+  const bySource = await sql`select coalesce(utm_source,'direct / unknown') as src, coalesce(utm_campaign,'') as camp, count(*)::int as n from users
+    where created_at > now() - interval '7 days' and lower(email) <> all(${ext}) group by 1,2 order by n desc limit 15`;
+  const newList = await sql`select email, name, created_at, utm_source, utm_campaign, email_verified_at is not null as verified from users
     where created_at > now() - interval '24 hours' and lower(email) <> all(${ext}) order by created_at desc limit 25`;
   const audits = await one(sql`select count(*)::int as n, count(distinct r.user_id)::int as people from usage_reports r join users u on u.id=r.user_id
     where r.at > now() - interval '24 hours' and lower(u.email) <> all(${ext})`);
@@ -41,11 +43,12 @@ export default async function handler(req, res) {
     ${row('Audits run', `${audits.n} (by ${audits.people} ${audits.people === 1 ? 'person' : 'people'})`)}${row('Unlock offers seen', ev.paywall)}${row('Checkouts started', ev.checkout)}
     ${row('New subscriptions', subs24.n)}${row('Full reports unlocked', unlocks.n)}${row('Paying accounts now', paid)}
     ${row('Ad accounts connected (all users)', `Meta ${conns.meta} · Google ${conns.google} · Snapchat ${conns.snap} · TikTok ${conns.tiktok}`)}</table>
-    ${newList.length ? `<h3 style="margin:20px 0 6px">New sign-ups</h3><ul style="padding-left:18px;margin:0">${newList.map(u => `<li>${esc(u.email)}${u.name ? ' (' + esc(u.name) + ')' : ''}${u.verified ? '' : ' · email not confirmed yet'}</li>`).join('')}</ul>` : ''}
+    ${newList.length ? `<h3 style="margin:20px 0 6px">New sign-ups</h3><ul style="padding-left:18px;margin:0">${newList.map(u => `<li>${esc(u.email)}${u.name ? ' (' + esc(u.name) + ')' : ''}${u.utm_source ? ' · from ' + esc(u.utm_source) + (u.utm_campaign ? ' / ' + esc(u.utm_campaign) : '') : ''}${u.verified ? '' : ' · email not confirmed yet'}</li>`).join('')}</ul>` : ''}
+    ${bySource.length ? `<h3 style="margin:20px 0 6px">Sign-ups by source, last 7 days</h3><ul style="padding-left:18px;margin:0">${bySource.map(s => `<li>${esc(s.src)}${s.camp ? ' / ' + esc(s.camp) : ''}: ${s.n}</li>`).join('')}</ul>` : ''}
     ${fb.length ? `<h3 style="margin:20px 0 6px">Feedback</h3><ul style="padding-left:18px;margin:0">${fb.map(f => `<li>${f.rating ? f.rating + '/5 · ' : ''}${esc(String(f.message || '').slice(0, 300))}${f.page ? ' <span style="color:#5b667a">(' + esc(f.page) + ')</span>' : ''}</li>`).join('')}</ul>` : ''}
     <p style="margin-top:20px;color:#5b667a">Visits by page, country and campaign: Vercel → optiroas → Analytics. Payments: Stripe dashboard. Site: ${esc(SITE())}</p></div>`;
   const text = `OptiROAS daily summary (last 24h, customers only)\nNew sign-ups: ${users.new24}\nAudits run: ${audits.n}\nUnlock offers seen: ${ev.paywall}\nCheckouts started: ${ev.checkout}\nNew subscriptions: ${subs24.n}\nPaying accounts: ${paid}`;
-  const stats = { users, newList, audits, unlocks, events: ev, plans, subs24, conns, feedback: fb.length };
+  const stats = { users, bySource, newList, audits, unlocks, events: ev, plans, subs24, conns, feedback: fb.length };
   const wantMail = cron || /[?&]send=1/.test(req.url || '');
   if (!wantMail) return json(res, 200, { ok: true, stats });
   const to = process.env.REPORT_EMAIL || list('ADMIN_EMAILS')[0] || 'admin@optiroas.com';
