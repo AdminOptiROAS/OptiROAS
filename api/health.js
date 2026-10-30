@@ -19,7 +19,8 @@ export default async function handler(req, res) {
       from api_log where at > now() - interval '30 days' and endpoint ~ '^(google|snap|tiktok):' group by 1`;
     calls.connections = (await sql`select (select count(*) from meta_connections)::int as meta, (select count(*) from google_connections)::int as google, (select count(*) from snap_connections)::int as snap, (select count(*) from tiktok_connections)::int as tiktok`)[0];
   } catch (e) { db = 'error: ' + String(e.message).slice(0, 120); }
-  const googleMissing = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI', 'GOOGLE_ADS_DEVELOPER_TOKEN'].filter(k => !process.env[k]);
+  // Google Ads developer tokens were retired on 9 Sep 2026; access comes from the Cloud project's access level
+  const googleMissing = ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'].filter(k => !process.env[k]);
   const snapMissing = ['SNAP_CLIENT_ID', 'SNAP_CLIENT_SECRET', 'SNAP_REDIRECT_URI'].filter(k => !process.env[k]);
   const tiktokMissing = ['TIKTOK_APP_ID', 'TIKTOK_APP_SECRET', 'TIKTOK_REDIRECT_URI'].filter(k => !process.env[k]);
   return json(res, missing.length || db !== 'ok' ? 500 : 200, { ok: !missing.length && db === 'ok', missing, googleMissing, snapMissing, tiktokMissing, emailOn: !!process.env.RESEND_API_KEY, stripeWebhook: !!process.env.STRIPE_WEBHOOK_SECRET, db, users, metaCallsLast15Days: calls, graph: process.env.META_GRAPH_VERSION || null });

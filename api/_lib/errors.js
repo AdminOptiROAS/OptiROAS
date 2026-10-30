@@ -4,7 +4,7 @@ const RULES = {
     [/invalid_grant|expired|revoked/i, 'Your Google connection has expired or was removed.', 'Reconnect Google Ads from My account.'],
     [/USER_PERMISSION_DENIED|PERMISSION_DENIED|doesn't have permission|not have access/i, 'The Google login you connected can’t read this account.', 'Ask the account owner to add that Google login to the ad account (Admin → Access and security), or connect with a login that already has access.'],
     [/CUSTOMER_NOT_ENABLED|not enabled|CANCELED|cancelled/i, 'This Google Ads account isn’t active (it may be cancelled or never finished setup).', 'Choose another account, or reactivate it in Google Ads.'],
-    [/DEVELOPER_TOKEN|developer token/i, 'Google hasn’t approved OptiROAS for this kind of account yet.', 'Upload a Google Ads export for now; we’re finishing Google’s approval.'],
+    [/CLOUD_PROJECT_NOT_APPROVED|DEVELOPER_TOKEN|developer token/i, 'Google hasn’t approved OptiROAS for this kind of account yet.', 'Upload a Google Ads export for now; we’re finishing Google’s approval.'],
     [/MANAGER|manager account|login-customer-id|login_customer_id/i, 'This is a manager (MCC) account or needs its manager to be selected.', 'Pick the individual client account under the manager account.'],
     [/RESOURCE_EXHAUSTED|quota|rate/i, 'Google is limiting requests right now.', 'Try again in a few minutes.'],
     [/./, 'Google Ads didn’t return the data.', 'Try again in a few minutes, or upload a Google Ads export instead.']],
