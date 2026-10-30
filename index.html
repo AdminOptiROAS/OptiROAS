@@ -3073,7 +3073,7 @@ const drop=$('audit');
 drop.addEventListener('drop',e=>{e.stopPropagation();if(e.dataTransfer.files.length)wzFromFiles([...e.dataTransfer.files])});
 document.addEventListener('dragover',e=>e.preventDefault());
 document.addEventListener('drop',e=>{if(!drop.contains(e.target)){e.preventDefault();if(e.dataTransfer.files.length){const l=[...e.dataTransfer.files];if(reportOpen()&&isFree()){toast(TR('Files are locked for your free audit.','الملفات مقفلة لتدقيقك المجاني.'));return}reportOpen()?addFiles(l):wzFromFiles(l)}}});
-$('exampleBtn').addEventListener('click',()=>{if(!ST.example&&ST.files.length)ST.mine={files:ST.files,view:ST.view,tab:ST.tab,crMeta:ST.crMeta,claimed:ST.claimed,goal:ST.goal,cur:$('currency').value,margin:$('margin').value,revenue:$('revenue').value};ST.files=exampleFiles();ST.example=true;ST.tab=null;ST.view='overview';$('currency').value=CURRENCIES.includes(regionCur())?regionCur():'USD';ST.exampleFiles=ST.files.map(f=>{f.cur=$('currency').value;return f});$('revenue').value='';render(true)});
+$('exampleBtn').addEventListener('click',()=>{px('ViewContent',{content_name:'Example report'});if(!ST.example&&ST.files.length)ST.mine={files:ST.files,view:ST.view,tab:ST.tab,crMeta:ST.crMeta,claimed:ST.claimed,goal:ST.goal,cur:$('currency').value,margin:$('margin').value,revenue:$('revenue').value};ST.files=exampleFiles();ST.example=true;ST.tab=null;ST.view='overview';$('currency').value=CURRENCIES.includes(regionCur())?regionCur():'USD';ST.exampleFiles=ST.files.map(f=>{f.cur=$('currency').value;return f});$('revenue').value='';render(true)});
 $('exBack').addEventListener('click',()=>{const m=ST.mine;if(!m)return;ST.mine=null;Object.assign(ST,{files:m.files,view:m.view||'overview',tab:m.tab,crMeta:m.crMeta,claimed:m.claimed,goal:m.goal,example:false});$('currency').value=m.cur;$('margin').value=m.margin;$('revenue').value=m.revenue;render(true)});
 $('resetBtn').addEventListener('click',()=>{ST.mine=null;sessClear();ST.goal='';ST.liveSrc=null;ST.liveToday=null;ST.liveAuto=false;clearInterval(ST.liveIv);ST.files=[];ST.crMeta=null;ST.example=false;ST.claimed=false;ST.userCur=false;go('home')});
 ['margin','revenue','days'].forEach(id=>$(id).addEventListener('input',()=>render()));
@@ -3855,6 +3855,14 @@ try{ST.region=localStorage.getItem('optiroas-region')||null}catch(e){ST.region=n
 const PLANS={free:{name:'Free audit',usd:0,yr:0,plats:0,live:false},starter:{name:'Starter',usd:49,yr:44,plats:3,live:false},pro:{name:'Pro',usd:129,yr:119,plats:7,live:true}};
 ST.cycle='monthly';
 const planUsd=(k,c)=>c==='yearly'?PLANS[k].yr:PLANS[k].usd;
+// Meta Pixel standard events. fbq exists only where the pixel loaded (not on reset or saved-report links).
+const px=(ev,p)=>{try{if(window.fbq)p?fbq('track',ev,p):fbq('track',ev)}catch(e){}};
+// Checkout: remember the plan chosen so the thank-you page can report Subscribe with its value
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="https://buy.stripe.com/"]');if(!a)return;const b=a.href.split('?')[0];
+  for(const k of ['starter','pro'])for(const c of ['monthly','yearly'])if(STRIPE[k]&&STRIPE[k][c]===b){const v=c==='yearly'?planUsd(k,c)*12:planUsd(k,c);
+    px('InitiateCheckout',{value:v,currency:'USD',content_name:PLANS[k].name+' '+c});try{localStorage.setItem('or_px_sub',JSON.stringify({k,c,v,t:Date.now()}))}catch(x){}}},true);
+function pxSubscribe(){let p=null;try{p=JSON.parse(localStorage.getItem('or_px_sub')||'null');localStorage.removeItem('or_px_sub')}catch(e){}
+  if(p&&Date.now()-p.t<6*3600e3)px('Subscribe',{value:p.v,currency:'USD',content_name:PLANS[p.k].name+' '+p.c})}
 function regAmt(usd){const c=regionCur(),r=FX[c];if(!r||c==='USD')return '$'+usd.toLocaleString('en-US');const v=usd*r;return c+' '+(['KWD','BHD','OMR','JOD'].includes(c)?v.toFixed(1):Math.round(v).toLocaleString('en-US'))}
 function cycleNote(k,c){if(c!=='yearly'||!PLANS[k].yr)return '';const y=PLANS[k].yr*12,s=(PLANS[k].usd-PLANS[k].yr)*12;return `Billed yearly at ${regAmt(y)} · save ${regAmt(s)} a year`}
 function regionCur(){const a=acct();if(a&&a.prefs&&a.prefs.currency&&a.prefs.currency!=='auto')return a.prefs.currency;return ST.region||LOC.cur}
@@ -3913,6 +3921,7 @@ function go(pg,anchor){
   if(pg==='audit'&&!ST.files.length)pg='home';
   if(pg==='home'&&wsUser())pg='workspace';
   ST.page=pg;$('authView').hidden=true;$('acctView').hidden=true;
+  if(pg==='welcome')pxSubscribe();if(pg==='pricing')px('ViewContent',{content_name:'Pricing'});
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.dataset.page!==pg);
   document.querySelectorAll('[data-nav]').forEach(a=>{if(a.dataset.nav===pg||(a.dataset.nav==='how'&&['delivered','pillars','calculator'].includes(pg)))a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
   $('navAudit').hidden=!ST.files.length;
@@ -3965,7 +3974,7 @@ $('waitForm').addEventListener('submit',async e=>{
   try{
     const r=await fetch('https://formspree.io/f/'+WAITLIST_FORM_ID,{method:'POST',headers:{'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify(data)});
     if(!r.ok){let m='';try{const j=await r.json();m=(j.errors||[]).map(x=>x.message).join(' ')}catch(x){}return err('That didn\u2019t go through'+(m?': '+m.replace(/\.?$/,'.'):'.')+' Try again, or email admin@optiroas.com.')}
-    done(`Thanks, ${name.split(' ')[0]}. We'll email ${email} when early access opens.`);
+    px('Lead');done(`Thanks, ${name.split(' ')[0]}. We'll email ${email} when early access opens.`);
   }catch(x){err('We couldn\u2019t reach the server. Check your connection and try again, or email admin@optiroas.com.')}
 });
 $('wlBack').onclick=()=>showView('site');
@@ -4262,7 +4271,7 @@ function renderAuth(el,note){
     const email=$('acEmail').value.trim(),password=$('acPass').value;if(!email||!password)return errf(TR('Enter your email and password.','أدخل بريدك الإلكتروني وكلمة المرور.'));
     $('acGo').disabled=true;ST.lastEmail=email;
     try{const r=await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,lang:ST.lang,name:up?$('acName').value.trim():undefined})});const jj=r||{};
-      try{localStorage.setItem('or_has_acct','1')}catch(e){}await loadMe();
+      try{localStorage.setItem('or_has_acct','1')}catch(e){}if(up)px('CompleteRegistration');await loadMe();
       if(up)ST.acctMsg={ok:true,t:jj.verifySent?TR(`Account created. We sent a confirmation link to ${email}; confirm it to run your free report.`,`تم إنشاء الحساب. أرسلنا رابط تأكيد إلى ${email}؛ أكّده لتشغيل تقريرك المجاني.`):TR('Account created. Welcome to OptiROAS.','تم إنشاء الحساب. مرحبًا بك في OptiROAS.')};
       if(ST.resumeWz&&ST.me&&ST.me.user){ST.resumeWz=false;ST.acctMsg=null;if(ST.wz.items.length)ST.wz.step=4;go('start');setTimeout(()=>toast(TR('Signed in. Your upload is where you left it.','تم تسجيل الدخول. ملفاتك كما تركتها.')),300);return}
       if(ST.pending&&ST.me&&ST.me.user){const l=ST.pending;ST.pending=null;await addFiles(l);if(ST.page==='audit'){ST.acctMsg=null;return}}
