@@ -3925,10 +3925,10 @@ const WAITLIST_FORM_ID='maeewolz';
 // Stripe Payment Links (Stripe Dashboard → Payment Links). Paste each link; empty ones keep that button on the waitlist.
 // In each link set "After payment" → "Don't show confirmation page" → redirect to https://optiroas.com/#welcome
 const STRIPE={
-  // SANDBOX (test) links. Replace with live-mode links at launch.
-  starter:{monthly:'https://buy.stripe.com/test_bJebJ160n18r9GE9LD1kA00',yearly:'https://buy.stripe.com/test_9B69ATbkH5oH064aPH1kA01'},
-  pro:{monthly:'https://buy.stripe.com/test_dRmbJ160n3gzf0Y3nf1kA02',yearly:'https://buy.stripe.com/test_eVq8wP2Ob6sL9GE4rj1kA03'},
-  portal:'https://billing.stripe.com/p/login/test_bJebJ160n18r9GE9LD1kA00'   // Settings → Billing → Customer portal → "Login link" (https://billing.stripe.com/p/login/...)
+  // LIVE links (Stripe account Optiroas). Each redirects to https://optiroas.com/#welcome after payment.
+  starter:{monthly:'https://buy.stripe.com/eVq3co03ZdG53mc2Un7N600',yearly:'https://buy.stripe.com/eVqfZa5ojdG55ukamP7N602'},
+  pro:{monthly:'https://buy.stripe.com/eVqbIU03ZatTaOE7aD7N601',yearly:'https://buy.stripe.com/3cIfZa7wreK97CsbqT7N603'},
+  portal:'https://billing.stripe.com/p/login/eVq3co03ZdG53mc2Un7N600'
 };
 const payLink=(k,c)=>{const b=(STRIPE[k]&&STRIPE[k][c])||'';const u=ST.me&&ST.me.user;return b&&u?`${b}?client_reference_id=${encodeURIComponent(u.id)}&prefilled_email=${encodeURIComponent(u.email)}`:b};
 const payOn=()=>!!(payLink('starter','monthly')||payLink('pro','monthly')||payLink('starter','yearly')||payLink('pro','yearly'));
