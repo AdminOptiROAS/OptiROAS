@@ -1,8 +1,10 @@
 import { sql } from './core.js';
 import { mailOn } from './mail.js';
 
-// Free plan: one free audit per account, ever (FREE_REPORTS_PER_MONTH sets how many), with one download of each PDF.
-// Paid plans and ADMIN_EMAILS are unlimited. Connecting ad accounts is a paid feature.
+// Pay per audit: anyone signed in can run an audit and see a preview (score, vitals, top findings).
+// The full report and its PDFs unlock with one audit credit, bought once for $14.99 (users.audit_credits).
+// A report is identified by its files' fingerprint (fp); an unlocked fp stays unlocked (audit_unlocks).
+// Subscriptions (Starter, Pro), ADMIN_EMAILS and REVIEW_EMAILS are unlimited. Connecting ad accounts is a subscription feature.
 const TZ = 'Asia/Dubai';
 const list = k => (process.env[k] || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 export const freeLimit = () => Math.max(0, parseInt(process.env.FREE_REPORTS_PER_MONTH || '1', 10));
@@ -42,11 +44,17 @@ export async function connectCheck(u, plat) {
   return { ok: false, to: '/?upgrade=platforms#pricing' };
 }
 export const canConnect = u => !!u && ((u.plan || 'free') !== 'free' || isAdmin(u) || isReviewer(u));
+export async function isUnlocked(u, fp) {
+  if (!fp) return false;
+  return (await sql`select 1 from audit_unlocks where user_id=${u.id} and fp=${String(fp).slice(0, 128)} limit 1`).length > 0;
+}
 export async function usageFor(u) {
   const plan = u.plan || 'free', unlimited = plan !== 'free' || isAdmin(u) || isReviewer(u);
+  const credits = (await sql`select audit_credits from users where id=${u.id}`)[0]?.audit_credits || 0;
+  const unlocked = (await sql`select count(*)::int as n from audit_unlocks where user_id=${u.id}`)[0].n;
   // free audits and downloads are counted over the life of the account, not per month
   const used = (await sql`select count(distinct coalesce(fp, id::text))::int as n from usage_reports where user_id=${u.id}`)[0].n;
   const dl = await sql`select kind, count(*)::int as n from usage_downloads where user_id=${u.id} group by kind`;
   const downloads = { plan: 0, summary: 0 }; for (const r of dl) downloads[r.kind] = r.n;
-  return { plan, unlimited, used, limit: unlimited ? null : freeLimit(), resets: null, once: !unlimited, verified: verified(u), downloads, dlLimit: unlimited ? null : 1, canConnect: canConnect(u), live: rulesFor(u).live, rules: rulesFor(u), connected: await connectedPlatforms(u.id) };
+  return { plan, unlimited, used, limit: null, resets: null, once: false, payPerAudit: !unlimited, credits, unlocked, verified: verified(u), downloads, dlLimit: null, canConnect: canConnect(u), live: rulesFor(u).live, rules: rulesFor(u), connected: await connectedPlatforms(u.id) };
 }

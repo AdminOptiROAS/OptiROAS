@@ -19,8 +19,8 @@ export default async function handler(req, res) {
     if (!r[0]) return json(res, 404, { error: 'That report isn’t in your account.' });
     d = r[0].data; id = String(b.id);
   } else d = cleanSummary(b.data);
-  const t = await takeDownload(user, 'summary', (d && d.ref) || b.ref || (id ? 'saved:' + id : ''));
-  if (!t.ok) return json(res, 402, { error: 'dl_limit', code: 'dl_limit', kind: 'summary', usage: t.usage });
+  const t = await takeDownload(user, 'summary', (d && d.ref) || b.ref || (id ? 'saved:' + id : ''), b.fp || (d && d.fp));
+  if (!t.ok) return json(res, 402, { error: 'locked', code: 'locked', kind: 'summary', usage: t.usage });
   const m = summaryEmail(d, { mode: 'report', id });
   const ok = await sendMail({ to: user.email, ...m });
   await sql`insert into api_log(user_id,endpoint,ok) values(${user.id},'report:email',${ok})`;

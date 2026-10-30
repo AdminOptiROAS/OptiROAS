@@ -4,6 +4,7 @@ import { ensureSchema, sql, json } from '../_lib/core.js';
 // Stripe → OptiROAS plan sync. Verifies the Stripe-Signature header with STRIPE_WEBHOOK_SECRET.
 // checkout.session.completed links the Stripe customer to the user (client_reference_id, else email);
 // customer.subscription.* sets the plan from the subscribed product, and back to free when it ends.
+// A paid one-time checkout (mode=payment, the $14.99 audit) adds one audit credit to the user.
 const PRODUCTS = () => ({
   [process.env.STRIPE_PRODUCT_STARTER || 'prod_VUKZcFyMlsFRoN']: 'starter',
   [process.env.STRIPE_PRODUCT_PRO || 'prod_VUKZ5k8FivEwsL']: 'pro'
@@ -31,7 +32,15 @@ export default async function handler(req, res) {
   if (!verify(payload, req.headers['stripe-signature'], secret)) return json(res, 400, { error: 'Bad signature' });
   const ev = JSON.parse(payload), o = ev.data && ev.data.object || {};
   await ensureSchema();
-  if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
+  if (ev.type === 'checkout.session.completed' && o.mode === 'payment' && o.payment_status === 'paid') {
+    // $14.99 single audit: one credit per paid checkout, counted once even if Stripe retries the event
+    const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
+    const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
+    const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email}`;
+    if (!u[0]) { console.error('stripe webhook: no OptiROAS user for audit payment', o.id); return json(res, 200, { received: true }); }
+    const ins = await sql`insert into audit_payments(session_id, user_id, amount) values(${o.id}, ${u[0].id}, ${o.amount_total || 0}) on conflict do nothing returning session_id`;
+    if (ins.length) await sql`update users set audit_credits = audit_credits + 1 where id=${u[0].id}`;
+  } else if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
     const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email}`;
