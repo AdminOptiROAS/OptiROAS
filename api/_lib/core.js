@@ -86,6 +86,9 @@ export function ensureSchema() {
     // free audits confirmed before paid audits launched stay unlocked
     await sql`insert into audit_unlocks(user_id, fp, at) select user_id, fp, min(at) from usage_reports
       where fp is not null and at < '2026-10-30T12:00:00Z' group by user_id, fp on conflict do nothing`;
+    // Site events the owner's daily summary counts (e.g. a checkout started); no page content, no personal data beyond the user id
+    await sql`create table if not exists site_events(
+      id bigserial primary key, user_id uuid, ev text not null, at timestamptz not null default now())`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });
