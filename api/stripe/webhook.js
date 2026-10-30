@@ -4,11 +4,16 @@ import { ensureSchema, sql, json } from '../_lib/core.js';
 // Stripe → OptiROAS plan sync. Verifies the Stripe-Signature header with STRIPE_WEBHOOK_SECRET.
 // checkout.session.completed links the Stripe customer to the user (client_reference_id, else email);
 // customer.subscription.* sets the plan from the subscribed product, and back to free when it ends.
-// A paid one-time checkout (mode=payment, the $14.99 audit) adds one audit credit to the user.
+// Audit plan (AED 55/month, 3 full audits per billing period): its period comes from the subscription events.
+// A paid one-time checkout (mode=payment) adds one audit credit to the user.
 const PRODUCTS = () => ({
   [process.env.STRIPE_PRODUCT_STARTER || 'prod_VUKZcFyMlsFRoN']: 'starter',
-  [process.env.STRIPE_PRODUCT_PRO || 'prod_VUKZ5k8FivEwsL']: 'pro'
+  [process.env.STRIPE_PRODUCT_PRO || 'prod_VUKZ5k8FivEwsL']: 'pro',
+  [process.env.STRIPE_PRODUCT_AUDIT || 'prod_VXJClD7uvpwsMN']: 'audit'
 });
+// Payment link for the Audit plan (AED 55 a month), so checkout can set the plan before the subscription event arrives
+const AUDIT_LINK = () => process.env.STRIPE_LINK_AUDIT || 'plink_1UWEbV2cgkqFH4LbYq4pbDFY';
+const ts = s => (s ? new Date(s * 1000) : null);
 const LIVE = new Set(['active', 'trialing', 'past_due']);
 
 async function raw(req) {
@@ -44,12 +49,17 @@ export default async function handler(req, res) {
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
     const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email}`;
-    if (u[0]) await sql`update users set stripe_customer_id=${o.customer}, plan=case when plan='free' then 'paid' else plan end where id=${u[0].id}`;
+    const audit = o.payment_link === AUDIT_LINK();
+    if (u[0] && audit) await sql`update users set stripe_customer_id=${o.customer}, plan=case when plan in ('free','audit') then 'audit' else plan end,
+        period_start=coalesce(period_start, now()), period_end=coalesce(period_end, now() + interval '1 month') where id=${u[0].id}`;
+    else if (u[0]) await sql`update users set stripe_customer_id=${o.customer}, plan=case when plan in ('free','audit') then 'paid' else plan end where id=${u[0].id}`;
     else console.error('stripe webhook: no OptiROAS user for checkout', o.id);
   } else if (/^customer\.subscription\.(created|updated|deleted)$/.test(ev.type)) {
     const prod = o.items && o.items.data && o.items.data[0] && o.items.data[0].price && o.items.data[0].price.product;
     const plan = ev.type.endsWith('deleted') || !LIVE.has(o.status) ? 'free' : (PRODUCTS()[prod] || 'paid');
-    const r = await sql`update users set plan=${plan} where stripe_customer_id=${o.customer} returning id`;
+    const it = o.items && o.items.data && o.items.data[0] || {};
+    const ps = ts(o.current_period_start || it.current_period_start), pe = ts(o.current_period_end || it.current_period_end);
+    const r = await sql`update users set plan=${plan}, period_start=coalesce(${ps}, period_start), period_end=coalesce(${pe}, period_end) where stripe_customer_id=${o.customer} returning id`;
     if (!r.length) console.error('stripe webhook: no user yet for customer', o.customer, ev.type);
   }
   return json(res, 200, { received: true });

@@ -75,6 +75,9 @@ export function ensureSchema() {
     await sql`alter table usage_downloads add column if not exists ref text`;
     // Pay-per-audit: credits bought with the one-time $14.99 payment link, and the reports they unlocked
     await sql`alter table users add column if not exists audit_credits int not null default 0`;
+    // Audit plan (monthly subscription): its current billing period, for the audits-per-month allowance
+    await sql`alter table users add column if not exists period_start timestamptz`;
+    await sql`alter table users add column if not exists period_end timestamptz`;
     await sql`create table if not exists audit_unlocks(
       user_id uuid not null references users(id) on delete cascade, fp text not null,
       at timestamptz not null default now(), primary key(user_id, fp))`;
