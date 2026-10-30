@@ -4073,7 +4073,9 @@ $('waitForm').addEventListener('submit',async e=>{
 $('wlBack').onclick=()=>showView('site');
 if(STRIPE.portal){$('portalBtn').href=STRIPE.portal;$('footPortal').href=STRIPE.portal;$('footPortal').hidden=false;$('portalBtn').rel=$('footPortal').rel='noopener'}
 $('signInBtn').onclick=async()=>{if(ST.me&&ST.me.user){await signOut()}else{ST.acctMode='signin';openAcct()}};
-async function signOut(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}sessClear();ST.claimed=false;ST.unlocked=false;ST.claimFp='';ST.liveSrc=null;ST.liveAuto=false;clearInterval(ST.liveIv);if(!ST.example){ST.files=[];ST.crMeta=null;ST.last=null;$('navAudit').hidden=true;if(ST.page==='audit')go('home')}await loadMe();if(!$('acctView').hidden)renderAcct();if(ST.page==='start')renderWizard();toast(TR('Signed out.','تم تسجيل الخروج.'))}
+// Sign-out reloads the page so nothing personal (name, files, report, workspace) stays on screen, even on a shared computer.
+async function signOut(){try{await api('/api/auth/logout',{method:'POST'})}catch(e){}clearTimeout(SESS.t);try{await sessPut(null)}catch(e){}clearInterval(ST.liveIv);
+  try{sessionStorage.setItem('or_flash','signedout')}catch(e){}location.replace('/')}
 function toast(m,ms){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(ST.tt);ST.tt=setTimeout(()=>t.hidden=true,ms||Math.max(2600,Math.min(7000,String(m).length*45)))}
 
 /* ================= report tabs ================= */
@@ -4647,6 +4649,7 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())ret
   const q=new URLSearchParams(location.search),mm=q.get('meta'),gg=q.get('google'),sn=q.get('snap'),tk=q.get('tiktok'),vf=q.get('verified'),upg=q.get('upgrade'),rid=q.get('report'),rtok=location.pathname==='/reset'?q.get('token'):null,wantAcct=location.hash==='#account';
   if(API_OK)await loadMe();
   const restored=API_OK&&!mm&&!gg&&!sn&&!tk&&!rid&&!rtok&&!upg&&!vf?await sessRestore():false;
+  try{if(sessionStorage.getItem('or_flash')==='signedout'){sessionStorage.removeItem('or_flash');setTimeout(()=>toast(TR('Signed out.','تم تسجيل الخروج.')),400)}}catch(e){}
   if(q.get('unlock')){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}setTimeout(waitUnlock,300)}else if(restored)setTimeout(lockSync,300);
   if(mm){const n=+q.get('n')||0;
     const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
