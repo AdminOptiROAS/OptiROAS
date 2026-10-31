@@ -25,7 +25,8 @@ export default async function handler(req, res) {
     let accts = [];
     const pull = async path => { try { const r = await graph(path, { fields, limit: 200, access_token: token, appsecret_proof: proof }, { userId: user.id }); return r.data || []; } catch { return []; } };
     accts = await pull('/me/adaccounts');
-    if (!accts.length && me.client_business_id) accts = [...await pull(`/${me.client_business_id}/owned_ad_accounts`), ...await pull(`/${me.client_business_id}/client_ad_accounts`)];
+    // Only ads_read is requested: the business owned/client account lists need business_management and would fail,
+    // which counts against the app's error rate in App Review. Accounts the person picked at login come back from /me/adaccounts.
     await sql`insert into meta_connections(user_id,meta_id,meta_name,client_business_id,token_enc)
       values(${user.id},${me.id || null},${me.name || null},${me.client_business_id || null},${encrypt(token)})
       on conflict(user_id) do update set meta_id=excluded.meta_id,meta_name=excluded.meta_name,
