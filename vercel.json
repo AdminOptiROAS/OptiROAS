@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(privacy|terms|data-deletion|waitlist|welcome|reset)",
+      "source": "/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account)",
       "destination": "/index.html"
     }
   ],

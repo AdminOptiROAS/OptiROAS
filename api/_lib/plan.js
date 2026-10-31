@@ -21,7 +21,7 @@ export const verified = u => !!u.email_verified_at || !mailOn() || list('ALLOWED
 // downloads, calculator and live dashboard all read these (the browser receives them as usage.rules).
 export const PLAN_RULES = {
   free: { audits: 1, downloadsEach: 1, connect: false, platforms: 0, calculator: false, live: false },
-  audit: { audits: 3, downloadsEach: null, connect: false, platforms: 0, calculator: false, live: false },
+  audit: { audits: 3, downloadsEach: null, connect: false, platforms: 0, calculator: true, live: false },
   starter: { audits: null, downloadsEach: null, connect: true, platforms: 3, calculator: true, live: false },
   pro: { audits: null, downloadsEach: null, connect: true, platforms: 7, calculator: true, live: true }
 };

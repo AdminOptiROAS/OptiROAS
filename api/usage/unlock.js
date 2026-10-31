@@ -10,6 +10,7 @@ export default async function handler(req, res) {
   const fp = String(body(req).fp || '').slice(0, 128);
   if (!fp) return json(res, 400, { error: 'Run the audit first, then unlock it.' });
   let u = await usageFor(user);
+  if (!u.verified) return json(res, 403, { error: 'Confirm your email to unlock the full report. We sent you a link when you signed up.', code: 'verify', usage: u });
   if (u.unlimited || await isUnlocked(user, fp)) return json(res, 200, { ok: true, unlocked: true, usage: u });
   if (!(u.monthly && u.monthly.left > 0)) {
     const r = await sql`update users set audit_credits = audit_credits - 1 where id=${user.id} and audit_credits > 0 returning audit_credits`;
