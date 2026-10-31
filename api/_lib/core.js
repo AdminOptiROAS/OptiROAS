@@ -92,6 +92,11 @@ export function ensureSchema() {
     // Site events the owner's daily summary counts (e.g. a checkout started); no page content, no personal data beyond the user id
     await sql`create table if not exists site_events(
       id bigserial primary key, user_id uuid, ev text not null, at timestamptz not null default now())`;
+    // Page views for the owner's daily summary: a random per-browser id, the site section and seconds it was on screen
+    await sql`create table if not exists page_views(
+      id bigserial primary key, vid text, user_id uuid, page text not null, n int not null default 1, secs int not null default 0,
+      src text, at timestamptz not null default now())`;
+    await sql`create index if not exists page_views_at on page_views(at)`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });

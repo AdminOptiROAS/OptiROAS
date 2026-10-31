@@ -3955,6 +3955,15 @@ const UTM=(()=>{try{const q=new URLSearchParams(location.search);let src=q.get('
   return old&&Date.now()-old.t<30*864e5?old:null}catch(e){return null}})();
 const SNAP_EV={Purchase:'PURCHASE',CompleteRegistration:'SIGN_UP',InitiateCheckout:'START_CHECKOUT',Subscribe:'SUBSCRIBE',ViewContent:'VIEW_CONTENT'};
 const track=ev=>{try{const b=JSON.stringify({ev});if(navigator.sendBeacon)navigator.sendBeacon('/api/track',new Blob([b],{type:'application/json'}));else fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true})}catch(e){}};
+// Page views and time on screen per site section, for the owner's daily summary (random browser id, no page content)
+const PV={p:null,t0:0,acc:0,first:false,vid:(()=>{try{let v=localStorage.getItem('or_vid');if(!v){v=Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem('or_vid',v)}return v}catch(e){return null}})()};
+function pvSend(){if(!PV.p)return;if(PV.t0){PV.acc+=Date.now()-PV.t0;PV.t0=document.visibilityState==='visible'?Date.now():0}
+  const s=Math.round(PV.acc/1000);if(!PV.first&&!s)return;
+  try{const b=JSON.stringify({ev:'pv',p:PV.p,s,n:PV.first?1:0,v:PV.vid,src:UTM&&UTM.source||''});if(navigator.sendBeacon)navigator.sendBeacon('/api/track',new Blob([b],{type:'application/json'}));else fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true})}catch(e){}
+  PV.acc=0;PV.first=false}
+function pvGo(pg){if(pg===PV.p)return;pvSend();PV.p=pg;PV.acc=0;PV.first=true;PV.t0=document.visibilityState==='visible'?Date.now():0}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')pvSend();else if(PV.p&&!PV.t0)PV.t0=Date.now()});
+addEventListener('pagehide',pvSend);
 const px=(ev,p)=>{try{if(window.fbq)p?fbq('track',ev,p):fbq('track',ev)}catch(e){}
   try{const g=GA_EV[ev];if(window.gtag&&g)gtag('event',g,Object.assign({},p&&p.value!=null?{value:p.value,currency:p.currency}:{},g==='purchase'?{transaction_id:'web-'+Date.now()}:{},p&&p.content_name?{items:[{item_name:p.content_name}]}:{}))}catch(e){}
   // Same event to the Snap Pixel, under Snap's own names
@@ -4028,6 +4037,7 @@ function go(pg,anchor){
   if(pg==='home'&&wsUser())pg='workspace';
   ST.page=pg;$('authView').hidden=true;$('acctView').hidden=true;
   try{if(ST.vaReady&&window.va)va('pageview',{route:'/'+pg,path:'/'+pg});ST.vaReady=true}catch(e){}
+  pvGo(pg);
   if(pg==='welcome')pxSubscribe();if(pg==='pricing')px('ViewContent',{content_name:'Pricing'});
   document.querySelectorAll('.page').forEach(p=>p.hidden=p.dataset.page!==pg);
   document.querySelectorAll('[data-nav]').forEach(a=>{if(a.dataset.nav===pg||(a.dataset.nav==='how'&&['delivered','pillars','calculator'].includes(pg)))a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
@@ -4050,6 +4060,7 @@ document.querySelectorAll('[data-example]').forEach(b=>b.addEventListener('click
 function showView(v,anchor){
   document.querySelectorAll('.page').forEach(p=>p.hidden=v!=='site'||p.dataset.page!==ST.page);
   $('authView').hidden=v!=='auth';$('acctView').hidden=v!=='acct';
+  pvGo(v==='auth'?'signin':v==='acct'?'account':ST.page);
   if(anchor&&$(anchor))$(anchor).scrollIntoView();else window.scrollTo(0,0);
 }
 const WL_PLATS=['meta','google','tiktok','snap','linkedin','microsoft','pinterest','x'];
