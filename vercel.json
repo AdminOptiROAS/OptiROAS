@@ -8,6 +8,9 @@
   "functions": {
     "api/meta/report.js": {
       "maxDuration": 120
+    },
+    "api/salla/[action].js": {
+      "maxDuration": 60
     }
   },
   "crons": [

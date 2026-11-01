@@ -21,7 +21,12 @@ const RULES = {
   tiktok: [
     [/40105|40104|401|expired/i, 'Your TikTok connection has expired.', 'Reconnect TikTok from My account.'],
     [/40001|permission|scope/i, 'The TikTok login you connected can’t read this advertiser account.', 'Reconnect and tick this advertiser account.'],
-    [/./, 'TikTok didn’t return the data.', 'Try again in a few minutes, or upload a TikTok export instead.']]
+    [/./, 'TikTok didn’t return the data.', 'Try again in a few minutes, or upload a TikTok export instead.']],
+  salla: [
+    [/401|invalid|expired|revoked|reconnect/i, 'Your Salla connection has expired or the app was removed from the store.', 'Reconnect Salla from My account.'],
+    [/403|permission|scope/i, 'The Salla app can’t read orders for this store.', 'Reinstall the OptiROAS app in Salla and allow order access.'],
+    [/429|busy/i, 'Salla is limiting requests right now.', 'Try again in a minute.'],
+    [/./, 'Salla didn’t return the orders.', 'Try again in a few minutes, or upload a Salla orders export instead.']]
 };
 export function friendly(platform, msg) {
   const m = String(msg || ''), r = (RULES[platform] || RULES.google).find(([re]) => re.test(m));

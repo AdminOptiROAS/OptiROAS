@@ -60,6 +60,8 @@ export function ensureSchema() {
     await sql`alter table users add column if not exists plan text not null default 'free'`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists vertical text`;
+    await sql`create table if not exists api_log(
+      id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
     await sql`alter table api_log add column if not exists err text`;
     await sql`alter table users add column if not exists email_verified_at timestamptz`;
     await sql`create table if not exists user_tokens(
@@ -92,6 +94,15 @@ export function ensureSchema() {
     // Site events the owner's daily summary counts (e.g. a checkout started); no page content, no personal data beyond the user id
     await sql`create table if not exists site_events(
       id bigserial primary key, user_id uuid, ev text not null, at timestamptz not null default now())`;
+    // Salla store connections (orders.read). Tokens encrypted like the ad platforms'; installs wait in salla_installs until linked to a user
+    await sql`create table if not exists salla_connections(
+      user_id uuid primary key, merchant_id text not null, store_name text, store_domain text, store_email text,
+      access_enc text not null, refresh_enc text, expires_at timestamptz, scope text,
+      connected_at timestamptz not null default now(), updated_at timestamptz not null default now(), last_import_at timestamptz)`;
+    await sql`create table if not exists salla_installs(
+      merchant_id text primary key, store_name text, store_domain text, email text, access_enc text not null, refresh_enc text,
+      expires_at timestamptz, scope text, created_at timestamptz not null default now())`;
+    await sql`create table if not exists salla_pending(user_id uuid primary key, at timestamptz not null default now())`;
     // Page views for the owner's daily summary: a random per-browser id, the site section and seconds it was on screen
     await sql`create table if not exists page_views(
       id bigserial primary key, vid text, user_id uuid, page text not null, n int not null default 1, secs int not null default 0,
