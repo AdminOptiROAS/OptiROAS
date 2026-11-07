@@ -4840,7 +4840,7 @@ const WZ_NEEDS=[
 const VALUE_UNITS=['purchase','conversion'];
 ST.wz={step:1,plats:new Set(),orders:false,items:[],tab:null,busy:false};
 function wzStart(step){const W=ST.wz;if(step)W.step=step;go('start')}
-const wzUsedUp=()=>{const us=ST.me&&ST.me.usage;return isFree()&&us&&!us.unlimited&&us.used>=us.limit};
+const wzUsedUp=()=>{const us=ST.me&&ST.me.usage;return isFree()&&us&&!us.unlimited&&typeof us.limit==='number'&&us.used>=us.limit};
 function wzFix(){const W=ST.wz;if(!isFree()||!W.items.length)return true;if((W.fixes||0)>=FIX_MAX){toast(TR('You’ve used all 3 fixes for this upload.','استخدمت كل التعديلات الثلاثة لهذا الرفع.'));return false}W.fixes=(W.fixes||0)+1;return true}
 async function wzFromFiles(list){
   const W=ST.wz;
