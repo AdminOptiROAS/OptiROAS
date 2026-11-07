@@ -3153,7 +3153,7 @@ async function allowAudit(list){
     toast(x.message);return false}
 }
 function showLimit(us){
-  const pp=priceTxt(planUsd('starter','monthly'));
+  const pp=planAed('starter');
   openAcct();
   $('acctCard').insertAdjacentHTML('afterbegin',`<div class="mcard limc"><div class="mhead2"><b>${TR('This audit can’t run right now','لا يمكن تشغيل هذا التدقيق الآن')}</b></div>
     <p class="muted small" style="margin:0">${TR('Email admin@optiroas.com and we’ll sort it out. Saved reports stay in your account.','راسل admin@optiroas.com وسنحلّ الأمر. تبقى التقارير المحفوظة في حسابك.')}</p>
@@ -3965,7 +3965,7 @@ function detectLocale(){
 }
 const LOC=detectLocale();
 try{ST.region=localStorage.getItem('optiroas-region')||null}catch(e){ST.region=null}
-const PLANS={free:{name:'Audit plan',usd:0,yr:0,plats:0,live:false},starter:{name:'Starter',usd:49,yr:44,plats:3,live:false},pro:{name:'Pro',usd:129,yr:119,plats:7,live:true}};
+const PLANS={free:{name:'Audit plan',usd:0,yr:0,plats:0,live:false},starter:{name:'Starter',usd:49,yr:44,aed:199,plats:3,live:false},pro:{name:'Pro',usd:129,yr:119,aed:499,plats:7,live:true}};
 ST.cycle='monthly';
 const planUsd=(k,c)=>c==='yearly'?PLANS[k].yr:PLANS[k].usd;
 // Meta Pixel standard events. fbq exists only where the pixel loaded (not on reset or saved-report links).
@@ -3994,13 +3994,15 @@ const px=(ev,p)=>{try{if(window.fbq)p?fbq('track',ev,p):fbq('track',ev)}catch(e)
   try{const se=SNAP_EV[ev];if(window.snaptr&&se){const q={};if(p&&p.value!=null){q.price=p.value;q.currency=p.currency}if(p&&p.content_name)q.item_category=p.content_name;snaptr('track',se,q)}}catch(e){}};
 // Checkout: remember the plan chosen so the thank-you page can report Subscribe with its value
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="https://buy.stripe.com/"]');if(!a)return;const b=a.href.split('?')[0];
-  for(const k of ['starter','pro'])for(const c of ['monthly','yearly'])if(STRIPE[k]&&STRIPE[k][c]===b){const v=c==='yearly'?planUsd(k,c)*12:planUsd(k,c);
-    px('InitiateCheckout',{value:v,currency:'USD',content_name:PLANS[k].name+' '+c});try{localStorage.setItem('or_px_sub',JSON.stringify({k,c,v,t:Date.now()}))}catch(x){}}},true);
+  for(const k of ['starter','pro'])for(const c of ['monthly','yearly'])if(STRIPE[k]&&STRIPE[k][c]===b){const v=PLANS[k].aed;
+    px('InitiateCheckout',{value:v,currency:'AED',content_name:PLANS[k].name+' '+c});try{localStorage.setItem('or_px_sub',JSON.stringify({k,c,v,t:Date.now()}))}catch(x){}}},true);
 function pxSubscribe(){let p=null;try{p=JSON.parse(localStorage.getItem('or_px_sub')||'null');localStorage.removeItem('or_px_sub')}catch(e){}
-  if(p&&Date.now()-p.t<6*3600e3)px('Subscribe',{value:p.v,currency:'USD',content_name:PLANS[p.k].name+' '+p.c})}
+  if(p&&Date.now()-p.t<6*3600e3)px('Subscribe',{value:p.v,currency:'AED',content_name:PLANS[p.k].name+' '+p.c})}
 function regAmt(usd){const c=regionCur(),r=FX[c];if(!r||c==='USD')return '$'+usd.toLocaleString('en-US');const v=usd*r;return c+' '+(['KWD','BHD','OMR','JOD'].includes(c)?v.toFixed(1):Math.round(v).toLocaleString('en-US'))}
 function cycleNote(k,c){if(c!=='yearly'||!PLANS[k].yr)return '';const y=PLANS[k].yr*12,s=(PLANS[k].usd-PLANS[k].yr)*12;return `Billed yearly at ${regAmt(y)} · save ${regAmt(s)} a year`}
 function regionCur(){const a=acct();if(a&&a.prefs&&a.prefs.currency&&a.prefs.currency!=='auto')return a.prefs.currency;return ST.region||LOC.cur}
+// Starter and Pro are charged in AED; show that price wherever a plan price appears
+const planAed=k=>({main:'AED '+PLANS[k].aed,sub:''});
 function priceTxt(usd){
   const c=regionCur(),r=FX[c];
   if(!usd)return {main:'Free',sub:''};
@@ -4025,7 +4027,7 @@ function renderTiers(){
   document.querySelectorAll('[data-cyc]').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.cyc===ST.cycle);b.onclick=()=>{ST.cycle=b.dataset.cyc;renderTiers()}});
   $('tiers').innerHTML=T.map(t=>{const p=priceTxt(planUsd(t.k,ST.cycle)),cn=cycleNote(t.k,ST.cycle);
     return `<div class="card tier${t.feat?' top':''}"><div><h3>${PLANS[t.k].name}${t.feat?' <span class="pill Opportunity">Most complete</span>':''}</h3><p class="muted small" style="margin-top:4px">${t.d}</p></div>
-      <div><div class="price">${t.k==='free'?auditPrice()+'<small> a month</small>':p.main+'<small> / month</small>'}</div>${t.k==='free'?'<div class="small yr">Preview free · subscribe to unlock</div>':''}${cn?`<div class="small yr">${cn}</div>`:''}${p.sub?`<div class="muted small">${p.sub}${ST.cycle==='yearly'&&t.k!=='free'?' a month':''}</div>`:''}</div>
+      <div><div class="price">${t.k==='free'?auditPrice()+'<small> a month</small>':'AED '+PLANS[t.k].aed+'<small> a month</small>'}</div>${t.k==='free'?'<div class="small yr">Preview free · subscribe to unlock</div>':''}${cn?`<div class="small yr">${cn}</div>`:''}</div>
       <ul>${t.f.map(x=>`<li>${x}</li>`).join('')}${t.no.map(x=>`<li class="no">${x}</li>`).join('')}</ul>
       ${cur===t.k?'<button class="btn quiet" type="button" disabled>Your current plan</button>':t.k==='free'?`<a class="btn" href="#audit">${t.cta}</a>`:!SUBS_OPEN?`<button class="btn ghost" type="button" disabled>Coming soon</button><button class="linkbtn small paynote" type="button" data-plan="${t.k}">Get notified when it opens</button>`:(payLink(t.k,ST.cycle)?`<a class="btn${t.feat?'':' ghost'}" href="${payLink(t.k,ST.cycle)}" rel="noopener">Subscribe to ${PLANS[t.k].name}</a><span class="muted small paynote">Secure checkout by Stripe · cancel anytime</span>`:`<button class="btn${t.feat?'':' ghost'}" type="button" data-plan="${t.k}">${t.cta}</button>`)}</div>`}).join('');
   $('tiers').querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>openAuth(b.dataset.plan));
@@ -4044,8 +4046,9 @@ const AUDIT_PRICE=55,AUDIT_CUR='AED',SUBS_OPEN=false;
 const STRIPE={
   audit:'https://buy.stripe.com/4gMaEQ9EzeK97CsamP7N604',   // Audit plan, AED 55/month; after payment it redirects to https://www.optiroas.com/?unlock=1#audit-report
   // LIVE links (Stripe account Optiroas). Each redirects to https://optiroas.com/#welcome after payment.
-  starter:{monthly:'https://buy.stripe.com/eVq3co03ZdG53mc2Un7N600',yearly:'https://buy.stripe.com/eVqfZa5ojdG55ukamP7N602'},
-  pro:{monthly:'https://buy.stripe.com/eVqbIU03ZatTaOE7aD7N601',yearly:'https://buy.stripe.com/3cIfZa7wreK97CsbqT7N603'},
+  // Starter AED 199/month and Pro AED 499/month (monthly only). Shown only when SUBS_OPEN is true.
+  starter:{monthly:'https://buy.stripe.com/bJe5kw4kf6dD5uk8eH7N606',yearly:''},
+  pro:{monthly:'https://buy.stripe.com/28EfZaeYT9pP2i88eH7N605',yearly:''},
   portal:'https://billing.stripe.com/p/login/eVq3co03ZdG53mc2Un7N600'
 };
 const auditLink=()=>{const b=STRIPE.audit||'',u=ST.me&&ST.me.user;return b&&u?`${b}?client_reference_id=${encodeURIComponent(u.id)}&prefilled_email=${encodeURIComponent(u.email)}`:b};
@@ -4146,7 +4149,7 @@ function setView(v,anchor){if(isLocked()&&v!=='overview'){openPaywall();return}S
 function renderLive(A){
   const pro=!!ST.livePreview||!!(ST.me&&ST.me.usage&&ST.me.usage.live),el=$('live');
   if(!pro){
-    const pp=priceTxt(129);
+    const pp=planAed('pro');
     el.innerHTML=`<div class="card lock"><span class="lk big">PRO</span><h3>The live dashboard is part of Pro</h3>
       <p class="muted">Pro connects up to 7 ad platforms and shows today’s numbers whenever you open the live dashboard, flagging when ROAS, cost per result or spend jumps, or tracking stops recording conversions.</p>
       <ul class="small"><li>Today so far vs a normal day, with pacing, campaign flags and ads improving or slipping</li><li>Alerts on ROAS and CPA spikes or drops, spend running high, tracking breaks and slipping ads</li><li>Last 7 days vs the 7 before, and a 14-day trend for every key number</li></ul>
@@ -5197,7 +5200,7 @@ function renderKeepBar(){
 function renderUpsell(){
   const el=$('upsell');if(!el)return;
   const us=ST.me&&ST.me.usage;if(ST.example||!ST.last||(us&&us.unlimited)){el.innerHTML='';return}
-  const pp=priceTxt(planUsd('starter','monthly'));
+  const pp=planAed('starter');
   el.innerHTML=`<div class="card upsell"><div><span class="eyebrow">${TR('Next step','الخطوة التالية')}</span><h3>${TR('Stop exporting files every week','توقّف عن تصدير الملفات كل أسبوع')}</h3>
     <p class="muted">${TR('Starter connects up to 3 ad platforms so you can re-run this audit in one click, with your progress carried over. Pro adds a live dashboard with today’s numbers that flags when ROAS drops or spend spikes.','تربط خطة Starter حتى 3 منصات إعلانية لتعيد تشغيل هذا التدقيق بنقرة واحدة مع متابعة تقدمك. وتضيف Pro لوحة مباشرة بأرقام اليوم تنبّهك عند انخفاض ROAS أو ارتفاع الإنفاق.')}</p></div>
     <div class="upbtns"><button class="btn" type="button" id="upGo">${TR('Starter and Pro: get notified','Starter وPro: أبلغني')}</button><span class="muted small">${TR('Coming soon','قريبًا')}</span></div></div>`;
