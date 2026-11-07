@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     if (!tok.refresh_token) throw new Error('Google did not return offline access. Remove OptiROAS from your Google account permissions and connect again.');
     if (!String(tok.scope || '').includes('adwords')) throw new Error('Google Ads access was not granted. Tick the Google Ads permission when connecting.');
     const access = tok.access_token, email = emailFromIdToken(tok.id_token);
-    const { accts, note } = await discover(access, (e, ok) => logApi(user.id, e, ok));
+    const { accts, note } = await discover(access, (e, ok, err) => logApi(user.id, e, ok, err));
     await sql`insert into google_connections(user_id,google_email,token_enc,note) values(${user.id},${email},${encrypt(tok.refresh_token)},${note})
       on conflict(user_id) do update set google_email=excluded.google_email,token_enc=excluded.token_enc,note=excluded.note,updated_at=now()`;
     await sql`delete from google_ad_accounts where user_id=${user.id}`;

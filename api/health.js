@@ -17,6 +17,11 @@ export default async function handler(req, res) {
     calls.otherPlatforms = await sql`select split_part(endpoint, ':', 1) as platform, count(*) filter (where ok)::int as ok, count(*)::int as total,
         (array_agg(left(coalesce(err, ''), 160) order by at desc) filter (where not ok))[1] as last_error
       from api_log where at > now() - interval '30 days' and endpoint ~ '^(google|snap|tiktok|salla):' group by 1`;
+    // per endpoint, so a failing step (token, account list, one closed account) is visible on its own
+    calls.otherByEndpoint = await sql`select endpoint, count(*) filter (where ok)::int as ok, count(*)::int as total,
+        (array_agg(left(regexp_replace(coalesce(err, ''), '[0-9]{8,}', '*', 'g'), 160) order by at desc) filter (where not ok))[1] as last_error,
+        max(at) as last_at
+      from api_log where at > now() - interval '30 days' and endpoint ~ '^(google|snap|tiktok|salla):' group by 1 order by 1`;
     calls.connections = (await sql`select (select count(*) from meta_connections)::int as meta, (select count(*) from google_connections)::int as google, (select count(*) from snap_connections)::int as snap, (select count(*) from tiktok_connections)::int as tiktok`)[0];
   } catch (e) { db = 'error: ' + String(e.message).slice(0, 120); }
   // Google Ads developer tokens were retired on 9 Sep 2026; access comes from the Cloud project's access level

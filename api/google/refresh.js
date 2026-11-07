@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   if (!con[0]) return json(res, 409, { error: 'Connect Google Ads first.' });
   try {
     const access = await accessFromRefresh(decrypt(con[0].token_enc));
-    const { accts, note } = await discover(access, (e, ok) => logApi(user.id, e, ok));
+    const { accts, note } = await discover(access, (e, ok, err) => logApi(user.id, e, ok, err));
     await sql`update google_connections set note=${note}, updated_at=now() where user_id=${user.id}`;
     await sql`delete from google_ad_accounts where user_id=${user.id}`;
     for (const a of accts)

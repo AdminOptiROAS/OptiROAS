@@ -44,7 +44,9 @@ export async function gaql(access, customerId, query, loginCustomerId) {
 // Finds the Google Ads accounts a login can reach (expanding manager accounts one level).
 // Returns the accounts plus a plain-English note when none could be read, so the UI can say why.
 export async function discover(access, log) {
-  const ids = await listAccessible(access); await log('google:listAccessibleCustomers', true);
+  let ids;
+  try { ids = await listAccessible(access); await log('google:listAccessibleCustomers', true); }
+  catch (e) { await log('google:listAccessibleCustomers', false, `${e.code || e.status || ''} ${e.message}`.trim().slice(0, 280)); throw e; }
   if (!ids.length) return { accts: [], note: 'This Google login has no Google Ads accounts. Sign in with the Google account that has access to your ads, or ask the account owner to add this email in Google Ads (Admin → Access and security).' };
   const accts = new Map(), errs = [];
   for (const id of ids.slice(0, 50)) {
@@ -53,14 +55,24 @@ export async function discover(access, log) {
       await log('google:customer', true);
       if (!c) continue;
       if (c.customer.manager) {
-        const kids = await gaql(access, id, 'SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone, customer_client.manager, customer_client.status FROM customer_client WHERE customer_client.level <= 1 AND customer_client.manager = FALSE', id);
-        await log('google:customer_client', true);
+        let kids;
+        try { kids = await gaql(access, id, 'SELECT customer_client.id, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone, customer_client.manager, customer_client.status FROM customer_client WHERE customer_client.level <= 1 AND customer_client.manager = FALSE', id);
+        await log('google:customer_client', true); }
+        catch (e) { await log('google:customer_client', false, `${e.code || e.status || ''} ${e.message}`.trim().slice(0, 280)); throw e; }
         for (const k of kids) { const cc = k.customerClient; if (cc.status && cc.status !== 'ENABLED') continue;
           if (!accts.has(String(cc.id))) accts.set(String(cc.id), { id: String(cc.id), name: cc.descriptiveName, currency: cc.currencyCode, tz: cc.timeZone, login: String(id) }); }
       } else if (!c.customer.status || c.customer.status === 'ENABLED') {
         accts.set(String(c.customer.id), { id: String(c.customer.id), name: c.customer.descriptiveName, currency: c.customer.currencyCode, tz: c.customer.timeZone, login: null });
       } else errs.push(`${id}: account is ${String(c.customer.status).toLowerCase()}`);
-    } catch (e) { await log('google:customer', false); errs.push(`${id}: ${e.message}`); console.error('google customer', id, e.status, e.code, e.message); }
+    } catch (e) {
+      // Closed, cancelled or never-activated accounts still come back from listAccessibleCustomers but can't be queried.
+      // That is the account's state, not a fault: record it under its own name so it doesn't look like a broken connection.
+      const txt = `${e.code || e.status || ''} ${e.message}`.trim().slice(0, 280);
+      const inactive = /CUSTOMER_NOT_ENABLED|not enabled|CANCEL|deactivated|closed/i.test(txt);
+      await log(inactive ? 'google:customer_inactive' : 'google:customer', false, txt);
+      errs.push(`${id}: ${inactive ? 'account is closed or not activated' : e.message}`);
+      console.error('google customer', id, e.status, e.code, e.message);
+    }
   }
   const note = accts.size ? null : `Google found ${ids.length} account${ids.length === 1 ? '' : 's'} for this login but none could be read. ${errs.slice(0, 2).join(' · ')}`.slice(0, 400);
   return { accts: [...accts.values()], note };
