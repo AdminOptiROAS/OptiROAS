@@ -1,7 +1,7 @@
 import { currentUser, sql, json, body, ensureSchema } from './_lib/core.js';
 
 // Records a few product events and page views for the owner's daily summary. Only known names are stored.
-const EVENTS = new Set(['checkout_start', 'paywall_open']);
+const EVENTS = new Set(['checkout_start', 'paywall_open', 'offer_open', 'offer_click']);
 const PAGES = new Set(['start', 'home', 'workspace', 'how', 'delivered', 'pillars', 'calculator', 'platforms', 'pricing', 'faq', 'audit',
   'privacy', 'terms', 'welcome', 'data-deletion', 'account', 'signin', 'reset']);
 const clean = (v, n) => String(v || '').replace(/[^\w.\-]/g, '').slice(0, n) || null;
