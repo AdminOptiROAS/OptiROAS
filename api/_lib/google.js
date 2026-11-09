@@ -1,6 +1,7 @@
 // Google Ads helpers: OAuth token refresh and GAQL search (read-only).
 export const GADS = () => `https://googleads.googleapis.com/${process.env.GOOGLE_ADS_API_VERSION || 'v26'}`;
-export const SCOPE = 'https://www.googleapis.com/auth/adwords openid email';
+// Only the Google Ads scope: it must match exactly what is registered for verification in Google Cloud (no openid/email)
+export const SCOPE = 'https://www.googleapis.com/auth/adwords';
 
 export async function tokenRequest(params) {
   const r = await fetch('https://oauth2.googleapis.com/token', {

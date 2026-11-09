@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
   u.search = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID, redirect_uri: GOOGLE_REDIRECT_URI, response_type: 'code', scope: SCOPE,
-    access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state, login_hint: user.email
+    access_type: 'offline', prompt: 'consent', state, login_hint: user.email
   }).toString();
   res.statusCode = 302; res.setHeader('Location', u.toString()); res.end();
 }
