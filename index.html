@@ -4025,11 +4025,11 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 addEventListener('pagehide',pvSend);
 // Advanced matching: SHA-256 hashed email (and name for Meta) for signed-in people only, so Meta and Snap can match
 // sign-ups and subscriptions to the ad that brought them. Plain values never leave the browser.
-const PX_IDS={meta:'29179497201735288',snap:'70531021-0759-43b3-af5b-6367514d7f14'};let PX_USER='';
+const PX_IDS={meta:'29179497201735288',snap:'70531021-0759-43b3-af5b-6367514d7f14'};let PX_USER='',PX_EM='';
 async function sha256(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 async function pxUser(email,name){
   try{email=String(email||'').trim().toLowerCase();if(!email||!crypto.subtle||PX_USER===email)return;PX_USER=email;
-    const em=await sha256(email);const parts=String(name||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
+    const em=await sha256(email);PX_EM=em;const parts=String(name||'').trim().toLowerCase().split(/\s+/).filter(Boolean);
     const md={em};if(parts.length){md.fn=await sha256(parts[0]);if(parts.length>1)md.ln=await sha256(parts[parts.length-1])}
     if(window.fbq)fbq('init',PX_IDS.meta,md);
     if(window.snaptr)snaptr('init',PX_IDS.snap,{user_hashed_email:em});
@@ -4037,7 +4037,7 @@ async function pxUser(email,name){
 const px=(ev,p)=>{try{if(window.fbq)p?fbq('track',ev,p):fbq('track',ev)}catch(e){}
   try{const g=GA_EV[ev];if(window.gtag&&g)gtag('event',g,Object.assign({},p&&p.value!=null?{value:p.value,currency:p.currency}:{},g==='purchase'?{transaction_id:'web-'+Date.now()}:{},p&&p.content_name?{items:[{item_name:p.content_name}]}:{}))}catch(e){}
   // Same event to the Snap Pixel, under Snap's own names
-  try{const se=SNAP_EV[ev];if(window.snaptr&&se){const q={};if(p&&p.value!=null){q.price=p.value;q.currency=p.currency}if(p&&p.content_name)q.item_category=p.content_name;snaptr('track',se,q)}}catch(e){}};
+  try{const se=SNAP_EV[ev];if(window.snaptr&&se){const q={};if(p&&p.value!=null){q.price=p.value;q.currency=p.currency}if(p&&p.content_name)q.item_category=p.content_name;q.client_dedup_id=(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));if(PX_EM)q.user_hashed_email=PX_EM;snaptr('track',se,q)}}catch(e){}};
 // Checkout: remember the plan chosen so the thank-you page can report Subscribe with its value
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href^="https://buy.stripe.com/"]');if(!a)return;const b=a.href.split('?')[0];
   for(const k of ['starter','pro'])for(const c of ['monthly','yearly'])if(STRIPE[k]&&STRIPE[k][c]===b){const v=PLANS[k].aed;
