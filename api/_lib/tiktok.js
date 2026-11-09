@@ -29,9 +29,21 @@ export async function tokenFor(userId) {
   if (!r[0]) return null;
   const c = r[0];
   if (c.expires_at && new Date(c.expires_at) < new Date() && c.refresh_enc) {
-    const d = await ttPost('/oauth2/refresh_token/', { ...creds(), grant_type: 'refresh_token', refresh_token: decrypt(c.refresh_enc) });
-    await saveTokens(userId, d);
-    return d.access_token;
+    // TikTok rotates refresh tokens (from 1 Dec 2026): each refresh returns a new one and the old one stops working.
+    // So save the new one only if nobody refreshed in the meantime, and never send an old one twice.
+    let d;
+    try { d = await ttPost('/oauth2/refresh_token/', { ...creds(), grant_type: 'refresh_token', refresh_token: decrypt(c.refresh_enc) }); }
+    catch (e) {
+      const n = (await sql`select token_enc,refresh_enc from tiktok_connections where user_id=${userId}`)[0];
+      if (n && n.refresh_enc !== c.refresh_enc) return decrypt(n.token_enc);   // another request refreshed a moment ago
+      const x = new Error('Your TikTok connection has expired. Reconnect TikTok.'); x.code = 40105; x.status = 401; throw x;
+    }
+    const exp = d.expires_in ? new Date(Date.now() + (d.expires_in - 300) * 1000).toISOString() : null;
+    const upd = await sql`update tiktok_connections set token_enc=${encrypt(d.access_token)}, refresh_enc=${d.refresh_token ? encrypt(d.refresh_token) : c.refresh_enc},
+        expires_at=${exp}, updated_at=now() where user_id=${userId} and refresh_enc=${c.refresh_enc} returning user_id`;
+    if (upd[0]) return d.access_token;
+    const n = (await sql`select token_enc from tiktok_connections where user_id=${userId}`)[0];
+    return n ? decrypt(n.token_enc) : d.access_token;
   }
   return decrypt(c.token_enc);
 }
