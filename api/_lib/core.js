@@ -108,6 +108,11 @@ export function ensureSchema() {
       id bigserial primary key, vid text, user_id uuid, page text not null, n int not null default 1, secs int not null default 0,
       src text, at timestamptz not null default now())`;
     await sql`create index if not exists page_views_at on page_views(at)`;
+    // People who asked (usually on a phone) to email themselves the link to run their audit on a computer; kept for follow-up and retargeting
+    await sql`create table if not exists leads(
+      email text primary key, lang text, source text, campaign text, vid text, page text,
+      unsub_token text not null, unsubscribed_at timestamptz, sends int not null default 0, last_sent_at timestamptz,
+      created_at timestamptz not null default now())`;
     await sql`create table if not exists api_log(
       id bigserial primary key, user_id uuid, endpoint text, ok boolean, at timestamptz not null default now())`;
   })().catch(e => { schemaReady = null; throw e; });

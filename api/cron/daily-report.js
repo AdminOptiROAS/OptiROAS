@@ -30,6 +30,7 @@ export default async function handler(req, res) {
   const ev = await one(sql`select count(*) filter (where ev='checkout_start')::int as checkout, count(*) filter (where ev='paywall_open')::int as paywall,
       count(*) filter (where ev='offer_open')::int as offer, count(*) filter (where ev='offer_click')::int as offer_click
     from site_events where at > now() - interval '24 hours'`);
+  const leads = await one(sql`select count(*) filter (where created_at > now() - interval '24 hours')::int as new24, count(*)::int as total from leads where email <> all(${ext})`);
   const plans = await sql`select plan, count(*)::int as n from users where plan <> 'free' and lower(email) <> all(${ext}) group by plan order by plan`;
   const subs24 = await one(sql`select count(*)::int as n from users where plan <> 'free' and period_start > now() - interval '24 hours' and lower(email) <> all(${ext})`);
   const conns = await one(sql`select (select count(*) from meta_connections)::int as meta, (select count(*) from google_connections)::int as google,
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
   const html = `<div style="font:14px/1.5 Arial,sans-serif;color:#0f1a2b;max-width:620px">
     <h2 style="margin:0 0 4px">OptiROAS daily summary</h2><p style="margin:0 0 16px;color:#5b667a">Last 24 hours, customers only (team and reviewer accounts excluded).</p>
     <table style="border-collapse:collapse">${row('Visitors', `${visits.visitors} (${visits.views} page views, ${dur(visits.secs / Math.max(1, visits.visitors))} on the site each on average)`)}${row('New sign-ups', users.new24)}${row('Sign-ups, last 7 days', users.new7)}${row('Customer accounts in total', users.total)}
-    ${row('Audits run', `${audits.n} (by ${audits.people} ${audits.people === 1 ? 'person' : 'people'})`)}${row('AED 55 pop-up', `${ev.offer} seen, ${ev.offer_click} clicked`)}${row('Unlock offers seen', ev.paywall)}${row('Checkouts started', ev.checkout)}
+    ${row('Asked to email the audit link', `${leads.new24} (${leads.total} in total)`)}${row('Audits run', `${audits.n} (by ${audits.people} ${audits.people === 1 ? 'person' : 'people'})`)}${row('AED 55 pop-up', `${ev.offer} seen, ${ev.offer_click} clicked`)}${row('Unlock offers seen', ev.paywall)}${row('Checkouts started', ev.checkout)}
     ${row('New subscriptions', subs24.n)}${row('Full reports unlocked', unlocks.n)}${row('Paying accounts now', paid)}
     ${row('Ad accounts connected (all users)', `Meta ${conns.meta} · Google ${conns.google} · Snapchat ${conns.snap} · TikTok ${conns.tiktok}`)}</table>
     ${pageTable}
@@ -69,7 +70,7 @@ export default async function handler(req, res) {
     ${fb.length ? `<h3 style="margin:20px 0 6px">Feedback</h3><ul style="padding-left:18px;margin:0">${fb.map(f => `<li>${f.rating ? f.rating + '/5 · ' : ''}${esc(String(f.message || '').slice(0, 300))}${f.page ? ' <span style="color:#5b667a">(' + esc(f.page) + ')</span>' : ''}</li>`).join('')}</ul>` : ''}
     <p style="margin-top:20px;color:#5b667a">Countries and devices: Google Analytics → Reports. Payments: Stripe dashboard. Site: ${esc(SITE())}</p></div>`;
   const text = `OptiROAS daily summary (last 24h, customers only)\nVisitors: ${visits.visitors} (${visits.views} page views)\nNew sign-ups: ${users.new24}\nAudits run: ${audits.n}\nUnlock offers seen: ${ev.paywall}\nCheckouts started: ${ev.checkout}\nNew subscriptions: ${subs24.n}\nPaying accounts: ${paid}`;
-  const stats = { visits, pages, visitSrc, users, bySource, newList, audits, unlocks, events: ev, plans, subs24, conns, feedback: fb.length };
+  const stats = { leads, visits, pages, visitSrc, users, bySource, newList, audits, unlocks, events: ev, plans, subs24, conns, feedback: fb.length };
   const wantMail = cron || /[?&]send=1/.test(req.url || '');
   if (!wantMail) return json(res, 200, { ok: true, stats });
   const to = process.env.REPORT_EMAIL || list('ADMIN_EMAILS')[0] || 'admin@optiroas.com';
