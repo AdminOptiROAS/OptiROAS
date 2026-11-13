@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { ensureSchema, sql, json, body, currentUser, emailOk } from './_lib/core.js';
 import { sendMail, mailOn, layout, SITE } from './_lib/mail.js';
 import { isAdmin } from './_lib/plan.js';
+import { unsubSig } from './_lib/nurture.js';
 
 // "Email me the link": a visitor (usually on a phone) gets the link to run their audit on a computer.
 //   POST /api/leads            {email, lang, src, camp, vid, page}  → stores the lead and sends the email
@@ -16,6 +17,15 @@ export default async function handler(req, res) {
   await ensureSchema();
   const q = Object.fromEntries(new URL(req.url, 'https://x').searchParams);
 
+  if (req.method === 'GET' && q.uu) {
+    const [id, sig] = String(q.uu).split('.');
+    const ok = id && sig && /^[0-9a-f-]{36}$/i.test(id) && sig === unsubSig(id);
+    const r = ok ? await sql`update users set mkt_unsub_at=coalesce(mkt_unsub_at, now()) where id=${id} returning lang` : [];
+    const ar = r[0] && r[0].lang === 'ar';
+    res.statusCode = r[0] ? 200 : 404; res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.end(r[0] ? page(ar ? 'ar' : 'en', ar ? 'تم إلغاء الاشتراك' : 'You’re unsubscribed', ar ? 'لن نرسل لك رسائل تذكير أو تسويق بعد الآن. ستبقى رسائل حسابك المهمة مثل إعادة تعيين كلمة المرور والإيصالات.' : 'We won’t send you reminders or marketing emails again. You’ll still get essential account emails such as password resets and receipts.')
+      : page('en', 'Link not found', 'This unsubscribe link isn’t valid. Email admin@optiroas.com and we’ll remove you.'));
+  }
   if (req.method === 'GET' && q.u) {
     const r = await sql`update leads set unsubscribed_at=coalesce(unsubscribed_at, now()) where unsub_token=${String(q.u).slice(0, 80)} returning lang`;
     const ar = r[0] && r[0].lang === 'ar';

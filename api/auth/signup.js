@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   await ensureSchema();
   const exists = await sql`select 1 from users where email=${email}`;
   if (exists.length) return json(res, 409, { error: 'An account with this email already exists. Sign in instead, or reset your password.' });
-  const r = await sql`insert into users(email,name,pass_hash,utm_source,utm_campaign) values(${email},${String(name || '').trim().slice(0, 120) || null},${hashPassword(password)},${clip(U.source)},${clip(U.campaign)}) returning id,email,name`;
+  const r = await sql`insert into users(email,name,pass_hash,utm_source,utm_campaign,lang) values(${email},${String(name || '').trim().slice(0, 120) || null},${hashPassword(password)},${clip(U.source)},${clip(U.campaign)},${lang === 'ar' ? 'ar' : 'en'}) returning id,email,name`;
   await startSession(res, r[0].id);
   let sent = false;
   if (mailOn() && !allow.includes(email)) sent = await sendVerify(r[0], lang);

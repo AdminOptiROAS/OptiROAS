@@ -4168,6 +4168,8 @@ document.addEventListener('click',e=>{
   e.preventDefault();if(r[0]==='live'){openLive();return}if(r[0]==='waitlist')openAuth();else if(r[0]==='account'){(async()=>{if(API_OK&&!ST.me)await loadMe();openAcct()})()}else go(r[0],r[1]);
 });
 document.querySelectorAll('[data-example]').forEach(b=>b.addEventListener('click',()=>$('exampleBtn').click()));
+// ?example=1 (links in our emails) opens the example report straight away
+try{if(new URLSearchParams(location.search).get('example')==='1')setTimeout(()=>{const b=$('exampleBtn');if(b)b.click()},600)}catch(e){};
 function showView(v,anchor){
   document.querySelectorAll('.page').forEach(p=>p.hidden=v!=='site'||p.dataset.page!==ST.page);
   $('authView').hidden=v!=='auth';$('acctView').hidden=v!=='acct';

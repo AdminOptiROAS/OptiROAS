@@ -108,6 +108,11 @@ export function ensureSchema() {
       id bigserial primary key, vid text, user_id uuid, page text not null, n int not null default 1, secs int not null default 0,
       src text, at timestamptz not null default now())`;
     await sql`create index if not exists page_views_at on page_views(at)`;
+    // Follow-up email series after sign-up (language chosen at sign-up, last step sent, marketing opt-out)
+    await sql`alter table users add column if not exists lang text`;
+    await sql`alter table users add column if not exists nurture_step int not null default 0`;
+    await sql`alter table users add column if not exists nurture_at timestamptz`;
+    await sql`alter table users add column if not exists mkt_unsub_at timestamptz`;
     // People who asked (usually on a phone) to email themselves the link to run their audit on a computer; kept for follow-up and retargeting
     await sql`create table if not exists leads(
       email text primary key, lang text, source text, campaign text, vid text, page text,
