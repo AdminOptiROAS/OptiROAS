@@ -5,12 +5,12 @@ const FROM = () => process.env.EMAIL_FROM || 'OptiROAS <noreply@optiroas.com>';
 const SUPPORT = 'admin@optiroas.com';
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export async function sendMail({ to, subject, html, text }) {
+export async function sendMail({ to, subject, html, text, attachments }) {
   if (!mailOn()) { console.error('mail: RESEND_API_KEY not set, email not sent:', subject); return false; }
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM(), to: [to], subject, html, text, reply_to: SUPPORT })
+      body: JSON.stringify({ from: FROM(), to: [to], subject, html, text, reply_to: SUPPORT, ...(attachments && attachments.length ? { attachments } : {}) })
     });
     if (!r.ok) { console.error('mail: Resend returned', r.status, (await r.text()).slice(0, 300)); return false; }
     return true;

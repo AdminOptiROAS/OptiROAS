@@ -1,17 +1,61 @@
 import { ensureSchema, sql, json, currentUser } from '../_lib/core.js';
 import { isAdmin } from '../_lib/plan.js';
 import { sendMail, mailOn, SITE } from '../_lib/mail.js';
+import { xlsx } from '../_lib/xlsx.js';
 
 // Daily (vercel.json cron, 08:10 Dubai): emails the owner what happened in the last 24 hours.
 // Team, reviewer and early-access emails are left out of the customer numbers.
 const list = k => (process.env[k] || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// The Excel file attached to the daily email: every customer and where they are (signed up → ran an audit → subscribed),
+// plus the "email me the link" leads. Times in UAE time.
+const PLAN = { audit: 'Audit (AED 55/month)', starter: 'Starter (AED 199/month)', pro: 'Pro (AED 499/month)' };
+const uae = d => d ? new Date(d).toLocaleString('sv-SE', { timeZone: 'Asia/Dubai' }).slice(0, 16) : '';
+async function customerWorkbook(ext) {
+  const us = await sql`select u.email, u.name, u.created_at, u.utm_source, u.utm_campaign, u.email_verified_at, u.plan, u.audit_credits, u.period_start, u.period_end,
+      u.lang, u.nurture_step, u.mkt_unsub_at,
+      (select count(*) from usage_reports r where r.user_id=u.id)::int as audits, (select max(at) from usage_reports r where r.user_id=u.id) as last_audit,
+      (select count(*) from audit_unlocks a where a.user_id=u.id)::int as unlocked,
+      concat_ws(', ', case when exists(select 1 from meta_connections c where c.user_id=u.id) then 'Meta' end,
+        case when exists(select 1 from google_connections c where c.user_id=u.id) then 'Google' end,
+        case when exists(select 1 from tiktok_connections c where c.user_id=u.id) then 'TikTok' end,
+        case when exists(select 1 from snap_connections c where c.user_id=u.id) then 'Snapchat' end,
+        case when exists(select 1 from salla_connections c where c.user_id=u.id) then 'Salla' end) as connected
+    from users u where lower(u.email) <> all(${ext}) order by u.created_at desc limit 20000`;
+  const subOf = u => PLAN[u.plan] || (u.audit_credits > 0 ? `Pay per audit (${u.audit_credits} left)` : '');
+  const stage = u => subOf(u) ? '3. Subscribed' : u.audits > 0 ? '2. Ran an audit' : '1. Signed up';
+  const rows = [['Email', 'Name', 'Stage', 'Signed up (UAE)', 'Email confirmed', 'Ran audit', 'Audits run', 'Last audit (UAE)', 'Full reports unlocked',
+    'Subscribed', 'Subscription', 'Subscribed since (UAE)', 'Renews / ends (UAE)', 'Ad accounts connected', 'Source', 'Campaign', 'Language', 'Follow-up emails sent', 'Unsubscribed from emails']];
+  for (const u of us) rows.push([u.email, u.name || '', stage(u), uae(u.created_at), u.email_verified_at ? 'Yes' : 'No', u.audits > 0 ? 'Yes' : 'No', u.audits, uae(u.last_audit), u.unlocked,
+    subOf(u) ? 'Yes' : 'No', subOf(u) || '—', subOf(u) ? uae(u.period_start) : '', subOf(u) ? uae(u.period_end) : '', u.connected || '', u.utm_source || 'direct / unknown', u.utm_campaign || '',
+    u.lang === 'ar' ? 'Arabic' : u.lang === 'en' ? 'English' : '', u.nurture_step || 0, u.mkt_unsub_at ? 'Yes' : 'No']);
+  const ls = await sql`select l.email, l.lang, l.source, l.campaign, l.created_at, l.sends, l.unsubscribed_at, exists(select 1 from users u where lower(u.email)=l.email) as signed
+    from leads l where l.email <> all(${ext}) order by l.created_at desc limit 20000`;
+  const lrows = [['Email', 'Asked on (UAE)', 'Signed up', 'Source', 'Campaign', 'Language', 'Emails sent', 'Unsubscribed']];
+  for (const l of ls) lrows.push([l.email, uae(l.created_at), l.signed ? 'Yes' : 'No', l.source || 'direct / unknown', l.campaign || '', l.lang === 'ar' ? 'Arabic' : 'English', l.sends, l.unsubscribed_at ? 'Yes' : 'No']);
+  const n = f => us.filter(f).length;
+  const summary = [['Stage', 'People'], ['Signed up (all)', us.length], ['Confirmed their email', n(u => u.email_verified_at)], ['Ran at least one audit', n(u => u.audits > 0)],
+    ['Subscribed (any plan)', n(u => subOf(u))], ...Object.keys(PLAN).map(k => ['  ' + PLAN[k], n(u => u.plan === k)]), ['  Pay per audit', n(u => !PLAN[u.plan] && u.audit_credits > 0)],
+    ['Signed up, no audit yet', n(u => !u.audits && !subOf(u))], ['Ran an audit, not subscribed', n(u => u.audits > 0 && !subOf(u))],
+    ['Email-link leads', ls.length], ['  of whom signed up', ls.filter(l => l.signed).length], ['', ''], ['Generated (UAE)', uae(new Date())], ['Team, reviewer and test accounts are left out.', '']];
+  return xlsx([{ name: 'Summary', rows: summary, widths: [40, 22] },
+    { name: 'Customers', rows, widths: [32, 18, 16, 17, 10, 10, 10, 17, 10, 11, 26, 17, 17, 22, 18, 18, 10, 10, 12] },
+    { name: 'Email-link leads', rows: lrows, widths: [32, 17, 10, 18, 18, 10, 10, 12] }]);
+}
+
 export default async function handler(req, res) {
   // The cron sends the email; a signed-in admin can open this URL to see today's numbers (add ?send=1 to email them too).
   const cron = !!process.env.CRON_SECRET && req.headers.authorization === `Bearer ${process.env.CRON_SECRET}`;
   const me = cron ? null : await currentUser(req).catch(() => null);
   if (!cron && !(me && isAdmin(me))) return json(res, 401, { error: 'Unauthorized' });
   await ensureSchema();
+  const internal0 = [...new Set([...list('ADMIN_EMAILS'), ...list('REVIEW_EMAILS'), ...list('ALLOWED_EMAILS')])];
+  if (!cron && /[?&]xlsx=1/.test(req.url || '')) {
+    const buf = await customerWorkbook(internal0.length ? internal0 : ['-']);
+    res.statusCode = 200; res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="OptiROAS customers ${new Date().toISOString().slice(0, 10)}.xlsx"`); res.setHeader('Cache-Control', 'no-store');
+    return res.end(buf);
+  }
   const internal = [...new Set([...list('ADMIN_EMAILS'), ...list('REVIEW_EMAILS'), ...list('ALLOWED_EMAILS')])];
   const ext = internal.length ? internal : ['-'];
   const one = async q => (await q)[0];
@@ -68,6 +112,7 @@ export default async function handler(req, res) {
     ${newList.length ? `<h3 style="margin:20px 0 6px">New sign-ups</h3><ul style="padding-left:18px;margin:0">${newList.map(u => `<li>${esc(u.email)}${u.name ? ' (' + esc(u.name) + ')' : ''}${u.utm_source ? ' · from ' + esc(u.utm_source) + (u.utm_campaign ? ' / ' + esc(u.utm_campaign) : '') : ''}${u.verified ? '' : ' · email not confirmed yet'}</li>`).join('')}</ul>` : ''}
     ${bySource.length ? `<h3 style="margin:20px 0 6px">Sign-ups by source, last 7 days</h3><ul style="padding-left:18px;margin:0">${bySource.map(s => `<li>${esc(s.src)}${s.camp ? ' / ' + esc(s.camp) : ''}: ${s.n}</li>`).join('')}</ul>` : ''}
     ${fb.length ? `<h3 style="margin:20px 0 6px">Feedback</h3><ul style="padding-left:18px;margin:0">${fb.map(f => `<li>${f.rating ? f.rating + '/5 · ' : ''}${esc(String(f.message || '').slice(0, 300))}${f.page ? ' <span style="color:#5b667a">(' + esc(f.page) + ')</span>' : ''}</li>`).join('')}</ul>` : ''}
+    <p style="margin-top:20px;color:#5b667a">The attached Excel file lists every customer with their stage (signed up, ran an audit, subscribed) and plan, plus the email-link leads.</p>
     <p style="margin-top:20px;color:#5b667a">Countries and devices: Google Analytics → Reports. Payments: Stripe dashboard. Site: ${esc(SITE())}</p></div>`;
   const text = `OptiROAS daily summary (last 24h, customers only)\nVisitors: ${visits.visitors} (${visits.views} page views)\nNew sign-ups: ${users.new24}\nAudits run: ${audits.n}\nUnlock offers seen: ${ev.paywall}\nCheckouts started: ${ev.checkout}\nNew subscriptions: ${subs24.n}\nPaying accounts: ${paid}`;
   const stats = { leads, visits, pages, visitSrc, users, bySource, newList, audits, unlocks, events: ev, plans, subs24, conns, feedback: fb.length };
@@ -75,6 +120,9 @@ export default async function handler(req, res) {
   if (!wantMail) return json(res, 200, { ok: true, stats });
   const to = process.env.REPORT_EMAIL || list('ADMIN_EMAILS')[0] || 'admin@optiroas.com';
   if (!mailOn()) return json(res, 200, { ok: true, skipped: 'email not configured' });
-  const ok = await sendMail({ to, subject: `OptiROAS today: ${visits.visitors} visitor${visits.visitors === 1 ? '' : 's'}, ${users.new24} sign-up${users.new24 === 1 ? '' : 's'}, ${ev.checkout} checkout${ev.checkout === 1 ? '' : 's'}, ${subs24.n} new subscription${subs24.n === 1 ? '' : 's'}`, html, text });
+  let attachments = [];
+  try { attachments = [{ filename: `OptiROAS customers ${new Date().toISOString().slice(0, 10)}.xlsx`, content: (await customerWorkbook(ext)).toString('base64') }]; }
+  catch (e) { console.error('daily xlsx', e.message); }
+  const ok = await sendMail({ to, attachments, subject: `OptiROAS today: ${visits.visitors} visitor${visits.visitors === 1 ? '' : 's'}, ${users.new24} sign-up${users.new24 === 1 ? '' : 's'}, ${ev.checkout} checkout${ev.checkout === 1 ? '' : 's'}, ${subs24.n} new subscription${subs24.n === 1 ? '' : 's'}`, html, text });
   return json(res, ok ? 200 : 502, { ok, stats });
 }
