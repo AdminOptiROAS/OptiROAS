@@ -4620,7 +4620,7 @@ async function renderWorkspace(){
   const ads=A?A.plats.flatMap(p=>(p.crBest||[]).filter(c=>c.thumb).map(c=>({p,c}))).slice(0,6):[];
   el.innerHTML=`<div class="wshero"><div><span class="kicker"><i></i>${TR('My reports','تقاريري')}</span><h1>${first?TR(`Welcome back, ${esc(first)}`,`مرحبًا بعودتك، ${esc(first)}`):TR('Welcome back','مرحبًا بعودتك')}</h1>
       <p class="muted">${TR(`${accs.length} connected ad account${accs.length===1?'':'s'} across ${conn.map(k=>PK[k].name).join(', ')}. Pick one to audit, or open your live view.`,`${accs.length} من الحسابات الإعلانية المربوطة عبر ${conn.map(k=>PK[k].name).join('، ')}. اختر حسابًا لتدقيقه، أو افتح عرضك المباشر.`)}</p>
-      <div class="acts"><button class="btn" type="button" data-ws="audit">${TR('Audit an account','دقّق حسابًا')}</button><button class="btn quiet" type="button" data-ws="live">${TR('My live dashboard','لوحتي المباشرة')}</button><button class="btn quiet" type="button" data-ws="upload">${TR('Upload files instead','ارفع ملفات بدلًا من ذلك')}</button></div></div>${WS_ART}</div>
+      <div class="acts">${accs.length>1?`<button class="btn" type="button" data-ws="all">${TR('Audit all accounts together','دقّق كل الحسابات معًا')}</button>`:''}<button class="btn${accs.length>1?' quiet':''}" type="button" data-ws="audit">${TR('Audit an account','دقّق حسابًا')}</button><button class="btn quiet" type="button" data-ws="live">${TR('My live dashboard','لوحتي المباشرة')}</button><button class="btn quiet" type="button" data-ws="upload">${TR('Upload files instead','ارفع ملفات بدلًا من ذلك')}</button></div></div>${WS_ART}</div>
     ${A?`<div class="wssec"><h2>${TR('Your open report','تقريرك المفتوح')}</h2><p class="muted small">${esc(reportName(A).label)}</p><div class="card wsnow">${dial(A.scoreOk?A.score:null)}<div class="kp">
       <div><span class="eyebrow">${TR('Ad spend','الإنفاق')}</span><b>${money(A.total,0)}</b></div>${A.vs?`<div><span class="eyebrow">ROAS</span><b>${x2(A.blendedRoas)}</b></div>`:''}${A.plan?`<div><span class="eyebrow">${TR('Budget to move','ميزانية يُعاد توزيعها')}</span><b>${money(A.plan.cut,0)}</b></div>`:''}<div><span class="eyebrow">${TR('Actions','الإجراءات')}</span><b>${A.F.length}</b></div></div>
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" type="button" data-ws="open">${TR('Open report','افتح التقرير')}</button><button class="btn quiet" type="button" data-ws="openlive">${TR('Live view','العرض المباشر')}</button></div></div></div>`:''}
@@ -4632,6 +4632,7 @@ async function renderWorkspace(){
     <div class="wssec"><h2>${TR('Saved reports','التقارير المحفوظة')}</h2><p class="muted small" style="margin:0">${TR('Saved reports keep the summary, your actions and their dates (never your ad data or files) for as long as your account is open.','تحتفظ التقارير المحفوظة بالملخص وإجراءاتك وتواريخها (وليس بياناتك الإعلانية أو ملفاتك أبدًا) ما دام حسابك مفتوحًا.')}</p><div id="wsSaved"><p class="muted small">${TR('Loading…','جارٍ التحميل…')}</p></div></div>`;
   el.querySelectorAll('[data-ws]').forEach(b=>b.onclick=()=>{const k=b.dataset.ws;
     if(k==='audit'){ST.wantLive=false;$('wsAccs').scrollIntoView({behavior:'smooth',block:'start'})}
+    if(k==='all')runAllAudit(b);
     if(k==='live')openLive();if(k==='upload')wzStart(1);if(k==='open')go('audit');if(k==='openlive'){go('audit');setView('live')}});
   el.querySelectorAll('[data-wsrun]').forEach(b=>b.onclick=()=>{ST.wantLive=false;openPicker(b.dataset.wsrun,b.dataset.acc)});
   el.querySelectorAll('[data-wslive]').forEach(b=>b.onclick=()=>{ST.wantLive=true;openPicker(b.dataset.wslive,b.dataset.acc)});
@@ -4761,6 +4762,30 @@ async function runMetaAudit(acc,days,btn,ids,opt){opt=opt||{};
   }catch(x){btn.disabled=false;btn.textContent=t;if(opt.stay){toast(x.message);return}ST.acctMsg={t:x.message};renderAcct()}
 }
 
+/* ---------- one audit across every connected platform and account ---------- */
+async function runAllAudit(btn,days){
+  days=days||60;const me=ST.me||{},t=btn?btn.textContent:'',files=[],skipped=[];
+  const set=s=>{if(btn){btn.disabled=!!s;btn.textContent=s||t}};
+  const pull=async(url,name)=>{const r=await api(url);if(!+(r.headers.get('X-Rows')||0))return false;files.push(new File([await r.text()],name,{type:'text/csv'}));return true};
+  const jobs=[];
+  for(const k of wsConn())for(const a of (me[k].accounts||[]).slice(0,10)){
+    const nm=k==='google'?(a.name||gid(a.id)):(a.name||a.id),q=`account=${encodeURIComponent(a.id)}&days=${days}`;
+    jobs.push({k,nm,run:async()=>{
+      if(k==='google'){const ok=await pull(`/api/google/report?${q}&type=campaigns`,`Google Ads · ${nm} (campaigns, last ${days} days, live).csv`);
+        if(ok)try{await pull(`/api/google/report?${q}&type=searchterms`,`Google Ads · ${nm} (search terms, last ${days} days, live).csv`)}catch(e){}return ok}
+      const lbl={meta:'Meta',snap:'Snapchat Ads',tiktok:'TikTok Ads'}[k];
+      return pull(`/api/${k}/report?${q}`,`${lbl} · ${nm} (last ${days} days, live).csv`)}});
+  }
+  if(!jobs.length){toast(TR('Connect an ad platform first.','اربط منصة إعلانية أولًا.'));return}
+  let i=0;for(const j of jobs){set(TR(`Pulling ${PK[j.k].name} (${++i} of ${jobs.length})…`,`جارٍ سحب ${PK[j.k].name} (${i} من ${jobs.length})…`));
+    try{if(!(await j.run()))skipped.push(`${PK[j.k].name} · ${j.nm}: ${TR(`no spend in the last ${days} days`,`لا إنفاق في آخر ${days} يومًا`)}`)}
+    catch(x){skipped.push(`${PK[j.k].name} · ${j.nm}: ${x.message}`)}}
+  set(null);
+  if(!files.length){modal(`<h3>${TR('No data to audit','لا توجد بيانات للتدقيق')}</h3><ul>${skipped.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><div class="row"><button class="btn" type="button" data-close>${TR('OK','حسنًا')}</button></div>`,d=>d.querySelector('[data-close]').onclick=()=>d.close());return}
+  ST.files=[];ST.example=false;ST.claimed=false;ST.unlocked=false;ST.claimFp='';ST.liveSrc=null;ST.liveToday=null;ST.crMeta=null;ST.pick=null;
+  await addFiles(files);
+  if(skipped.length)setTimeout(()=>modal(`<h3>${TR('Some accounts were left out','لم تُضمَّن بعض الحسابات')}</h3><ul>${skipped.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><div class="row"><button class="btn" type="button" data-close>${TR('OK','حسنًا')}</button></div>`,d=>d.querySelector('[data-close]').onclick=()=>d.close()),400);
+}
 /* ---------- campaign picker: account → period → campaigns → report ---------- */
 const PK={meta:{name:'Meta',me:'meta',run:(...a)=>runMetaAudit(...a)},google:{name:'Google Ads',me:'google',run:(...a)=>runGoogleAudit(...a)},snap:{name:'Snapchat',me:'snap',run:(...a)=>runSnapAudit(...a)},tiktok:{name:'TikTok',me:'tiktok',run:(...a)=>runTiktokAudit(...a)}};
 const PK_ST={active:['Active','نشطة'],paused:['Paused','متوقفة مؤقتًا'],removed:['Archived','مؤرشفة'],other:['Ended','منتهية']};
@@ -4836,7 +4861,7 @@ $('dzMeta').onclick=async()=>{if(API_OK&&!ST.me)await loadMe();if(!canConn())ret
   try{if(sessionStorage.getItem('or_flash')==='signedout'){sessionStorage.removeItem('or_flash');setTimeout(()=>toast(TR('Signed out.','تم تسجيل الخروج.')),400)}}catch(e){}
   if(q.get('unlock')){try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}setTimeout(waitUnlock,300)}else if(restored)setTimeout(lockSync,300);
   if(mm){const n=+q.get('n')||0;
-    const msgs={connected:{ok:true,t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.'},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
+    const msgs={connected:{ok:!!n||q.get('why')!=='perm',t:n?`Meta connected. ${n} ad account${n===1?'':'s'} shared with OptiROAS.`:(q.get('why')==='perm'?TR('Meta connected, but Meta didn’t let OptiROAS read your ad accounts (missing permission). Your other connected platforms are unaffected. Make sure the Facebook profile you used has access to the ad account, then reconnect. If it does, Meta is still reviewing OptiROAS: email admin@optiroas.com and we’ll give your profile early access.','تم ربط Meta، لكن Meta لم يسمح لـ OptiROAS بقراءة حساباتك الإعلانية (صلاحية ناقصة). منصاتك المربوطة الأخرى لم تتأثر. تأكد أن ملف فيسبوك الذي استخدمته لديه صلاحية على الحساب الإعلاني، ثم أعد الربط. إذا كانت لديه، فـ Meta ما زال يراجع OptiROAS: راسلنا على admin@optiroas.com وسنمنح ملفك وصولًا مبكرًا.'):'Meta connected, but no ad accounts were shared. Reconnect and tick at least one ad account.')},cancelled:{t:'Meta connection was cancelled. Nothing was shared.'},signin:{t:'Sign in first, then connect Meta.'},error:{t:'Meta connection didn’t complete'+(q.get('why')&&q.get('why')!=='state'?': '+q.get('why'):'. Please try again.')}};
     try{history.replaceState(null,'',location.pathname+'#account')}catch(e){}
     openAcct(msgs[mm]||null);if(mm==='connected')afterConnect('meta')}
   else if(gg){const n=+q.get('n')||0;

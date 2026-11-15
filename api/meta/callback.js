@@ -23,7 +23,8 @@ export default async function handler(req, res) {
     const me = await graph('/me', { fields: 'id,name,client_business_id', access_token: token, appsecret_proof: proof }, { userId: user.id }).catch(() => ({}));
     const fields = 'account_id,name,currency,timezone_name,account_status';
     let accts = [];
-    const pull = async path => { try { const r = await graph(path, { fields, limit: 200, access_token: token, appsecret_proof: proof }, { userId: user.id }); return r.data || []; } catch { return []; } };
+    let permErr = false;
+    const pull = async path => { try { const r = await graph(path, { fields, limit: 200, access_token: token, appsecret_proof: proof }, { userId: user.id }); return r.data || []; } catch (e) { if (/permission|#200|#10\b/i.test(String(e.message))) permErr = true; return []; } };
     accts = await pull('/me/adaccounts');
     // Only ads_read is requested: the business owned/client account lists need business_management and would fail,
     // which counts against the app's error rate in App Review. Accounts the person picked at login come back from /me/adaccounts.
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
       await sql`insert into meta_ad_accounts(user_id,account_id,name,currency,timezone,status)
         values(${user.id},${id},${a.name || id},${a.currency || null},${a.timezone_name || null},${a.account_status ?? null})`;
     }
-    return back(res, `meta=connected&n=${seen.size}`);
+    return back(res, `meta=connected&n=${seen.size}${!seen.size && permErr ? '&why=perm' : ''}`);
   } catch (e) {
     console.error('meta callback', e.message, e.meta);
     return back(res, 'meta=error&why=' + encodeURIComponent(String(e.message).slice(0, 140)));

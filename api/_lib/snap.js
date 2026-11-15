@@ -1,4 +1,5 @@
 // Snapchat Marketing API helpers: OAuth and read-only GET requests.
+import { sql, encrypt, decrypt } from './core.js';
 export const SNAP_API = 'https://adsapi.snapchat.com/v1';
 export const SNAP_SCOPE = 'snapchat-marketing-api';
 
@@ -34,4 +35,25 @@ export function tzOffset(tz, date) {
     const m = /GMT([+-]\d{2}):?(\d{2})?/.exec(p && p.value || '');
     return m ? `${m[1]}:${m[2] || '00'}` : '+00:00';
   } catch { return '+00:00'; }
+}
+
+// A fresh access token for a user's Snapchat connection. Two pulls can run at once (campaign list and report),
+// and Snapchat may rotate the refresh token: save a new one only if the stored one is still the one we used,
+// and if our refresh fails because another request already rotated it, retry once with the newer token.
+export async function snapAccess(userId) {
+  for (let i = 0; i < 2; i++) {
+    const row = (await sql`select token_enc from snap_connections where user_id=${userId}`)[0];
+    if (!row) { const e = new Error('Connect Snapchat first.'); e.status = 409; throw e; }
+    try {
+      const tok = await snapToken({ grant_type: 'refresh_token', refresh_token: decrypt(row.token_enc) });
+      if (tok.refresh_token) await sql`update snap_connections set token_enc=${encrypt(tok.refresh_token)}, updated_at=now() where user_id=${userId} and token_enc=${row.token_enc}`;
+      return tok.access_token;
+    } catch (e) {
+      await new Promise(r => setTimeout(r, 600)); // let a parallel refresh finish saving its new token
+      const now = (await sql`select token_enc from snap_connections where user_id=${userId}`)[0];
+      if (i === 0 && now && now.token_enc !== row.token_enc) continue;
+      if (e.code === 'invalid_grant') { e.message = 'Your Snapchat connection has expired. Reconnect Snapchat.'; e.status = 401; }
+      throw e;
+    }
+  }
 }

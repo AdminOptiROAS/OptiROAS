@@ -1,6 +1,6 @@
 import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, decrypt, encrypt, logApi } from '../_lib/core.js';
-import { snapToken, snapGet, tzOffset } from '../_lib/snap.js';
+import { snapToken, snapGet, tzOffset, snapAccess } from '../_lib/snap.js';
 import { idsParam } from '../_lib/camps.js';
 import { canConnect } from '../_lib/plan.js';
 
@@ -43,9 +43,7 @@ export default async function handler(req, res) {
   const end = localDay(tz, new Date()), start = addDays(end, -days); // full days up to yesterday
   let access, camps = new Map(), series = [], extra = true;
   try {
-    const tok = await snapToken({ grant_type: 'refresh_token', refresh_token: decrypt(con[0].token_enc) });
-    access = tok.access_token;
-    if (tok.refresh_token) await sql`update snap_connections set token_enc=${encrypt(tok.refresh_token)}, updated_at=now() where user_id=${user.id}`;
+    access = await snapAccess(user.id);
     for (const j of await snapGet(access, `/adaccounts/${acc}/campaigns`, { limit: '200' }))
       for (const c of (j.campaigns || [])) camps.set(c.campaign.id, c.campaign);
     await logApi(user.id, 'snap:campaigns', true);

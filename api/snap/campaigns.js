@@ -1,6 +1,6 @@
 import { friendly } from '../_lib/errors.js';
 import { currentUser, sql, json, decrypt, encrypt, logApi } from '../_lib/core.js';
-import { snapToken, snapGet, tzOffset } from '../_lib/snap.js';
+import { snapToken, snapGet, tzOffset, snapAccess } from '../_lib/snap.js';
 import { STATUS, daysParam } from '../_lib/camps.js';
 import { canConnect } from '../_lib/plan.js';
 
@@ -20,8 +20,7 @@ export default async function handler(req, res) {
   if (!con[0]) return json(res, 409, { error: 'Connect Snapchat first.' });
   const tz = own[0].timezone || 'UTC', end = localDay(tz, new Date()), start = addDays(end, -days);
   try {
-    const tok = await snapToken({ grant_type: 'refresh_token', refresh_token: decrypt(con[0].token_enc) });
-    if (tok.refresh_token) await sql`update snap_connections set token_enc=${encrypt(tok.refresh_token)}, updated_at=now() where user_id=${user.id}`;
+    const tok = { access_token: await snapAccess(user.id) };
     const m = new Map();
     for (const j of await snapGet(tok.access_token, `/adaccounts/${acc}/campaigns`, { limit: '200' }))
       for (const c of (j.campaigns || [])) { const x = c.campaign;
