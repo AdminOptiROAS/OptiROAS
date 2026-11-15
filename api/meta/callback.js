@@ -26,6 +26,14 @@ export default async function handler(req, res) {
     let permErr = false;
     const pull = async path => { try { const r = await graph(path, { fields, limit: 200, access_token: token, appsecret_proof: proof }, { userId: user.id }); return r.data || []; } catch (e) { if (/permission|#200|#10\b/i.test(String(e.message))) permErr = true; return []; } };
     accts = await pull('/me/adaccounts');
+    // No accounts: record which permissions Meta actually granted (names and status only), so the cause shows in the health log
+    if (!accts.length) {
+      try {
+        const pr = await graph('/me/permissions', { access_token: token, appsecret_proof: proof }, { userId: user.id });
+        const list = (pr.data || []).map(x => `${x.permission}:${x.status}`).join(' ') || 'none';
+        await sql`insert into api_log(user_id,endpoint,ok,err) values(${user.id},'/v:granted',false,${('granted ' + list).slice(0, 300)})`;
+      } catch (e) { }
+    }
     // Only ads_read is requested: the business owned/client account lists need business_management and would fail,
     // which counts against the app's error rate in App Review. Accounts the person picked at login come back from /me/adaccounts.
     await sql`insert into meta_connections(user_id,meta_id,meta_name,client_business_id,token_enc)
