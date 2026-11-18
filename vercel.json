@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides)",
+      "source": "/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides|ai-visibility)",
       "destination": "/index.html"
     }
   ],
@@ -11,6 +11,9 @@
     },
     "api/salla/[action].js": {
       "maxDuration": 60
+    },
+    "api/ai/[action].js": {
+      "maxDuration": 300
     }
   },
   "crons": [
@@ -21,6 +24,10 @@
     {
       "path": "/api/cron/daily-report",
       "schedule": "10 4 * * *"
+    },
+    {
+      "path": "/api/ai/cron",
+      "schedule": "25 * * * *"
     }
   ],
   "headers": [
