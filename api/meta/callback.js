@@ -48,7 +48,9 @@ export default async function handler(req, res) {
       await sql`insert into meta_ad_accounts(user_id,account_id,name,currency,timezone,status)
         values(${user.id},${id},${a.name || id},${a.currency || null},${a.timezone_name || null},${a.account_status ?? null})`;
     }
-    return back(res, `meta=connected&n=${seen.size}${!seen.size && permErr ? '&why=perm' : ''}`);
+    // Meta gave no ad-account permission: don't keep a connection that can't read anything, so the page offers "Connect Meta" again
+    if (!seen.size && permErr) { await sql`delete from meta_connections where user_id=${user.id}`; return back(res, 'meta=connected&n=0&why=perm'); }
+    return back(res, `meta=connected&n=${seen.size}`);
   } catch (e) {
     console.error('meta callback', e.message, e.meta);
     return back(res, 'meta=error&why=' + encodeURIComponent(String(e.message).slice(0, 140)));
