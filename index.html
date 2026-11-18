@@ -974,6 +974,7 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
 .calclock .lk{font-size:28px}.calclock b{font-size:18px}.calclock .muted{max-width:46ch}
 .wzlimit{padding:22px;display:flex;flex-direction:column;gap:8px}
 .lockn{display:block;margin-top:6px}
+.allsum{margin:0 0 12px}.allsum p{margin:0 0 8px}.ptag.First{background:#0a6c86;color:#fff}
 </style>
 </head>
 <body>
@@ -1216,13 +1217,12 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
       <div>
         <div class="sechead" style="margin-bottom:12px;scroll-margin-top:76px" id="findHead"><h3 style="font-size:20px">Actions</h3></div>
         <div id="doFirst"></div>
-        <div id="bplan" style="scroll-margin-top:76px"></div>
-        <div class="sechead" style="margin:18px 0 8px"><h3 style="font-size:18px">Next actions</h3></div>
         <div class="chips" id="filters" role="group" aria-label="Filter recommendations" style="margin-bottom:12px"></div>
-        <div id="ledger"></div>
         <div class="fwrap" id="findings"></div>
         <div id="tests" style="margin-top:14px"></div>
         <div id="dismissed" style="margin-top:10px"></div>
+        <div id="ledger" style="margin-top:14px"></div>
+        <div id="bplan" style="scroll-margin-top:76px;margin-top:18px"></div>
       </div>
       <div>
         <div class="sechead" style="margin-bottom:12px"><h3 style="font-size:20px">Growth plan</h3><span class="muted small">Every action from this audit, sorted by when to do it</span></div>
@@ -3535,14 +3535,15 @@ function render(scroll){
   $('rfQ').oninput=e=>{RF.q=e.target.value;clearTimeout(ST.rfT);ST.rfT=setTimeout(()=>{const pos=e.target.selectionStart;render();const n=$('rfQ');if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(x){}}},250)};
   const rq=RF.q.trim().toLowerCase();
   const DM=dismissLoad(),PRI=priorityOf(A),PRIs=new Set(PRI);
-  const FF=A.F.filter(f=>f.type!=='test'&&!DM[fkey(f)]&&!PRIs.has(f)).filter(f=>(ST.filter==='all'||f.plat===ST.filter)&&(!ST.pil||f.pil===ST.pil)&&(RF.sev==='all'||f.sev===RF.sev)&&(RF.type==='all'||(f.bucket||'fix')===RF.type)&&(!RF.hide||!LDm[fkey(f)])&&(!rq||(String(f.title)+' '+String(f.act)).toLowerCase().includes(rq)));
+  const ord=f=>PRIs.has(f)?0:f.type==='test'?2:1;
+  const FF=A.F.filter(f=>!DM[fkey(f)]).sort((a,b)=>ord(a)-ord(b)||A.F.indexOf(a)-A.F.indexOf(b)).filter(f=>(ST.filter==='all'||f.plat===ST.filter)&&(!ST.pil||f.pil===ST.pil)&&(RF.sev==='all'||f.sev===RF.sev)&&(RF.type==='all'||(f.bucket||'fix')===RF.type)&&(!RF.hide||!LDm[fkey(f)])&&(!rq||(String(f.title)+' '+String(f.act)).toLowerCase().includes(rq)));
   const CN=[...new Set(A.plats.flatMap(p=>p.camps.map(c=>c.name)).concat(A.plats.flatMap(p=>(p.creatives||[]).map(c=>c.name))))].filter(n=>n&&n.length>2).sort((a,b)=>b.length-a.length);
   const nameWrap=t=>{let h=esc(t);const hits=[];for(const n of CN){const e=esc(n);if(h.includes(e)&&!hits.some(x=>x.includes(e)))hits.push(e)}
     hits.forEach((e,i)=>{h=h.split(e).join('\u0000'+i+'\u0001')});return h.replace(/\u0000(\d+)\u0001/g,(m,i)=>`<span class="cn" title="${hits[i]}">${hits[i]}</span>`)};
   const headline=f=>{const t=String(f.sst||f.title).replace(/^[^:]{1,24}:\s*/,'');return t.charAt(0).toUpperCase()+t.slice(1)};
   const fCard=(f,n)=>{const tag=BKT(f),w=whereOf(f,A),how=howTo(f),pre=prereqs(f,A),rc=recheck(f),p=A.plats.find(x=>x.pk===f.plat);
     return `<div class="f fa${LD[fkey(f)]?' isdone':''}" id="f-${A.F.indexOf(f)}"><div class="rank">${String(n).padStart(2,'0')}</div>
-    <div class="body"><div class="tl">${f.newc?`<span class="ptag New">${TR('New','جديد')}</span>`:''}<span class="ptag ${tag}">${TAGL(tag)}</span><span class="ftype ${f.type}" title="${f.type==='observed'?TR('Seen directly in your data','مرصود مباشرة في بياناتك'):f.type==='estimate'?TR('A projection from your data, not a measured result','تقدير من بياناتك، وليس نتيجة مقيسة'):TR('An idea to test with a small budget','فكرة للاختبار بميزانية صغيرة')}">${f.type==='observed'?TR('Observed','مرصود'):f.type==='estimate'?TR('Estimate','تقدير'):TR('Test idea','فكرة اختبار')}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
+    <div class="body"><div class="tl">${PRIs.has(f)?`<span class="ptag First">${TR('Do first','ابدأ بها')}</span>`:''}${f.newc?`<span class="ptag New">${TR('New','جديد')}</span>`:''}<span class="ptag ${tag}">${TAGL(tag)}</span><span class="ftype ${f.type}" title="${f.type==='observed'?TR('Seen directly in your data','مرصود مباشرة في بياناتك'):f.type==='estimate'?TR('A projection from your data, not a measured result','تقدير من بياناتك، وليس نتيجة مقيسة'):TR('An idea to test with a small budget','فكرة للاختبار بميزانية صغيرة')}">${f.type==='observed'?TR('Observed','مرصود'):f.type==='estimate'?TR('Estimate','تقدير'):TR('Test idea','فكرة اختبار')}</span><span class="pill ${f.sev}">${TR(...(SEV_L[f.sev]||[f.sev,f.sev]))}</span><span class="pbadge">${pdot(f.plat)}${pname(f.plat)}</span><span class="pbadge pl">· ${pilN(f.pil)}</span></div>
     <h3 class="fah">${nameWrap(headline(f))}</h3>${f.sst?`<p class="fap">${nameWrap(f.title)}</p>`:''}
     <p class="fmeta small">${w?`<span><b>${TR('Where','أين')}:</b> ${nameWrap(w)}</span>`:''}${p&&p.T&&p.T.first?`<span><b>${TR('Data','البيانات')}:</b> ${fmtDate(p.T.first)} – ${fmtDate(p.T.last)}</span>`:''}<span><b>${TR('Check again','راجع مجددًا')}:</b> ${rc}</span>${LD[fkey(f)]&&LD[fkey(f)].doneAt?`<span class="pos"><b>${TR('Marked done','عُلّم كمنفّذ')}:</b> ${new Date(LD[fkey(f)].doneAt).toLocaleDateString(LANG==='ar'?'ar-AE-u-nu-latn':'en-GB',{day:'numeric',month:'short'})}${LD[fkey(f)].verifiedAt?TR(' · no longer detected in a later audit (not a measured result)',' · لم يعد مرصودًا في تدقيق لاحق (ليست نتيجة مقيسة)'):''}</span>`:''}</p>
     <details class="fx"><summary>${TR('Why, what to do, and how','السبب وما يجب فعله وكيف')}</summary>
@@ -3566,9 +3567,13 @@ function render(scroll){
         <div class="card findings">${fs.map((f,n)=>fCard(f,n+1)).join('')}</div></details>`}).join('');
   }
 
-  $('doFirst').innerHTML=PRI.length?`<div class="dofirst"><div class="sechead" style="margin:0 0 8px"><h3 style="font-size:18px">${TR('Do first','ابدأ بهذه')}</h3><span class="muted small">${TR(`The ${PRI.length===1?'action':PRI.length+' actions'} with the most evidence and impact`,`${PRI.length===1?'الإجراء':PRI.length+' إجراءات'} بأقوى دليل وأكبر أثر`)}</span></div><div class="card findings">${PRI.map((f,n)=>fCard(f,n+1)).join('')}</div></div>`:'';
+  {const all=A.F.filter(f=>!DM[fkey(f)]),pk=[...new Set(all.map(f=>f.plat))],nm=k=>k==='cross'?TR('Across platforms','عبر المنصات'):pname(k);
+   $('doFirst').innerHTML=all.length?`<div class="allsum"><p><b>${TR(`${all.length} actions across ${A.plats.length} platform${A.plats.length===1?'':'s'}`,`${all.length} إجراء عبر ${A.plats.length} ${A.plats.length===1?'منصة':'منصات'}`)}</b>${PRI.length?TR(` · ${PRI.length} marked “Do first”`,` · ${PRI.length} بعلامة «ابدأ بها»`):''}${ST.filter!=='all'?` · <button type="button" class="linkbtn" id="allShow">${TR('Show all platforms','اعرض كل المنصات')}</button>`:''}</p>
+     ${pk.length>1?`<div class="chips">${pk.map(k=>`<button type="button" class="chip" data-pf="${k}" aria-pressed="${ST.filter===k}">${pdot(k)} ${nm(k)} <span class="muted">${all.filter(f=>f.plat===k).length}</span></button>`).join('')}</div>`:''}</div>`:'';
+   $('doFirst').querySelectorAll('[data-pf]').forEach(b=>b.onclick=()=>{ST.filter=ST.filter===b.dataset.pf?'all':b.dataset.pf;render()});
+   if($('allShow'))$('allShow').onclick=()=>{ST.filter='all';render()};}
   {const TT=A.F.filter(f=>f.type==='test'&&!DM[fkey(f)]);
-   $('tests').innerHTML=TT.length?`<details class="fgroup tgroup"><summary class="fgh"><span class="fgn">${TR(`Test ideas (${TT.length})`,`أفكار للاختبار (${TT.length})`)}</span><span class="fgv">${TR('Lower confidence. Run one or two at a time with a small budget, after the fixes above.','ثقة أقل. نفّذ فكرة أو اثنتين في كل مرة بميزانية صغيرة، بعد الإصلاحات أعلاه.')}</span></summary><div class="card findings">${TT.map((f,n)=>fCard(f,n+1)).join('')}</div></details>`:'';
+   $('tests').innerHTML='';
    const DD=A.F.filter(f=>DM[fkey(f)]);
    $('dismissed').innerHTML=DD.length?`<details class="fgroup"><summary class="fgh"><span class="fgn">${TR(`Dismissed (${DD.length})`,`تم تجاهلها (${DD.length})`)}</span></summary><ul class="small">${DD.map(f=>`<li>${esc(headline(f))} · <span class="muted">${esc((DISMISS_R.find(r=>r[0]===DM[fkey(f)])||[,'',''])[LANG==='ar'?2:1])}</span> <button type="button" class="linkbtn small" data-undismiss="${A.F.indexOf(f)}">${TR('Restore','استعادة')}</button></li>`).join('')}</ul></details>`:''}
   const AP=$('results');
