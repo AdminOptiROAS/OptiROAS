@@ -4,6 +4,7 @@ import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, enginesOn,
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
 import { pullGa4, gaEmail, cleanProperty } from '../_lib/ga4.js';
+import { alertsFor, listAlerts, googleReviews, reviewsState, placementsState, addPlacement, emailAlerts, emailMonthly } from '../_lib/ai-extra.js';
 
 // Pull the last 28 days from the linked GA4 property and store it like an upload. Errors are kept on the brand.
 async function syncGa(userId, property) {
@@ -24,13 +25,15 @@ const clean = (s, n = 200) => String(s || '').replace(/\s+/g, ' ').trim().slice(
 const isAr = s => /[؀-ۿ]/.test(s);
 
 async function state(u) {
-  const s = await summary(u.id);
+  let s = await summary(u.id);
+  if (s && s.batch && !s.progress) { try { await alertsFor(u.id, s); } catch (e) { console.error('ai alerts', e.message); } }
   const kw = (await sql`select country, data, error, fetched_at from ai_kw where user_id=${u.id}`)[0] || null;
   const visits = await sql`select id, start_date, end_date, file, data, uploaded_at from ai_visits where user_id=${u.id} order by uploaded_at desc limit 6`;
   const prompts = await sql`select id, text, lang from ai_prompts where user_id=${u.id} order by id`;
   return { allowed: true, team: team(u), engines: enginesOn().map(k => ({ key: k, name: ENGINES[k].name })), allEngines: Object.keys(ENGINES).map(k => ({ key: k, name: ENGINES[k].name })),
     runs: RUNS(), countries: Object.entries(COUNTRIES).map(([k, v]) => ({ code: k, en: v.en, ar: v.ar })), prompts, report: s, keywords: kw, visits,
-    kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID), gaEmail: gaEmail() };
+    kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID), gaEmail: gaEmail(),
+    alerts: await listAlerts(u.id), reviews: await reviewsState(u.id), placements: await placementsState(u.id, s) };
 }
 
 export default async function handler(req, res) {
@@ -46,14 +49,23 @@ export default async function handler(req, res) {
     }
     // weekly Google Analytics refresh for linked properties
     if (gaEmail()) for (const g of await sql`select user_id, ga_property from ai_brands where active and ga_property is not null and (ga_synced_at is null or ga_synced_at < now() - interval '6 days') limit 30`) await syncGa(g.user_id, g.ga_property);
-    const done = await work({ ms: 250000, parallel: 8 });
-    return json(res, 200, { ok: true, started, done });
+    const done = await work({ ms: 220000, parallel: 8 });
+    let mailed = 0, monthly = 0;
+    for (const b of await sql`select user_id from ai_brands where active and last_batch_at is not null and (alerts_batch is null or alerts_batch < last_batch_at) limit 40`) {
+      try { await alertsFor(b.user_id); if (await emailAlerts(b.user_id)) mailed++; } catch (e) { console.error('ai alerts cron', e.message); }
+    }
+    for (const b of await sql`select b.user_id from ai_brands b where b.active and b.alerts_batch is not null and b.created_at < now() - interval '7 days' and (b.monthly_sent_at is null or b.monthly_sent_at < now() - interval '30 days') limit 20`) {
+      try { if (await emailMonthly(b.user_id)) monthly++; } catch (e) { console.error('ai monthly', e.message); }
+    }
+    if (process.env.GOOGLE_PLACES_API_KEY) for (const b of await sql`select user_id from ai_brands where active and (places_at is null or places_at < now() - interval '7 days') limit 20`) { try { await googleReviews(b.user_id); } catch (e) { console.error('ai places', e.message); } }
+    return json(res, 200, { ok: true, started, done, mailed, monthly });
   }
 
   // "Book a free AI visibility check": open to anyone, emails the team and confirms to the visitor
   if (action === 'request' && req.method === 'POST') {
     const b = body(req), ar = b.lang === 'ar';
     if (String(b.website2 || '')) return json(res, 200, { ok: true }); // honeypot
+    const service = ['reviews', 'content', 'listings'].includes(b.service) ? b.service : 'check';
     const email = String(b.email || '').trim().toLowerCase(), f = { name: clean(b.name, 80), phone: clean(b.phone, 30), brand: clean(b.brand, 80), website: clean(b.website, 120), country: COUNTRIES[b.country] ? b.country : 'SA' };
     if (!emailOk(email)) return json(res, 400, { error: ar ? 'أدخل بريدًا إلكترونيًا صحيحًا.' : 'Enter a valid email address.' });
     if (!f.brand) return json(res, 400, { error: ar ? 'أدخل اسم علامتك التجارية.' : 'Enter your brand name.' });
@@ -62,11 +74,12 @@ export default async function handler(req, res) {
     if (recent.me) return json(res, 200, { ok: true, again: true });
     if (recent.n > 20) return json(res, 429, { error: ar ? 'طلبات كثيرة الآن. حاول بعد قليل.' : 'Too many requests right now. Please try again shortly.' });
     const me = await currentUser(req).catch(() => null);
-    await sql`insert into ai_requests(email, name, phone, brand, website, country, lang, user_id) values(${email}, ${f.name}, ${f.phone}, ${f.brand}, ${f.website}, ${f.country}, ${ar ? 'ar' : 'en'}, ${me ? me.id : null})`;
+    await sql`alter table ai_requests add column if not exists service text`;
+    await sql`insert into ai_requests(email, name, phone, brand, website, country, lang, user_id, service) values(${email}, ${f.name}, ${f.phone}, ${f.brand}, ${f.website}, ${f.country}, ${ar ? 'ar' : 'en'}, ${me ? me.id : null}, ${service})`;
     if (mailOn()) {
       const team = (process.env.ADMIN_EMAILS || 'admin@optiroas.com').split(',').map(x => x.trim()).filter(Boolean);
       const lines = [`Brand: ${f.brand}`, `Website: ${f.website || '-'}`, `Country: ${(COUNTRIES[f.country] || {}).en}`, `Name: ${f.name || '-'}`, `Email: ${email}`, `Phone / WhatsApp: ${f.phone || '-'}`, `Language: ${ar ? 'Arabic' : 'English'}`];
-      for (const t of team) await sendMail({ to: t, subject: `AI visibility check request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open OptiROAS', link: 'https://www.optiroas.com/#ai-visibility', outro: 'Reply to the client within one working day.' }) }).catch(() => {});
+      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open OptiROAS', link: 'https://www.optiroas.com/#ai-visibility', outro: 'Reply to the client within one working day.' }) }).catch(() => {});
       await sendMail({ to: email, subject: ar ? 'استلمنا طلب فحص الظهور في الذكاء الاصطناعي' : 'We received your AI visibility check request', ...layout({ lang: ar ? 'ar' : 'en',
         title: ar ? 'شكرًا، استلمنا طلبك' : 'Thanks, we have your request',
         intro: ar ? `سنفحص كيف توصي مساعدات الذكاء الاصطناعي بـ ${f.brand} ونتواصل معك خلال يوم عمل واحد بالنتائج والخطوات التالية.` : `We’ll check how AI assistants recommend ${f.brand} and get back to you within one working day with the results and next steps.`,
@@ -93,9 +106,11 @@ export default async function handler(req, res) {
     const prompts = [...new Set((b.prompts || []).map(x => clean(typeof x === 'string' ? x : x.text, 300)).filter(Boolean))].slice(0, maxP);
     if (!prompts.length) return json(res, 400, { error: 'Add at least one question shoppers ask.' });
     const country = COUNTRIES[b.country] ? b.country : 'SA';
+    const facts = String(b.facts || '').trim().slice(0, 2000) || null, catEn = clean(b.category_en, 80) || null, catAr = clean(b.category_ar, 80) || null;
     const website = clean(b.website, 120).replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').toLowerCase() || null;
     await sql`insert into ai_brands(user_id, brand, aliases, website, country, competitors, keywords) values(${u.id}, ${brand}, ${JSON.stringify(aliases)}, ${website}, ${country}, ${JSON.stringify(competitors)}, ${JSON.stringify(keywords)})
       on conflict(user_id) do update set brand=excluded.brand, aliases=excluded.aliases, website=excluded.website, country=excluded.country, competitors=excluded.competitors, keywords=excluded.keywords, active=true, updated_at=now()`;
+    await sql`update ai_brands set facts=${facts}, category_en=${catEn}, category_ar=${catAr} where user_id=${u.id}`;
     // keep questions that didn't change, so their history stays linked
     const old = await sql`select id, text from ai_prompts where user_id=${u.id}`;
     const keep = new Set(prompts);
@@ -168,6 +183,26 @@ export default async function handler(req, res) {
     try { d = parseGa4(text); } catch (e) { return json(res, 400, { error: e.message }); }
     await sql`insert into ai_visits(user_id, start_date, end_date, file, data) values(${u.id}, ${d.start}, ${d.end}, ${clean(b.file, 120)}, ${JSON.stringify(d)})`;
     await sql`delete from ai_visits where user_id=${u.id} and id not in (select id from ai_visits where user_id=${u.id} order by uploaded_at desc limit 12)`;
+    return json(res, 200, await state(u));
+  }
+
+  if (action === 'reviews' && req.method === 'POST') {
+    if (b.remove) await sql`delete from ai_reviews where user_id=${u.id} and id=${+b.remove}`;
+    else if (b.refresh) {
+      if (!process.env.GOOGLE_PLACES_API_KEY) return json(res, 503, { error: 'Google reviews aren’t switched on yet.' });
+      try { await googleReviews(u.id); } catch (e) { return json(res, 400, { error: e.message }); }
+    } else {
+      const platform = clean(b.platform, 40), rating = b.rating === '' || b.rating == null ? null : +b.rating, count = b.count === '' || b.count == null ? null : Math.round(+b.count);
+      if (!platform) return json(res, 400, { error: 'Choose a platform.' });
+      if ((rating != null && !(rating >= 0 && rating <= 5)) || (count != null && !(count >= 0))) return json(res, 400, { error: 'Rating must be 0–5 and the number of reviews 0 or more.' });
+      await sql`insert into ai_reviews(user_id, platform, rating, count, url) values(${u.id}, ${platform}, ${rating}, ${count}, ${clean(b.url, 300) || null})`;
+    }
+    return json(res, 200, await state(u));
+  }
+
+  if (action === 'placement' && req.method === 'POST') {
+    if (b.remove) await sql`delete from ai_placements where user_id=${u.id} and id=${+b.remove}`;
+    else { const url = clean(b.url, 400); if (!/\./.test(url)) return json(res, 400, { error: 'Paste the page link.' }); await addPlacement(u.id, url, clean(b.note, 200)); }
     return json(res, 200, await state(u));
   }
 

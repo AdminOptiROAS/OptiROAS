@@ -1010,6 +1010,15 @@ nav.top .links .pubonly{display:inline-flex}body.ws nav.top .links .pubonly{disp
 
 .aivpitch{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px;align-items:start;padding-top:12px}.aivpitch h1{font-size:clamp(30px,4vw,46px);margin:14px 0 10px}.aivpitch .lede{color:var(--muted);font-size:17px}.aivreq{display:flex;flex-direction:column;gap:12px}.aivreq .btn{align-self:stretch}
 @media (max-width:900px){.aivpitch{grid-template-columns:1fr}}
+.aivbadge{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font:700 11px var(--mono);margin-inline-start:4px}.aivtabs{overflow-x:auto;white-space:nowrap}
+.aivalerts{padding:14px 18px;margin-bottom:14px}.aivalerts h3{margin:0 0 6px;font-size:16px}.aivalerts ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.aivalerts li{display:flex;gap:8px;font-size:14px}.aivalerts li.up span{color:var(--good)}.aivalerts li.down span{color:var(--bad)}
+.aivtop{margin:8px 0 0;padding:0;list-style:none;counter-reset:t}.aivtop li{counter-increment:t;display:grid;grid-template-columns:24px minmax(0,1fr) 34% 48px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.aivtop li::before{content:counter(t);font:600 12px var(--mono);color:var(--muted)}.aivtop li.own{background:var(--accent-soft)}.aivtop li>span:first-of-type{overflow:hidden;text-overflow:ellipsis}.aivtop .bars{height:8px;border-radius:5px;background:var(--line);overflow:hidden;display:block}.aivtop .bars i{display:block;height:100%;background:var(--accent)}
+.aivtop li .aivpill{display:none}@media (min-width:700px){.aivtop li{grid-template-columns:24px minmax(0,1fr) auto 30% 48px}.aivtop li .aivpill{display:inline}}
+.aivpill.bad{background:var(--bad-soft);color:var(--bad)}.aivsay{padding:12px 16px;margin-bottom:8px}.aivsay summary{cursor:pointer;font-weight:600}.aivclaims{list-style:none;padding:0;margin:6px 0;display:flex;flex-direction:column;gap:6px;font-size:14px}.aivclaims li.wrong{background:var(--bad-soft);border-radius:8px;padding:6px 8px}
+.g2c{display:grid;grid-template-columns:1fr 1fr;gap:14px}.aivpl{list-style:none;padding:0;margin:0 0 10px;display:flex;flex-direction:column;gap:6px;font-size:14px}.aivplf{gap:8px;flex-wrap:wrap}.aivplf input{flex:1;min-width:180px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit}
+.aivsvc{padding:14px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;background:var(--accent-soft)}
+.aivseas{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 10px}.aivsoon{font:600 11px var(--mono);color:var(--bad)}
+@media (max-width:800px){.g2c{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -3217,6 +3226,90 @@ function aivSpark(vals,w,h){w=w||120;h=h||28;if(!vals||vals.length<2)return '';c
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/></svg>`}
 function aivHi(text,names){let t=esc(text);for(const n of names.filter(Boolean).sort((a,b)=>b.length-a.length)){const e=esc(n).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');try{t=t.replace(new RegExp(e,'gi'),m=>`<mark>${m}</mark>`)}catch(x){}}return t}
 async function aivLoad(){try{AIV.d=await api('/api/ai/state')}catch(e){AIV.d={error:e.message,code:e.data&&e.data.code}}}
+/* ---- AI visibility v2: alerts, top 10, what AI says, placements, reviews, seasons ---- */
+const AIV_SEASONS=[
+  {k:'whitefriday',en_name:'White Friday',ar_name:'الجمعة البيضاء',at:'2026-11-27',en:['best White Friday deals on {cat} in {country}','where to find the biggest {cat} discounts on White Friday'],ar:['أفضل عروض الجمعة البيضاء على {cat} في {country}','وين ألقى أقوى خصومات {cat} في الجمعة البيضاء']},
+  {k:'uaenational',en_name:'UAE National Day',ar_name:'اليوم الوطني الإماراتي',at:'2026-12-02',en:['UAE National Day offers on {cat}'],ar:['عروض اليوم الوطني الإماراتي على {cat}']},
+  {k:'yearend',en_name:'Year-end sales',ar_name:'تخفيضات نهاية السنة',at:'2026-12-20',en:['best year-end sales on {cat} in {country}'],ar:['أفضل تخفيضات نهاية السنة على {cat} في {country}']},
+  {k:'ramadan',en_name:'Ramadan',ar_name:'رمضان',at:'2027-02-08',en:['best {cat} for Ramadan in {country}','best Ramadan gift {cat}'],ar:['أفضل {cat} لرمضان في {country}','أفضل هدية {cat} في رمضان']},
+  {k:'founding',en_name:'Saudi Founding Day',ar_name:'يوم التأسيس',at:'2027-02-22',en:['Founding Day offers on {cat} in Saudi Arabia'],ar:['عروض يوم التأسيس على {cat}']},
+  {k:'eid',en_name:'Eid',ar_name:'العيد',at:'2027-03-09',en:['best {cat} for Eid gifts','Eid offers on {cat} in {country}'],ar:['أفضل {cat} هدية للعيد','عروض العيد على {cat} في {country}']},
+  {k:'summer',en_name:'Summer and travel',ar_name:'الصيف والسفر',at:'2027-06-15',en:['best {cat} for summer travel'],ar:['أفضل {cat} للسفر في الصيف']},
+  {k:'school',en_name:'Back to school',ar_name:'العودة إلى المدارس',at:'2027-08-20',en:['best {cat} for back to school in {country}'],ar:['أفضل {cat} للعودة إلى المدارس في {country}']},
+  {k:'national',en_name:'Saudi National Day',ar_name:'اليوم الوطني السعودي',at:'2027-09-23',en:['Saudi National Day offers on {cat}'],ar:['عروض اليوم الوطني على {cat}']},
+  {k:'1111',en_name:'11.11',ar_name:'11.11',at:'2027-11-11',en:['best 11.11 deals on {cat} in {country}'],ar:['أفضل عروض 11.11 على {cat} في {country}']}];
+function aivSeasons(B){
+  const now=Date.now(),list=AIV_SEASONS.map(s=>({...s,days:Math.round((new Date(s.at)-now)/864e5)})).filter(s=>s.days>-10).sort((a,b)=>a.days-b.days);
+  return `<h3>${TR('Seasonal questions','أسئلة المواسم')}</h3><p class="muted small">${TR('Add questions shoppers ask before each season, so you know who AI recommends in time to act.','أضف أسئلة يطرحها المتسوقون قبل كل موسم، لتعرف من يرشّحه الذكاء الاصطناعي في وقت يسمح لك بالتحرك.')}</p>
+    <div class="aivseas">${list.map(s=>`<button type="button" class="chip" data-season="${s.k}">${esc(LANG==='ar'?s.ar_name:s.en_name)}${s.days<=56?` <span class="aivsoon">${s.days<=0?TR('now','الآن'):TR(`in ${s.days} days`,`بعد ${s.days} يومًا`)}</span>`:''}</button>`).join('')}</div>`;
+}
+function aivAlerts(){
+  const D=AIV.d,R=D.report,al=(D.alerts||[]);if(!al.length)return '';
+  const cur=al.filter(a=>R.batch&&+new Date(a.batch)===+new Date(R.batch)),old=al.filter(a=>!cur.includes(a));
+  const li=a=>`<li class="${a.good?'up':'down'}"><span aria-hidden="true">${a.good?'▲':'▼'}</span>${esc(LANG==='ar'?a.ar:a.en)}</li>`;
+  return `<div class="card aivalerts"><h3>${TR('Alerts from your latest check','تنبيهات من آخر فحص')}</h3>${cur.length?`<ul>${cur.map(li).join('')}</ul>`:`<p class="muted small">${TR('No changes since the previous check.','لا تغييرات منذ الفحص السابق.')}</p>`}
+    ${old.length?`<details><summary class="small">${TR('Earlier alerts','تنبيهات سابقة')}</summary><ul>${old.slice(0,15).map(li).join('')}</ul></details>`:''}<p class="muted small" style="margin:6px 0 0">${TR('We also email you when the weekly check finds changes.','نرسل لك بريدًا أيضًا عندما يجد الفحص الأسبوعي تغييرات.')}</p></div>`;
+}
+function aivTop10(){
+  const T=(AIV.d.report.top||[]);if(!T.length)return '';
+  return `<div class="card aivtbl"><h3>${TR('Top 10 brands AI recommends for your questions','أكثر 10 علامات يرشّحها الذكاء الاصطناعي في أسئلتك')}</h3>
+    <p class="muted small">${TR('Every brand and store the assistants named, not only the competitors you track.','كل علامة ومتجر ذكرته المساعدات، وليس فقط المنافسين الذين تتابعهم.')}</p>
+    <ol class="aivtop">${T.map(t=>`<li class="${t.own?'own':''}"><span class="notr" dir="auto">${esc(t.name)}</span>${t.own?` <span class="aivpill ok">${TR('you','أنت')}</span>`:t.comp?` <span class="aivpill no">${TR('tracked','متابَع')}</span>`:t.type==='store'?` <span class="aivpill no">${TR('store','متجر')}</span>`:''}<span class="bars"><i style="width:${Math.round(t.rate*100)}%"></i></span><b class="num">${aPct(t.rate)}</b></li>`).join('')}</ol></div>`;
+}
+function aivSays(el){
+  const R=AIV.d.report,S=R&&R.says;
+  if(!S){el.innerHTML=`<div class="card" style="padding:22px"><p>${TR('This appears after your next check. Each check now also asks every assistant what it knows about your brand, in Arabic and English.','يظهر هذا بعد فحصك القادم. كل فحص صار يسأل كل مساعد أيضًا ماذا يعرف عن علامتك، بالعربية والإنجليزية.')}</p><button class="btn" type="button" id="aivRun2">${TR('Run a check now','شغّل فحصًا الآن')}</button></div>`;const b=$('aivRun2');if(b)b.onclick=async()=>{if(await aivPost('/api/ai/run',{},b)){AIV.tab='recs';renderAi();aivTick()}};return}
+  const sl={positive:TR('positive','إيجابي'),neutral:TR('neutral','محايد'),negative:TR('negative','سلبي'),mixed:TR('mixed','مختلط')},st={matches:TR('correct','صحيح'),wrong:TR('wrong','خطأ'),unverified:TR('not checked','غير مُتحقَّق')};
+  const tot=Object.values(S.sentiment).reduce((a,b)=>a+b,0)||1;
+  el.innerHTML=`<div class="aivkpi">
+      <div class="card"><span class="eyebrow">${TR('Tone','النبرة')}</span><b>${aPct(S.sentiment.positive/tot)}</b><span class="muted small">${TR('of answers are positive about you','من الإجابات إيجابية عنك')}</span></div>
+      <div class="card"><span class="eyebrow">${TR('Wrong facts','معلومات خاطئة')}</span><b class="${S.wrong?'neg':''}">${S.wrong}</b><span class="muted small">${R.brand.facts?TR('compared with the facts you gave us','مقارنةً بالمعلومات التي زوّدتنا بها'):TR('add your facts in Setup to check these','أضف معلوماتك في الإعداد لنتحقق منها')}</span></div>
+      <div class="card"><span class="eyebrow">${TR('Doesn’t know you','لا يعرفك')}</span><b class="${S.unknown?'neg':''}">${S.unknown}</b><span class="muted small">${TR(`of ${S.answers} answers`,`من ${S.answers} إجابة`)}</span></div></div>
+    ${S.questions.map(q=>`<details class="card aivsay"${S.wrong?'':''}><summary><span class="notr" dir="auto">${esc(q.text)}</span></summary>
+      ${q.engines.map(e=>{const a=e.analysis;return `<div class="aivans"><div class="ah"><b style="color:${AIE[e.engine]}">${esc((AIV.d.allEngines.find(x=>x.key===e.engine)||{}).name||e.engine)}</b>${a?` <span class="aivpill ${a.sentiment==='negative'?'bad':a.sentiment==='positive'?'ok':'no'}">${sl[a.sentiment]||''}</span>${a.known===false?` <span class="aivpill bad">${TR('doesn’t know you','لا يعرفك')}</span>`:''}`:''}</div>
+        ${a&&a.summary?`<p class="small notr" dir="auto"><b>${esc(a.summary)}</b></p>`:''}
+        ${a&&a.claims&&a.claims.length?`<ul class="aivclaims">${a.claims.map(c=>`<li class="${c.status}"><span class="aivpill ${c.status==='wrong'?'bad':c.status==='matches'?'ok':'no'}">${st[c.status]}</span> <span class="notr" dir="auto">${esc(c.claim)}</span>${c.fix?`<div class="small notr" dir="auto">${TR('Correct:','الصحيح:')} ${esc(c.fix)}</div>`:''}</li>`).join('')}</ul>`:''}
+        <details class="small"><summary>${TR('Full answer','الإجابة كاملة')}</summary><div class="at notr" dir="auto">${esc(e.answer)}</div>${e.sources.length?`<div class="muted">${TR('Sources','المصادر')}: ${e.sources.map(esc).join(' · ')}</div>`:''}</details></div>`}).join('')}</details>`).join('')}
+    <p class="muted small">${TR('How to fix wrong facts: correct them on your website and product pages, then on the marketplaces and review sites the assistants cite. Changes usually show within a few weeks.','كيف تصحّح المعلومات الخاطئة: صحّحها في موقعك وصفحات منتجاتك، ثم في المتاجر ومواقع التقييم التي تستشهد بها المساعدات. التغييرات تظهر عادةً خلال أسابيع.')}</p>`;
+}
+function aivPlaces(el){
+  const R=AIV.d.report,S=(R&&R.sources)||{withYou:[],targets:[]},P=AIV.d.placements||[];
+  const row=(x,extra)=>`<li><span class="notr">${esc(x.domain)}</span>${extra||''}<span class="muted">${aPct(x.share)}</span></li>`;
+  el.innerHTML=`<div class="g2c">
+    <div class="card aivtbl"><h3>${TR('Websites that put you in AI answers','مواقع أدخلتك في إجابات الذكاء الاصطناعي')}</h3><p class="muted small">${TR('Sources the assistants cited in answers that recommend you. “New” = not seen in earlier checks.','مصادر استشهدت بها المساعدات في إجابات ترشّحك. «جديد» = لم يظهر في الفحوص السابقة.')}</p>
+      ${S.withYou.length?`<ol class="aivdom">${S.withYou.map(x=>row(x,x.isNew?` <span class="aivpill ok">${TR('new','جديد')}</span>`:'')).join('')}</ol>`:`<p class="small">${TR('None yet.','لا يوجد بعد.')}</p>`}</div>
+    <div class="card aivtbl"><h3>${TR('Where to get listed next','أين تظهر بعد ذلك')}</h3><p class="muted small">${TR('Sources cited when AI recommends your competitors but not you. Getting listed or reviewed here is the fastest way in.','مصادر تُستشهد بها عندما يرشّح الذكاء الاصطناعي منافسيك دونك. الظهور أو التقييم فيها أسرع طريق للدخول.')}</p>
+      ${S.targets.length?`<ol class="aivdom">${S.targets.map(x=>row(x)).join('')}</ol>`:`<p class="small">${TR('No gaps found in the latest check.','لا فجوات في آخر فحص.')}</p>`}</div></div>
+    <div class="card aivtbl"><h3>${TR('Placements you’ve won','الظهور الذي حققته')}</h3><p class="muted small">${TR('Log each new listing, article or review page. We show when AI starts citing it.','سجّل كل إدراج أو مقال أو صفحة تقييم جديدة. نوضّح متى يبدأ الذكاء الاصطناعي بالاستشهاد بها.')}</p>
+      ${P.length?`<ul class="aivpl">${P.map(p=>`<li><a class="notr" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.domain||p.url)}</a> <span class="muted small">${esc(p.note||'')} · ${new Date(p.added_at).toLocaleDateString(LANG==='ar'?'ar':'en-GB')}</span> <span class="aivpill ${p.inAI?'ok':'no'}">${p.inAI?TR('cited by AI','يستشهد به الذكاء الاصطناعي'):TR('not cited yet','لم يُستشهد به بعد')}</span> <button type="button" class="linkbtn small" data-rmp="${p.id}">${TR('Remove','حذف')}</button></li>`).join('')}</ul>`:''}
+      <form class="row aivplf" id="aivPlF"><input name="url" placeholder="${TR('Page link, e.g. mumzworld.com/your-brand','رابط الصفحة، مثل mumzworld.com/your-brand')}" dir="ltr"><input name="note" placeholder="${TR('Note (optional)','ملاحظة (اختياري)')}" dir="auto"><button class="btn sm" type="submit">${TR('Add','أضف')}</button></form></div>
+    ${aivServiceCta('listings',TR('Want our team to get you listed on these sites?','تريد أن يعمل فريقنا على إدراجك في هذه المواقع؟'))}`;
+  const F=$('aivPlF');F.onsubmit=async e=>{e.preventDefault();if(await aivPost('/api/ai/placement',{url:F.url.value,note:F.note.value},F.querySelector('button')))renderAi()};
+  el.querySelectorAll('[data-rmp]').forEach(b=>b.onclick=async()=>{if(await aivPost('/api/ai/placement',{remove:b.dataset.rmp}))renderAi()});aivServiceWire(el);
+}
+function aivReviews(el){
+  const V=AIV.d.reviews||{platforms:[]},P=V.platforms;
+  const delta=(a,b,d)=>a==null||b==null?'':(a-b)?` <span class="${a>b?'pos':'neg'} small">${a>b?'+':''}${d?(a-b).toFixed(d):a-b}</span>`:'';
+  el.innerHTML=`<div class="card aivtbl"><h3>${TR('Your reviews across platforms','تقييماتك عبر المنصات')}</h3><p class="muted small">${TR('AI assistants lean heavily on reviews. More recent, positive reviews make you more likely to be recommended. Change is shown against about a month ago.','تعتمد مساعدات الذكاء الاصطناعي كثيرًا على التقييمات. التقييمات الحديثة والإيجابية تزيد فرصة ترشيحك. التغيير مقارنةً بقبل شهر تقريبًا.')}</p>
+    ${P.length?`<div class="tscroll"><table><thead><tr><th>${TR('Platform','المنصة')}</th><th>${TR('Rating','التقييم')}</th><th>${TR('Reviews','عدد التقييمات')}</th><th>${TR('Updated','آخر تحديث')}</th><th></th></tr></thead><tbody>${P.map(p=>`<tr><td><b>${esc(p.platform)}</b>${p.source==='google'?` <span class="muted small">${TR('automatic','تلقائي')}</span>`:''}</td><td>${p.rating!=null?p.rating.toFixed(1)+' ★':'–'}${p.was?delta(p.rating,p.was.rating,1):''}</td><td>${p.count!=null?aNf(p.count):'–'}${p.was?delta(p.count,p.was.count):''}</td><td class="small">${new Date(p.at).toLocaleDateString(LANG==='ar'?'ar':'en-GB')}</td><td>${p.url?`<a class="small" href="${esc(p.url)}" target="_blank" rel="noopener">${TR('Open','افتح')}</a>`:''}</td></tr>`).join('')}</tbody></table></div>`:`<p class="small">${TR('No reviews recorded yet.','لم تُسجَّل تقييمات بعد.')}</p>`}
+    ${V.google?`<button class="btn quiet sm" type="button" id="aivGRev">${TR('Update Google reviews now','حدّث تقييمات Google الآن')}</button>`:''}</div>
+    <form class="card aivform" id="aivRevF"><h3 style="margin-top:0">${TR('Add or update a platform','أضف أو حدّث منصة')}</h3><p class="muted small">${TR('Copy the rating and number of reviews from the platform. Update it once a month to see your progress.','انسخ التقييم وعدد التقييمات من المنصة. حدّثها مرة في الشهر لترى تقدّمك.')}</p>
+      <div class="g2"><label>${TR('Platform','المنصة')}<select name="platform">${['Noon','Amazon','Google Maps','Trustpilot','Salla','Zid','Instagram','Mumzworld','Other'].map(x=>`<option>${x}</option>`).join('')}</select></label><label>${TR('Link (optional)','الرابط (اختياري)')}<input name="url" dir="ltr"></label>
+      <label>${TR('Rating (0–5)','التقييم (0–5)')}<input name="rating" inputmode="decimal" dir="ltr"></label><label>${TR('Number of reviews','عدد التقييمات')}<input name="count" inputmode="numeric" dir="ltr"></label></div>
+      <div class="row"><button class="btn" type="submit">${TR('Save','حفظ')}</button></div></form>
+    <div class="card aivtbl"><h3>${TR('How to get more reviews','كيف تحصل على تقييمات أكثر')}</h3><ul class="ticks small">
+      <li>${TR('Ask every customer after delivery, by WhatsApp or SMS, with a direct link to your Google and marketplace review pages.','اطلب من كل عميل بعد التوصيل، عبر واتساب أو رسالة، مع رابط مباشر لصفحات تقييمك في Google والمتاجر.')}</li>
+      <li>${TR('Reply to every review, good or bad, within a few days. Assistants read the replies too.','ردّ على كل تقييم، جيد أو سيئ، خلال أيام. المساعدات تقرأ الردود أيضًا.')}</li>
+      <li>${TR('Keep the same brand name everywhere so reviews are counted for you.','استخدم اسم العلامة نفسه في كل مكان لتُحسب التقييمات لك.')}</li>
+      <li>${TR('Send products to trusted bloggers and YouTubers for honest reviews in Arabic.','أرسل منتجات لمدوّنين ويوتيوبرز موثوقين لمراجعات صادقة بالعربية.')}</li></ul></div>
+    ${aivServiceCta('reviews',TR('Want our team to run a reviews programme for you?','تريد أن يدير فريقنا برنامج تقييمات لك؟'))}`;
+  const F=$('aivRevF');F.onsubmit=async e=>{e.preventDefault();if(await aivPost('/api/ai/reviews',{platform:F.platform.value,url:F.url.value,rating:F.rating.value,count:F.count.value},F.querySelector('[type=submit]')))renderAi()};
+  const g=$('aivGRev');if(g)g.onclick=async()=>{if(await aivPost('/api/ai/reviews',{refresh:1},g))renderAi()};aivServiceWire(el);
+}
+function aivServiceCta(kind,text){return `<div class="card aivsvc"><b>${text}</b><button class="btn quiet sm" type="button" data-svc="${kind}">${TR('Talk to our team','تحدّث مع فريقنا')}</button></div>`}
+function aivServiceWire(el){el.querySelectorAll('[data-svc]').forEach(b=>b.onclick=async()=>{const B=AIV.d.report.brand,u=ST.me.user;b.disabled=true;
+  try{await api('/api/ai/request',{method:'POST',body:JSON.stringify({service:b.dataset.svc,brand:B.brand,website:B.website||'',country:B.country,name:u.name||'',email:u.email,lang:LANG})});b.textContent=TR('Request sent. We’ll be in touch.','أُرسل الطلب. سنتواصل معك.')}catch(e){toast(e.message);b.disabled=false}})}
+
 function aivPitch(el){
   const u=(ST.me&&ST.me.user)||{},sel=c=>`<option value="${c[0]}">${esc(LANG==='ar'?c[2]:c[1])}</option>`;
   const C=[['SA','Saudi Arabia','السعودية'],['AE','United Arab Emirates','الإمارات'],['KW','Kuwait','الكويت'],['QA','Qatar','قطر'],['BH','Bahrain','البحرين'],['OM','Oman','عُمان'],['EG','Egypt','مصر']];
@@ -3251,12 +3344,13 @@ async function renderAi(){
   if(D.error){if(D.code==='upgrade'){aivPitch(el);return}el.innerHTML=`<div class="card" style="padding:24px"><h1>${TR('AI visibility','الظهور في الذكاء الاصطناعي')}</h1><p>${esc(D.error)}</p></div>`;return}
   const R=D.report,B=R&&R.brand;
   if(!B&&AIV.tab!=='setup')AIV.tab='setup';
-  const tabs=[['recs',TR('AI recommendations','توصيات الذكاء الاصطناعي')],['demand',TR('Search demand','الطلب في البحث')],['visits',TR('Visits from AI','الزيارات من الذكاء الاصطناعي')],['setup',TR('Setup','الإعداد')]];
+  const nAl=(D.alerts||[]).filter(a=>R&&R.batch&&+new Date(a.batch)===+new Date(R.batch)).length;
+  const tabs=[['recs',TR('AI recommendations','توصيات الذكاء الاصطناعي')+(nAl?` <span class="aivbadge">${nAl}</span>`:'')],['says',TR('What AI says about you','ماذا يقول الذكاء الاصطناعي عنك')],['places',TR('Placements','الظهور في المواقع')],['reviews',TR('Reviews','التقييمات')],['demand',TR('Search demand','الطلب في البحث')],['visits',TR('Visits from AI','الزيارات من الذكاء الاصطناعي')],['setup',TR('Setup','الإعداد')]];
   el.innerHTML=`<div class="aivhead"><span class="kicker"><i></i>${TR('AI visibility','الظهور في الذكاء الاصطناعي')}</span><h1>${B?esc(B.brand):TR('Set up your brand','أعدّ علامتك')}</h1>
     <p class="muted">${TR('How AI assistants recommend your brand, how many people search for it, and how many visits AI sends you.','كيف توصي مساعدات الذكاء الاصطناعي بعلامتك، وكم شخصًا يبحث عنها، وكم زيارة يرسلها لك الذكاء الاصطناعي.')}${B?` · ${esc(LANG==='ar'?(D.countries.find(c=>c.code===B.country)||{}).ar:(D.countries.find(c=>c.code===B.country)||{}).en)}`:''}</p></div>
     <div class="rtabs aivtabs" role="tablist">${tabs.map(([k,l])=>`<button class="rtab" type="button" role="tab" data-aitab="${k}" aria-selected="${AIV.tab===k}"${!B&&k!=='setup'?' disabled':''}>${l}</button>`).join('')}</div><div id="aivBody"></div>`;
   el.querySelectorAll('[data-aitab]').forEach(b=>b.onclick=()=>{AIV.tab=b.dataset.aitab;renderAi()});
-  ({recs:aivRecs,demand:aivDemand,visits:aivVisits,setup:aivSetup})[AIV.tab]($('aivBody'));
+  ({recs:aivRecs,says:aivSays,places:aivPlaces,reviews:aivReviews,demand:aivDemand,visits:aivVisits,setup:aivSetup})[AIV.tab]($('aivBody'));
 }
 async function aivPost(path,body,btn){
   if(AIV.busy)return;AIV.busy=true;const t=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent=TR('Working…','جارٍ العمل…')}
@@ -3280,7 +3374,7 @@ function aivRecs(el){
   const own=R.total.brands[0],rank=[...R.total.brands].sort((a,b)=>b.rate-a.rate).findIndex(b=>b.own)+1;
   const tr=R.trend.map(t=>t.rate);
   const engs=Object.keys(R.byEngine),langs=Object.keys(R.byLang);
-  el.innerHTML=head+`<div class="aivkpi">
+  el.innerHTML=head+aivAlerts()+`<div class="aivkpi">
       <div class="card"><span class="eyebrow">${TR('Share of voice','حصة الظهور')}</span><b>${aPct(own.rate)}</b><span class="muted small">${TR('of answers name you','من الإجابات تذكرك')}</span>${aivSpark(tr)}</div>
       <div class="card"><span class="eyebrow">${TR('Named first','الأول في الترشيح')}</span><b>${aPct(own.first)}</b><span class="muted small">${TR('of answers list you first','من الإجابات تضعك أولًا')}</span></div>
       <div class="card"><span class="eyebrow">${TR('Your site cited','موقعك كمصدر')}</span><b>${B.website?aPct(R.total.cited):'–'}</b><span class="muted small">${B.website?TR('of answers link to '+esc(B.website),'من الإجابات تشير إلى '+esc(B.website)):TR('add your website in Setup','أضف موقعك في الإعداد')}</span></div>
@@ -3289,6 +3383,7 @@ function aivRecs(el){
       <tbody>${R.total.brands.map((b,i)=>`<tr class="${b.own?'own':''}"><td class="notr"><b>${esc(b.name)}</b></td><td><b>${aPct(b.rate)}</b></td>${engs.map(e=>`<td>${aPct(R.byEngine[e].brands[i].rate)}</td>`).join('')}${langs.map(l=>`<td>${aPct(R.byLang[l].brands[i].rate)}</td>`).join('')}<td>${b.avgPos?b.avgPos.toFixed(1):'–'}</td></tr>`).join('')}</tbody></table></div>
       <p class="muted small">${TR('Share of answers that name each brand. Position 1 = named first. Answers come from each assistant’s API with web search on and your country set; they are close to, but not identical to, what shoppers see in the apps.','نسبة الإجابات التي تذكر كل علامة. الترتيب 1 = ذُكرت أولًا. الإجابات من واجهة API لكل مساعد مع تفعيل البحث في الويب وتحديد بلدك؛ وهي قريبة مما يراه المتسوقون في التطبيقات لكنها ليست مطابقة.')}</p></div>
     ${R.domains.length?`<div class="card aivtbl"><h3>${TR('Websites the assistants cite','المواقع التي تستشهد بها المساعدات')}</h3><p class="muted small">${TR('Being listed or reviewed on these sites makes AI more likely to recommend you.','الظهور أو التقييم على هذه المواقع يزيد احتمال أن يوصي بك الذكاء الاصطناعي.')}</p><ol class="aivdom">${R.domains.map(d=>`<li><span class="notr">${esc(d.domain)}</span><span class="muted">${aPct(d.share)}</span></li>`).join('')}</ol></div>`:''}
+    ${aivTop10()}
     <div class="aivq"><h3>${TR('Question by question','سؤالًا بسؤال')}</h3>${R.prompts.map(p=>`<details class="card"><summary><span class="notr" dir="auto">${esc(p.text)}</span><span class="aivpill ${p.brands[0].rate?'ok':'no'}">${p.brands[0].rate?TR(`named in ${aPct(p.brands[0].rate)}`,`مذكورة في ${aPct(p.brands[0].rate)}`):TR('not named','غير مذكورة')}</span></summary>
       ${p.engines.map(e=>`<div class="aivans"><div class="ah"><b style="color:${AIE[e.engine]}">${esc((D.allEngines.find(x=>x.key===e.engine)||{}).name||e.engine)}</b> <span class="muted small">${TR(`named you in ${e.hits} of ${e.runs} runs`,`ذكرتك في ${e.hits} من ${e.runs} مرات`)}${e.comps.length?' · '+TR('also named','ذكرت أيضًا')+': '+e.comps.map(esc).join('، '):''}</span></div>
         <div class="at notr" dir="auto">${aivHi(e.answer,allNames)}</div>${e.sources.length?`<div class="muted small">${TR('Sources','المصادر')}: ${e.sources.map(esc).join(' · ')}</div>`:''}</div>`).join('')}</details>`).join('')}</div>`;
@@ -3360,9 +3455,13 @@ function aivSetup(el){
     ${[0,1,2,3,4].map(i=>`<div class="g2"><label>${TR(`Competitor ${i+1}`,`المنافس ${i+1}`)}<input name="c${i}" value="${esc((C[i]||{}).name||'')}" dir="auto"></label><label>${TR('Other spellings','تهجئات أخرى')}<input name="ca${i}" value="${esc(((C[i]||{}).aliases||[]).join(', '))}" dir="auto"></label></div>`).join('')}
     <h3>${TR('Questions shoppers ask AI','أسئلة يطرحها المتسوقون على الذكاء الاصطناعي')}</h3>
     <p class="muted small">${TR('One per line, in Arabic or English. Write them the way a shopper would, without your brand name in most of them.','سؤال في كل سطر، بالعربية أو الإنجليزية. اكتبها كما يكتبها المتسوق، ومعظمها دون اسم علامتك.')}</p>
-    <div class="g2"><label>${TR('Product category (English)','فئة المنتج (بالإنجليزية)')}<input id="aivCatEn" placeholder="oud perfume"></label><label>${TR('Product category (Arabic)','فئة المنتج (بالعربية)')}<input id="aivCatAr" dir="rtl" placeholder="عطر عود"></label></div>
+    <div class="g2"><label>${TR('Product category (English)','فئة المنتج (بالإنجليزية)')}<input id="aivCatEn" name="category_en" placeholder="oud perfume" value="${esc(B.category_en||'')}"></label><label>${TR('Product category (Arabic)','فئة المنتج (بالعربية)')}<input id="aivCatAr" name="category_ar" dir="rtl" placeholder="عطر عود" value="${esc(B.category_ar||'')}"></label></div>
     <button type="button" class="btn quiet sm" id="aivSuggest">${TR('Suggest questions','اقترح أسئلة')}</button>
     <textarea name="prompts" rows="10" dir="auto" placeholder="أفضل محل عود في الرياض&#10;best oud perfume gift under 500 riyals">${esc(ps.join('\n'))}</textarea>
+    ${aivSeasons(B)}
+    <h3>${TR('Facts about your brand','معلومات عن علامتك')}</h3>
+    <p class="muted small">${TR('Prices, main products, where you sell, branches, delivery, warranty, returns. We use these to check whether AI says the right things about you.','الأسعار، المنتجات الرئيسية، أين تبيع، الفروع، التوصيل، الضمان، الاسترجاع. نستخدمها لنتحقق هل يقول الذكاء الاصطناعي معلومات صحيحة عنك.')}</p>
+    <textarea name="facts" rows="5" dir="auto" placeholder="${TR('e.g. YOYO stroller SAR 2,499. Sold on our website and Mumzworld. Free delivery in Riyadh. 2-year warranty.','مثال: عربة YOYO بسعر 2,499 ريال. نبيع في موقعنا وممزورلد. توصيل مجاني في الرياض. ضمان سنتين.')}">${esc(B.facts||'')}</textarea>
     <h3>${TR('Keywords for search demand','كلمات مفتاحية لقياس الطلب')}</h3>
     <p class="muted small">${TR('One per line. Leave empty to use your brand name and its spellings.','كلمة في كل سطر. اتركها فارغة لاستخدام اسم علامتك وتهجئاتها.')}</p>
     <textarea name="keywords" rows="5" dir="auto">${esc((B.keywords||[]).join('\n'))}</textarea>
@@ -3377,8 +3476,12 @@ function aivSetup(el){
     const cur0=F.prompts.value.split('\n').map(s=>s.trim()).filter(Boolean);F.prompts.value=[...new Set([...cur0,...q])].join('\n')};
   F.onsubmit=async e=>{e.preventDefault();const sp=s=>s.split(',').map(x=>x.trim()).filter(Boolean),ln=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
     const body={brand:F.brand.value,aliases:sp(F.aliases.value),website:F.website.value,country:F.country.value,
-      competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value)};
+      competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value),facts:F.facts.value,category_en:F.category_en.value,category_ar:F.category_ar.value};
     if(await aivPost('/api/ai/setup',body,F.querySelector('[type=submit]'))){toast(TR('Saved.','تم الحفظ.'));AIV.tab='recs';renderAi()}};
+  F.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>{const en=F.category_en.value.trim(),ar=F.category_ar.value.trim();if(!en&&!ar){toast(TR('Enter your product category first.','أدخل فئة المنتج أولًا.'));F.category_en.focus();return}
+    const c=D.countries.find(x=>x.code===F.country.value)||{},S=AIV_SEASONS.find(x=>x.k===b.dataset.season);const q=[];
+    if(ar)q.push(...S.ar.map(t=>t.replace(/\{cat\}/g,ar).replace(/\{country\}/g,c.ar||'')));if(en)q.push(...S.en.map(t=>t.replace(/\{cat\}/g,en).replace(/\{country\}/g,c.en||'')));
+    const cur0=F.prompts.value.split('\n').map(x=>x.trim()).filter(Boolean);F.prompts.value=[...new Set([...cur0,...q])].join('\n');toast(TR(`Added ${q.length} ${S.en_name} questions. Press Save.`,`أُضيف ${q.length} أسئلة لموسم ${S.ar_name}. اضغط حفظ.`))});
 }
 
 const $=id=>document.getElementById(id);
