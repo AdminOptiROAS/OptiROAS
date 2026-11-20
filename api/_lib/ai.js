@@ -40,6 +40,9 @@ export function ensureAi() {
       id bigserial primary key, user_id uuid not null references users(id) on delete cascade, start_date date, end_date date,
       file text, data jsonb not null, uploaded_at timestamptz not null default now())`;
     await sql`create index if not exists ai_visits_user on ai_visits(user_id, uploaded_at desc)`;
+    await sql`alter table ai_brands add column if not exists ga_property text`;
+    await sql`alter table ai_brands add column if not exists ga_synced_at timestamptz`;
+    await sql`alter table ai_brands add column if not exists ga_error text`;
   })().catch(e => { ready = null; throw e; });
   return ready;
 }

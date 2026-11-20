@@ -1,6 +1,7 @@
 import { ensureSchema, sql, json } from './_lib/core.js';
 import { ENGINES, enginesOn } from './_lib/ai.js';
 import { demand } from './_lib/ai-demand.js';
+import { gaReady } from './_lib/ga4.js';
 
 // ?ai=1: one tiny live call per AI assistant and one Keyword Planner lookup, at most once every 2 minutes (results cached)
 let aiCheck = null;
@@ -14,6 +15,8 @@ async function checkAi() {
   }));
   try { const d = await demand(['عطر عود'], 'SA'); out.keywordPlanner = `ok (عطر عود: ${d.keywords[0] ? d.keywords[0].avg : '?'} searches/month in Saudi Arabia)`; }
   catch (e) { out.keywordPlanner = 'error: ' + String(e.message).slice(0, 200); }
+  try { out.googleAnalytics = process.env.GA_SERVICE_ACCOUNT_JSON ? `ok (signed in as ${await gaReady()})` : 'GA_SERVICE_ACCOUNT_JSON not set'; }
+  catch (e) { out.googleAnalytics = 'error: ' + String(e.message).slice(0, 200); }
   aiCheck = out; return out;
 }
 

@@ -2,6 +2,21 @@ import { ensureSchema, currentUser, sql, json, body } from '../_lib/core.js';
 import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
+import { pullGa4, gaEmail, cleanProperty } from '../_lib/ga4.js';
+
+// Pull the last 28 days from the linked GA4 property and store it like an upload. Errors are kept on the brand.
+async function syncGa(userId, property) {
+  try {
+    const d = await pullGa4(property);
+    await sql`insert into ai_visits(user_id, start_date, end_date, file, data) values(${userId}, ${d.start}, ${d.end}, 'Google Analytics (connected)', ${JSON.stringify(d)})`;
+    await sql`delete from ai_visits where user_id=${userId} and id not in (select id from ai_visits where user_id=${userId} order by uploaded_at desc limit 12)`;
+    await sql`update ai_brands set ga_property=${cleanProperty(property)}, ga_synced_at=now(), ga_error=null where user_id=${userId}`;
+    return null;
+  } catch (e) {
+    await sql`update ai_brands set ga_error=${String(e.message).slice(0, 300)}, ga_synced_at=now() where user_id=${userId} and ga_property is not null`;
+    return e;
+  }
+}
 
 // /api/ai/state | setup | run | tick | demand | visits | cron   (one function for the AI visibility section)
 const clean = (s, n = 200) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -14,7 +29,7 @@ async function state(u) {
   const prompts = await sql`select id, text, lang from ai_prompts where user_id=${u.id} order by id`;
   return { allowed: true, team: team(u), engines: enginesOn().map(k => ({ key: k, name: ENGINES[k].name })), allEngines: Object.keys(ENGINES).map(k => ({ key: k, name: ENGINES[k].name })),
     runs: RUNS(), countries: Object.entries(COUNTRIES).map(([k, v]) => ({ code: k, en: v.en, ar: v.ar })), prompts, report: s, keywords: kw, visits,
-    kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID) };
+    kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID), gaEmail: gaEmail() };
 }
 
 export default async function handler(req, res) {
@@ -28,7 +43,9 @@ export default async function handler(req, res) {
       const due = await sql`select b.user_id from ai_brands b join users u on u.id=b.user_id where b.active and (b.last_batch_at is null or b.last_batch_at < now() - interval '7 days') limit 50`;
       for (const d of due) { const r = await enqueue(d.user_id); if (r.queued) started++; }
     }
-    const done = await work({ ms: 280000, parallel: 8 });
+    // weekly Google Analytics refresh for linked properties
+    if (gaEmail()) for (const g of await sql`select user_id, ga_property from ai_brands where active and ga_property is not null and (ga_synced_at is null or ga_synced_at < now() - interval '6 days') limit 30`) await syncGa(g.user_id, g.ga_property);
+    const done = await work({ ms: 250000, parallel: 8 });
     return json(res, 200, { ok: true, started, done });
   }
 
@@ -94,6 +111,24 @@ export default async function handler(req, res) {
     } catch (e) {
       await sql`insert into ai_kw(user_id, country, data, error, fetched_at) values(${u.id}, ${br.country}, ${JSON.stringify({ asked: kws })}, ${String(e.message).slice(0, 300)}, now())
         on conflict(user_id) do update set country=excluded.country, data=excluded.data, error=excluded.error, fetched_at=now()`;
+    }
+    return json(res, 200, await state(u));
+  }
+
+  if (action === 'ga' && req.method === 'POST') {
+    const br = (await sql`select ga_property from ai_brands where user_id=${u.id}`)[0];
+    if (!br) return json(res, 400, { error: 'Set up your brand first.' });
+    if (b.unlink) { await sql`update ai_brands set ga_property=null, ga_error=null, ga_synced_at=null where user_id=${u.id}`; return json(res, 200, await state(u)); }
+    if (!gaEmail()) return json(res, 503, { error: 'Google Analytics connection isn’t switched on yet.' });
+    const prop = cleanProperty(b.property || br.ga_property);
+    if (!prop) return json(res, 400, { error: 'Enter your GA4 property ID (a number like 312345678).' });
+    if (b.property && !br.ga_property) await sql`update ai_brands set ga_property=${prop} where user_id=${u.id}`;
+    const e = await syncGa(u.id, prop);
+    if (e) {
+      if (!br.ga_property) await sql`update ai_brands set ga_property=null where user_id=${u.id}`;
+      const msg = e.code === 'access' ? `OptiROAS can’t see property ${prop} yet. In Google Analytics → Admin → Property access management, add ${gaEmail()} as a Viewer, then try again.`
+        : e.code === 'property' ? `Google Analytics doesn’t recognise property ${prop}. Copy the Property ID from Admin → Property details (a number, not the G- measurement ID).` : e.message;
+      return json(res, 400, { error: msg });
     }
     return json(res, 200, await state(u));
   }

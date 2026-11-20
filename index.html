@@ -991,6 +991,7 @@ nav.top .links .aionly{display:none}body.aiok nav.top .links .aionly{display:inl
 .aivsteps{margin:10px 0 16px;line-height:1.7}
 @media (max-width:700px){.aivform .g2{grid-template-columns:1fr}.aivdom{columns:1}}
 
+.aivga{padding:16px 18px;margin-bottom:14px}.aivga h3{margin:0 0 4px;font-size:17px}.aivga code{background:var(--sunk);padding:2px 6px;border-radius:6px;font-size:13px;word-break:break-all}
 </style>
 </head>
 <body>
@@ -3209,14 +3210,30 @@ function aivDemand(el){
     ${ideas.length?`<div class="card aivtbl"><h3>${TR('Related searches','عمليات بحث مرتبطة')}</h3><div class="tscroll"><table>${th}<tbody>${ideas.map(row).join('')}</tbody></table></div></div>`:''}`;
   $('aivKw').onclick=e=>go(e.target);
 }
+function aivGaBox(){
+  const D=AIV.d,B=(D.report&&D.report.brand)||{};if(!D.gaEmail)return '';
+  if(B.ga_property)return `<div class="card aivga"><div class="aivbar" style="margin:0"><div><b>${TR('Google Analytics connected','Google Analytics مربوط')}</b> <span class="muted small">· ${TR('property','الخاصية')} ${esc(B.ga_property)}${B.ga_synced_at?' · '+TR('updated','حُدّث')+' '+new Date(B.ga_synced_at).toLocaleDateString(LANG==='ar'?'ar':'en-GB'):''} · ${TR('refreshes every week','يتحدّث كل أسبوع')}</span>
+    ${B.ga_error?`<div class="ferr small">${esc(B.ga_error)}</div>`:''}</div><div class="row" style="gap:8px"><button class="btn quiet sm" type="button" id="aivGaSync">${TR('Refresh now','حدّث الآن')}</button><button class="linkbtn small" type="button" id="aivGaOff">${TR('Disconnect','فصل')}</button></div></div></div>`;
+  return `<div class="card aivga"><h3>${TR('Connect Google Analytics','اربط Google Analytics')}</h3><p class="muted small">${TR('One minute, once. OptiROAS then updates your AI visits every week. You can remove access any time from the same screen.','دقيقة واحدة، مرة واحدة. بعدها يحدّث OptiROAS زياراتك من الذكاء الاصطناعي كل أسبوع. ويمكنك إلغاء الوصول في أي وقت من الشاشة نفسها.')}</p>
+    <ol class="small aivsteps"><li>${TR('Copy this email:','انسخ هذا البريد:')} <code class="notr" dir="ltr">${esc(D.gaEmail)}</code> <button type="button" class="linkbtn" id="aivGaCopy">${TR('Copy','نسخ')}</button></li>
+    <li>${TR('In Google Analytics, open <b>Admin</b> → <b>Property access management</b> → <b>+</b> → <b>Add users</b>. Paste the email, choose the role <b>Viewer</b>, untick “Notify by email”, and click <b>Add</b>.','في Google Analytics افتح <b>المشرف</b> ← <b>إدارة الوصول إلى الخاصية</b> ← <b>+</b> ← <b>إضافة مستخدمين</b>. الصق البريد، واختر دور <b>مُشاهد</b>، وألغِ «إشعار عبر البريد»، ثم اضغط <b>إضافة</b>.')}</li>
+    <li>${TR('Open <b>Admin</b> → <b>Property details</b>, copy the <b>Property ID</b> (a number like 312345678) and paste it here:','افتح <b>المشرف</b> ← <b>تفاصيل الخاصية</b>، وانسخ <b>معرّف الخاصية</b> (رقم مثل 312345678) والصقه هنا:')}</li></ol>
+    <div class="row" style="gap:8px;flex-wrap:wrap"><input id="aivGaProp" inputmode="numeric" placeholder="312345678" dir="ltr" style="max-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font:inherit"><button class="btn" type="button" id="aivGaGo">${TR('Connect','اربط')}</button></div></div>`;
+}
+function aivGaWire(){
+  const c=$('aivGaCopy');if(c)c.onclick=()=>{try{navigator.clipboard.writeText(AIV.d.gaEmail);toast(TR('Copied.','تم النسخ.'))}catch(e){}};
+  const g=$('aivGaGo');if(g)g.onclick=async()=>{const p=$('aivGaProp').value.trim();if(!p){toast(TR('Paste your Property ID first.','الصق معرّف الخاصية أولًا.'));return}if(await aivPost('/api/ai/ga',{property:p},g)){toast(TR('Google Analytics connected.','تم ربط Google Analytics.'));renderAi()}};
+  const sy=$('aivGaSync');if(sy)sy.onclick=async()=>{if(await aivPost('/api/ai/ga',{},sy))renderAi()};
+  const off=$('aivGaOff');if(off)off.onclick=async()=>{if(await aivPost('/api/ai/ga',{unlink:1},off))renderAi()};
+}
 function aivVisits(el){
   const D=AIV.d,V=D.visits||[],v=V[0]&&V[0].data;
   const steps=`<ol class="small aivsteps"><li>${TR('Open Google Analytics → Reports → Acquisition → <b>Traffic acquisition</b>.','افتح Google Analytics ← التقارير ← الاكتساب ← <b>اكتساب الزيارات</b>.')}</li><li>${TR('Set the date range (for example, last month).','حدّد الفترة (مثل الشهر الماضي).')}</li><li>${TR('Change the first column to <b>Session source / medium</b>.','غيّر العمود الأول إلى <b>مصدر الجلسة / الوسيلة</b>.')}</li><li>${TR('Click Share (↗) → <b>Download file</b> → <b>Download CSV</b>, then upload it here.','اضغط مشاركة (↗) ← <b>تنزيل الملف</b> ← <b>تنزيل CSV</b>، ثم ارفعه هنا.')}</li></ol>`;
   const up=`<label class="btn${v?' quiet':''}" style="cursor:pointer">${TR('Upload Google Analytics CSV','ارفع ملف Google Analytics (CSV)')}<input type="file" accept=".csv,text/csv" id="aivFile" hidden></label>`;
-  if(!v){el.innerHTML=`<div class="card" style="padding:22px"><h3>${TR('Visits, sales and revenue from AI assistants','الزيارات والمبيعات والإيرادات من مساعدات الذكاء الاصطناعي')}</h3><p class="muted">${TR('See how many visitors ChatGPT, Perplexity, Gemini, Copilot and Claude send to your website, and how they convert compared with everyone else.','اعرف كم زائرًا يرسل ChatGPT وPerplexity وGemini وCopilot وClaude إلى موقعك، وكيف يتحولون مقارنة بالجميع.')}</p>${steps}${up}</div>`;aivFileWire();return}
+  if(!v){el.innerHTML=`<div class="card" style="padding:22px"><h3>${TR('Visits, sales and revenue from AI assistants','الزيارات والمبيعات والإيرادات من مساعدات الذكاء الاصطناعي')}</h3><p class="muted">${TR('See how many visitors ChatGPT, Perplexity, Gemini, Copilot and Claude send to your website, and how they convert compared with everyone else.','اعرف كم زائرًا يرسل ChatGPT وPerplexity وGemini وCopilot وClaude إلى موقعك، وكيف يتحولون مقارنة بالجميع.')}</p>${D.gaEmail?'':steps+up}</div>${aivGaBox()}${D.gaEmail?`<details class="card aivtbl"><summary>${TR('Or upload a Google Analytics CSV instead','أو ارفع ملف CSV من Google Analytics بدلًا من ذلك')}</summary>${steps}${up}</details>`:''}`;aivFileWire();aivGaWire();return}
   const T=v.total,A=v.ai,cr=x=>x.sessions?x.keyEvents/x.sessions:null,rps=x=>x.sessions?x.revenue/x.sessions:null,has=v.has||{};
   const per=`${v.start||'?'} → ${v.end||'?'}`;
-  el.innerHTML=`<div class="aivbar"><span class="muted small">${esc(V[0].file||'')} · ${esc(per)}</span>${up}</div>
+  el.innerHTML=`${aivGaBox()}<div class="aivbar"><span class="muted small">${esc(V[0].file||'')} · ${esc(per)} · ${TR('AI apps often hide where visits come from, so the real number is usually higher.','تطبيقات الذكاء الاصطناعي كثيرًا ما تخفي مصدر الزيارة، لذا الرقم الفعلي غالبًا أعلى.')}</span>${up}</div>
     <div class="aivkpi"><div class="card"><span class="eyebrow">${TR('Visits from AI','زيارات من الذكاء الاصطناعي')}</span><b>${aNf(A.sessions)}</b><span class="muted small">${TR(`${aPct(A.sessions/T.sessions)} of all visits`,`${aPct(A.sessions/T.sessions)} من كل الزيارات`)}</span></div>
       ${has.keyEvents?`<div class="card"><span class="eyebrow">${TR('Conversion rate','معدل التحويل')}</span><b>${aPct(cr(A))}</b><span class="muted small">${TR(`site average ${aPct(cr(T))}`,`متوسط الموقع ${aPct(cr(T))}`)}</span></div>`:''}
       ${has.revenue?`<div class="card"><span class="eyebrow">${TR('Revenue from AI','الإيرادات من الذكاء الاصطناعي')}</span><b>${aNf(Math.round(A.revenue))}</b><span class="muted small">${TR(`${aPct(T.revenue?A.revenue/T.revenue:0)} of all revenue`,`${aPct(T.revenue?A.revenue/T.revenue:0)} من كل الإيرادات`)}</span></div>
@@ -3226,7 +3243,7 @@ function aivVisits(el){
       :`<div class="card" style="padding:18px"><p>${TR('No visits from AI assistants in this period.','لا توجد زيارات من مساعدات الذكاء الاصطناعي في هذه الفترة.')}</p></div>`}
     ${V.length>1?`<div class="card aivtbl"><h3>${TR('Earlier uploads','ملفات سابقة')}</h3><ul class="small">${V.map(x=>`<li>${esc((x.start_date||'').slice(0,10))} → ${esc((x.end_date||'').slice(0,10))}: ${aNf(x.data.ai.sessions)} ${TR('AI visits','زيارة من الذكاء الاصطناعي')} (${aPct(x.data.ai.sessions/x.data.total.sessions)}) <button type="button" class="linkbtn" data-rmv="${x.id}">${TR('Remove','حذف')}</button></li>`).join('')}</ul></div>`:''}
     <details class="card aivtbl"><summary>${TR('How to export from Google Analytics','كيف تصدّر من Google Analytics')}</summary>${steps}</details>`;
-  aivFileWire();el.querySelectorAll('[data-rmv]').forEach(b=>b.onclick=async()=>{if(await aivPost('/api/ai/visits',{remove:b.dataset.rmv}))renderAi()});
+  aivFileWire();aivGaWire();el.querySelectorAll('[data-rmv]').forEach(b=>b.onclick=async()=>{if(await aivPost('/api/ai/visits',{remove:b.dataset.rmv}))renderAi()});
 }
 function aivFileWire(){const f=$('aivFile');if(!f)return;f.onchange=async()=>{const file=f.files[0];if(!file)return;if(file.size>3e6){toast(TR('That file is over 3 MB.','حجم الملف أكبر من 3 ميغابايت.'));return}
   const text=await file.text();if(await aivPost('/api/ai/visits',{text,file:file.name}))renderAi()}}
