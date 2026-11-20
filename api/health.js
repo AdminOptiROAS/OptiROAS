@@ -2,10 +2,10 @@ import { ensureSchema, sql, json } from './_lib/core.js';
 import { ENGINES, enginesOn } from './_lib/ai.js';
 import { demand } from './_lib/ai-demand.js';
 
-// ?ai=1: one tiny live call per AI assistant and one Keyword Planner lookup, at most once every 10 minutes (results cached)
+// ?ai=1: one tiny live call per AI assistant and one Keyword Planner lookup, at most once every 2 minutes (results cached)
 let aiCheck = null;
 async function checkAi() {
-  if (aiCheck && Date.now() - aiCheck.at < 10 * 60e3) return { ...aiCheck, cached: true };
+  if (aiCheck && Date.now() - aiCheck.at < 2 * 60e3) return { ...aiCheck, cached: true };
   const out = { at: Date.now(), engines: {}, keywordPlanner: null };
   await Promise.all(Object.keys(ENGINES).map(async k => {
     if (!process.env[ENGINES[k].key]) { out.engines[k] = 'no key'; return; }
