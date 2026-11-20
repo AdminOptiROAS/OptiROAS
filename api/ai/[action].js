@@ -33,7 +33,19 @@ async function state(u) {
   return { allowed: true, team: team(u), engines: enginesOn().map(k => ({ key: k, name: ENGINES[k].name })), allEngines: Object.keys(ENGINES).map(k => ({ key: k, name: ENGINES[k].name })),
     runs: RUNS(), countries: Object.entries(COUNTRIES).map(([k, v]) => ({ code: k, en: v.en, ar: v.ar })), prompts, report: s, keywords: kw, visits,
     kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID), gaEmail: gaEmail(),
-    alerts: await listAlerts(u.id), reviews: await reviewsState(u.id), placements: await placementsState(u.id, s) };
+    alerts: await listAlerts(u.id), reviews: await reviewsState(u.id), placements: await placementsState(u.id, s), prefill: s ? null : await prefill(u) };
+}
+// What we already know when a client sets up their brand: details from sign-up, then their free-check request, then their email's domain.
+const FREE_MAIL = /^(gmail|googlemail|hotmail|outlook|live|yahoo|icloud|me|aol|proton|protonmail|msn|ymail|gmx|mail|zoho)\./i;
+async function prefill(u) {
+  const me = (await sql`select name, company, website from users where id=${u.id}`)[0] || {};
+  const rq = (await sql`select brand, website, country, name from ai_requests where (user_id=${u.id} or lower(email)=${String(u.email || '').toLowerCase()}) and brand is not null order by created_at desc limit 1`.catch(() => []))[0] || {};
+  const dom = String(u.email || '').split('@')[1] || '';
+  const site = s => String(s || '').trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/.*$/, '').toLowerCase();
+  const website = site(me.website) || site(rq.website) || (dom && !FREE_MAIL.test(dom) ? dom : '');
+  let brand = me.company || rq.brand || '';
+  if (!brand && website) { const b = website.split('.')[0]; brand = b.charAt(0).toUpperCase() + b.slice(1); }
+  return { brand, website, country: COUNTRIES[rq.country] ? rq.country : null };
 }
 
 export default async function handler(req, res) {

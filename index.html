@@ -986,7 +986,7 @@ nav.top .links .aionly{display:none}body.aiok nav.top .links .aionly{display:inl
 .aivfixf{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.aivfixf input{min-width:200px}
 .aivfixl>li{padding:12px;border:1px solid var(--line);border-radius:10px;display:grid;gap:6px}.aivfix{border-color:var(--bad,#c0392b)}
 .aivnudge{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;margin-bottom:14px;border-color:var(--accent)}.aivnudge>div{display:grid;gap:2px}
-.aivsub{margin:22px 0 10px}.aivkpi b.amber,.small.amber{color:#b26a00}
+.aivsub{margin:22px 0 10px}.aivpre{margin:0 0 12px;padding:10px 12px;border-radius:10px;background:var(--accent-soft,#eef);color:var(--accent-deep,#223)}.aivkpi b.amber,.small.amber{color:#b26a00}
 .aivfix,.aivfacts{padding:18px 20px;margin-bottom:14px}.aivfix h3,.aivfacts h3{margin:0 0 4px}.aivfix .aivsvc{margin-top:12px}
 @media(max-width:640px){.aivkpi{grid-template-columns:1fr 1fr;gap:8px}.aivkpi .card{padding:10px 12px}.aivfact{flex-direction:column;align-items:stretch}.aivfact .fb{justify-content:flex-start}.aivnudge{flex-direction:column;align-items:stretch}}
 .aivflow{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px;padding:0}
@@ -3584,9 +3584,10 @@ function aivVisits(el){
 function aivFileWire(){const f=$('aivFile');if(!f)return;f.onchange=async()=>{const file=f.files[0];if(!file)return;if(file.size>3e6){toast(TR('That file is over 3 MB.','حجم الملف أكبر من 3 ميغابايت.'));return}
   const text=await file.text();if(await aivPost('/api/ai/visits',{text,file:file.name}))renderAi()}}
 function aivSetup(el){
-  const D=AIV.d,B=(D.report&&D.report.brand)||{},C=B.competitors||[];
+  const D=AIV.d,B0=(D.report&&D.report.brand)||{},P=(!B0.brand&&D.prefill)||{},B=B0.brand?B0:{...B0,brand:P.brand||'',website:P.website||'',country:P.country||B0.country},C=B.competitors||[];
   const ps=D.prompts.map(p=>p.text);
   el.innerHTML=`<form class="card aivform" id="aivForm" novalidate>
+    ${!B0.brand&&(P.brand||P.website)?`<p class="aivpre small">${TR('We filled in what you already told us. Check it, add your competitors and questions, then save.','عبّأنا ما أخبرتنا به مسبقًا. راجعه، وأضف منافسيك وأسئلتك، ثم احفظ.')}</p>`:''}
     <div class="g2"><label>${TR('Brand name','اسم العلامة')}<input name="brand" required maxlength="80" value="${esc(B.brand||'')}" dir="auto" placeholder="${TR('e.g. Al Ezz Oud','مثال: العز عود')}"></label>
       <label>${TR('Other spellings (comma-separated)','تهجئات أخرى (مفصولة بفواصل)')}<input name="aliases" value="${esc((B.aliases||[]).join(', '))}" dir="auto" placeholder="العز عود, Al Ezz Oud, Alezz"></label>
       <label>${TR('Website','الموقع الإلكتروني')}<input name="website" value="${esc(B.website||'')}" placeholder="alezzoud.com"></label>
@@ -3602,7 +3603,7 @@ function aivSetup(el){
     <h3>${TR('Keywords for search demand','كلمات مفتاحية لقياس الطلب')}</h3>
     <p class="muted small">${TR('One per line. Leave empty to use your brand name and its spellings.','كلمة في كل سطر. اتركها فارغة لاستخدام اسم علامتك وتهجئاتها.')}</p>
     <textarea name="keywords" rows="5" dir="auto">${esc((B.keywords||[]).join('\n'))}</textarea>
-    <div class="row"><button class="btn" type="submit">${B.brand?TR('Save','حفظ'):TR('Save and run my first check','احفظ وشغّل فحصي الأول')}</button>${B.brand?'':`<span class="muted small">${TR('Your first check starts as soon as you save.','يبدأ فحصك الأول فور الحفظ.')}</span>`}</div></form>`;
+    <div class="row"><button class="btn" type="submit">${B0.brand?TR('Save','حفظ'):TR('Save and run my first check','احفظ وشغّل فحصي الأول')}</button>${B0.brand?'':`<span class="muted small">${TR('Your first check starts as soon as you save.','يبدأ فحصك الأول فور الحفظ.')}</span>`}</div></form>`;
   const F=$('aivForm');
   $('aivSuggest').onclick=()=>{const en=$('aivCatEn').value.trim(),ar=$('aivCatAr').value.trim(),c=D.countries.find(x=>x.code===F.country.value)||{},br=F.brand.value.trim(),c1=F.c0.value.trim();
     const cur={SA:'ريال',AE:'درهم',KW:'دينار',QA:'ريال',BH:'دينار',OM:'ريال',EG:'جنيه',US:'دولار'}[F.country.value]||'',curEn={SA:'riyals',AE:'dirhams',KW:'dinars',QA:'riyals',BH:'dinars',OM:'riyals',EG:'pounds',US:'dollars'}[F.country.value]||'';
@@ -3614,7 +3615,7 @@ function aivSetup(el){
   F.onsubmit=async e=>{e.preventDefault();const sp=s=>s.split(',').map(x=>x.trim()).filter(Boolean),ln=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
     const body={brand:F.brand.value,aliases:sp(F.aliases.value),website:F.website.value,country:F.country.value,
       competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value),category_en:F.category_en.value,category_ar:F.category_ar.value};
-    const first=!B.brand;
+    const first=!B0.brand;
     if(await aivPost('/api/ai/setup',body,F.querySelector('[type=submit]'))){AIV.tab='recs';
       if(first&&body.prompts.length){toast(TR('Saved. Your first check is starting.','تم الحفظ. بدأ فحصك الأول.'));renderAi();if(await aivPost('/api/ai/run',{})){renderAi();aivTick()}}
       else{toast(TR('Saved.','تم الحفظ.'));renderAi()}}};
@@ -4984,6 +4985,7 @@ function usageHTML(us,u){
 }
 function renderAuth(el,note){renderAuth0(el,note);if(window.KITEO){const md=ST.acctMode||'signup';
   if(md==='signup'||md==='signin'){const sub=el.querySelector(':scope > div p.muted.small');const t=md==='signup'?TR('Track how AI recommends your brand. Start with a free AI check.','تابع كيف يرشّح الذكاء الاصطناعي علامتك. ابدأ بفحص مجاني.'):TR('Sign in to see your AI visibility dashboard.','سجّل الدخول لترى لوحة ظهورك في الذكاء الاصطناعي.');if(sub)sub.textContent=t;
+   if(md==='signup'&&!el.querySelector('#acCo')){const nf=el.querySelector('#acName');const f=nf&&nf.closest('.fld');if(f)f.insertAdjacentHTML('afterend',`<div class="fld"><label for="acCo">${TR('Brand name','اسم العلامة')}</label><input id="acCo" autocomplete="organization" dir="auto" maxlength="80"></div><div class="fld"><label for="acWeb">${TR('Website (optional)','الموقع الإلكتروني (اختياري)')}</label><input id="acWeb" inputmode="url" autocomplete="url" dir="ltr" placeholder="yourbrand.com" maxlength="120"></div>`)}
    const nx=el.querySelector('.nextc');if(nx)nx.innerHTML=`<div class="mhead2"><b>${TR('Then add your brand','ثم أضف علامتك')}</b></div><p class="muted small" style="margin:0">${TR('Add your brand, competitors and the questions your customers ask. Kiteo checks ChatGPT, Gemini, Perplexity and Claude for you.','أضف علامتك ومنافسيك والأسئلة التي يطرحها عملاؤك. يفحص Kiteo ‏ChatGPT وGemini وPerplexity وClaude نيابةً عنك.')}</p>`}
   const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode())if(n.nodeValue.includes('OptiROAS'))n.nodeValue=n.nodeValue.replace(/OptiROAS/g,'Kiteo');el.querySelectorAll('input[placeholder]').forEach(i=>i.placeholder=i.placeholder.replace(/OptiROAS/g,'Kiteo'))}}
 function renderAuth0(el,note){
@@ -5035,7 +5037,7 @@ function renderAuth0(el,note){
   $('acctForm').onsubmit=async e=>{e.preventDefault();
     const email=$('acEmail').value.trim(),password=$('acPass').value;if(!email||!password)return errf(TR('Enter your email and password.','أدخل بريدك الإلكتروني وكلمة المرور.'));
     $('acGo').disabled=true;ST.lastEmail=email;
-    try{const r=await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,lang:ST.lang,name:up?$('acName').value.trim():undefined,utm:up&&UTM?{source:UTM.source,campaign:UTM.campaign}:undefined})});const jj=r||{};
+    try{const r=await api(up?'/api/auth/signup':'/api/auth/login',{method:'POST',body:JSON.stringify({email,password,lang:ST.lang,name:up?$('acName').value.trim():undefined,company:up&&$('acCo')?$('acCo').value.trim():undefined,website:up&&$('acWeb')?$('acWeb').value.trim():undefined,utm:up&&UTM?{source:UTM.source,campaign:UTM.campaign}:undefined})});const jj=r||{};
       try{localStorage.setItem('or_has_acct','1')}catch(e){}if(up){await pxUser(email,$('acName')&&$('acName').value);px('CompleteRegistration')}await loadMe();
       if(up)ST.acctMsg={ok:true,t:jj.verifySent?TR(`Account created. We sent a confirmation link to ${email}; confirm it to unlock full reports.`,`تم إنشاء الحساب. أرسلنا رابط تأكيد إلى ${email}؛ أكّده لفتح التقارير الكاملة.`):TR('Account created. Welcome to OptiROAS.','تم إنشاء الحساب. مرحبًا بك في OptiROAS.')};
       if(window.KITEO&&ST.me&&ST.me.user){const m=ST.acctMsg;ST.acctMsg=null;go('ai');if(m)setTimeout(()=>toast(m.t.replace(/OptiROAS/g,'Kiteo').replace(/full reports/,'your dashboard').replace(/التقارير الكاملة/,'لوحتك')),300);return}

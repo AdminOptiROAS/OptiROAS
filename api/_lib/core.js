@@ -62,6 +62,8 @@ export function ensureSchema() {
     await sql`alter table users add column if not exists brand text not null default 'optiroas'`;
     await sql`alter table users drop constraint if exists users_email_key`;
     await sql`create unique index if not exists users_email_brand on users(email, brand)`;
+    await sql`alter table users add column if not exists company text`;
+    await sql`alter table users add column if not exists website text`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists vertical text`;
     await sql`create table if not exists api_log(
