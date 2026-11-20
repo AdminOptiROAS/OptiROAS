@@ -1,7 +1,25 @@
 import { ensureSchema, sql, json } from './_lib/core.js';
+import { ENGINES, enginesOn } from './_lib/ai.js';
+import { demand } from './_lib/ai-demand.js';
+
+// ?ai=1: one tiny live call per AI assistant and one Keyword Planner lookup, at most once every 10 minutes (results cached)
+let aiCheck = null;
+async function checkAi() {
+  if (aiCheck && Date.now() - aiCheck.at < 10 * 60e3) return { ...aiCheck, cached: true };
+  const out = { at: Date.now(), engines: {}, keywordPlanner: null };
+  await Promise.all(Object.keys(ENGINES).map(async k => {
+    if (!process.env[ENGINES[k].key]) { out.engines[k] = 'no key'; return; }
+    try { const r = await ENGINES[k].ask('Name one well-known perfume shop in Riyadh. One line.', 'SA'); out.engines[k] = r.text ? `ok (${r.cites.length} sources)` : 'empty answer'; }
+    catch (e) { out.engines[k] = 'error: ' + String(e.message).slice(0, 160); }
+  }));
+  try { const d = await demand(['عطر عود'], 'SA'); out.keywordPlanner = `ok (عطر عود: ${d.keywords[0] ? d.keywords[0].avg : '?'} searches/month in Saudi Arabia)`; }
+  catch (e) { out.keywordPlanner = 'error: ' + String(e.message).slice(0, 200); }
+  aiCheck = out; return out;
+}
 
 // Reports whether the server, database and required settings are in place (no secrets returned).
 export default async function handler(req, res) {
+  if (/[?&]ai=1/.test(req.url || '')) return json(res, 200, { ai: await checkAi(), on: enginesOn() });
   const need = ['DATABASE_URL', 'ENCRYPTION_KEY', 'META_APP_ID', 'META_APP_SECRET', 'META_LOGIN_CONFIG_ID', 'META_REDIRECT_URI'];
   const missing = need.filter(k => !process.env[k]);
   let db = 'ok', users = null, calls = null;
