@@ -12,8 +12,8 @@ export const COUNTRIES = {
 };
 const envList = k => (process.env[k] || '').toLowerCase().split(',').map(x => x.trim()).filter(Boolean);
 export const aiTeam = u => isAdmin(u) || isReviewer(u);
-// Who can use AI visibility: the team, plans in AI_VIS_PLANS (default: pro), or everyone with AI_VIS_OPEN=1
-export const aiAllowed = u => !!u && (aiTeam(u) || process.env.AI_VIS_OPEN === '1' || (process.env.AI_VIS_PLANS ? envList('AI_VIS_PLANS') : ['pro']).includes(u.plan || 'free'));
+// Who can use AI visibility: the team, testers in AI_VIS_EMAILS, plans in AI_VIS_PLANS (default: pro), or everyone with AI_VIS_OPEN=1
+export const aiAllowed = u => !!u && (aiTeam(u) || envList('AI_VIS_EMAILS').includes(String(u.email || '').toLowerCase()) || process.env.AI_VIS_OPEN === '1' || (process.env.AI_VIS_PLANS ? envList('AI_VIS_PLANS') : ['pro']).includes(u.plan || 'free'));
 export const RUNS = () => Math.min(3, Math.max(1, parseInt(process.env.AI_RUNS_PER_PROMPT || '2', 10) || 2));
 
 let ready;
