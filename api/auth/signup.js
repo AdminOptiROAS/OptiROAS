@@ -1,5 +1,5 @@
 import { ensureSchema, sql, json, body, emailOk, hashPassword, startSession } from '../_lib/core.js';
-import { sendVerify } from '../_lib/tokens.js';
+import { sendVerify, brandOf } from '../_lib/tokens.js';
 import { mailOn } from '../_lib/mail.js';
 
 // Free sign-ups are open. Set INVITE_ONLY=true to limit sign-ups to the emails on ALLOWED_EMAILS.
@@ -18,6 +18,6 @@ export default async function handler(req, res) {
   const r = await sql`insert into users(email,name,pass_hash,utm_source,utm_campaign,lang) values(${email},${String(name || '').trim().slice(0, 120) || null},${hashPassword(password)},${clip(U.source)},${clip(U.campaign)},${lang === 'ar' ? 'ar' : 'en'}) returning id,email,name`;
   await startSession(res, r[0].id);
   let sent = false;
-  if (mailOn() && !allow.includes(email)) sent = await sendVerify(r[0], lang);
+  if (mailOn() && !allow.includes(email)) sent = await sendVerify(r[0], lang, brandOf(req));
   return json(res, 200, { user: r[0], verifySent: sent });
 }
