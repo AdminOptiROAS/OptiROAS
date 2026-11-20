@@ -1,4 +1,5 @@
-import { ensureSchema, currentUser, sql, json, body } from '../_lib/core.js';
+import { ensureSchema, currentUser, sql, json, body, emailOk } from '../_lib/core.js';
+import { sendMail, layout, mailOn } from '../_lib/mail.js';
 import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
@@ -47,6 +48,32 @@ export default async function handler(req, res) {
     if (gaEmail()) for (const g of await sql`select user_id, ga_property from ai_brands where active and ga_property is not null and (ga_synced_at is null or ga_synced_at < now() - interval '6 days') limit 30`) await syncGa(g.user_id, g.ga_property);
     const done = await work({ ms: 250000, parallel: 8 });
     return json(res, 200, { ok: true, started, done });
+  }
+
+  // "Book a free AI visibility check": open to anyone, emails the team and confirms to the visitor
+  if (action === 'request' && req.method === 'POST') {
+    const b = body(req), ar = b.lang === 'ar';
+    if (String(b.website2 || '')) return json(res, 200, { ok: true }); // honeypot
+    const email = String(b.email || '').trim().toLowerCase(), f = { name: clean(b.name, 80), phone: clean(b.phone, 30), brand: clean(b.brand, 80), website: clean(b.website, 120), country: COUNTRIES[b.country] ? b.country : 'SA' };
+    if (!emailOk(email)) return json(res, 400, { error: ar ? 'أدخل بريدًا إلكترونيًا صحيحًا.' : 'Enter a valid email address.' });
+    if (!f.brand) return json(res, 400, { error: ar ? 'أدخل اسم علامتك التجارية.' : 'Enter your brand name.' });
+    await sql`create table if not exists ai_requests(id bigserial primary key, email text not null, name text, phone text, brand text, website text, country text, lang text, user_id uuid, created_at timestamptz not null default now())`;
+    const recent = (await sql`select count(*)::int as n, count(*) filter (where email=${email})::int as me from ai_requests where created_at > now() - interval '10 minutes'`)[0];
+    if (recent.me) return json(res, 200, { ok: true, again: true });
+    if (recent.n > 20) return json(res, 429, { error: ar ? 'طلبات كثيرة الآن. حاول بعد قليل.' : 'Too many requests right now. Please try again shortly.' });
+    const me = await currentUser(req).catch(() => null);
+    await sql`insert into ai_requests(email, name, phone, brand, website, country, lang, user_id) values(${email}, ${f.name}, ${f.phone}, ${f.brand}, ${f.website}, ${f.country}, ${ar ? 'ar' : 'en'}, ${me ? me.id : null})`;
+    if (mailOn()) {
+      const team = (process.env.ADMIN_EMAILS || 'admin@optiroas.com').split(',').map(x => x.trim()).filter(Boolean);
+      const lines = [`Brand: ${f.brand}`, `Website: ${f.website || '-'}`, `Country: ${(COUNTRIES[f.country] || {}).en}`, `Name: ${f.name || '-'}`, `Email: ${email}`, `Phone / WhatsApp: ${f.phone || '-'}`, `Language: ${ar ? 'Arabic' : 'English'}`];
+      for (const t of team) await sendMail({ to: t, subject: `AI visibility check request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open OptiROAS', link: 'https://www.optiroas.com/#ai-visibility', outro: 'Reply to the client within one working day.' }) }).catch(() => {});
+      await sendMail({ to: email, subject: ar ? 'استلمنا طلب فحص الظهور في الذكاء الاصطناعي' : 'We received your AI visibility check request', ...layout({ lang: ar ? 'ar' : 'en',
+        title: ar ? 'شكرًا، استلمنا طلبك' : 'Thanks, we have your request',
+        intro: ar ? `سنفحص كيف توصي مساعدات الذكاء الاصطناعي بـ ${f.brand} ونتواصل معك خلال يوم عمل واحد بالنتائج والخطوات التالية.` : `We’ll check how AI assistants recommend ${f.brand} and get back to you within one working day with the results and next steps.`,
+        button: ar ? 'زر OptiROAS' : 'Visit OptiROAS', link: `https://www.optiroas.com/?lang=${ar ? 'ar' : 'en'}`,
+        outro: ar ? 'لديك سؤال؟ ردّ على هذا البريد.' : 'Questions? Just reply to this email.' }) }).catch(() => {});
+    }
+    return json(res, 200, { ok: true });
   }
 
   const u = await currentUser(req);
