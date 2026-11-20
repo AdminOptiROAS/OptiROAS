@@ -140,7 +140,10 @@ export default async function handler(req, res) {
     if (!br) return json(res, 400, { error: 'Set up your brand first.' });
     if (!enginesOn().length) return json(res, 503, { error: 'No AI assistant is switched on yet. Add an API key in Vercel (see setup).' });
     const open = (await sql`select count(*)::int as n from ai_jobs where user_id=${u.id} and status in ('queued','running')`)[0].n;
-    if (!open) {
+    // answers that failed in the latest check (e.g. an assistant was briefly unavailable) are retried first, without counting as a new check
+    const retried = open ? [] : await sql`update ai_jobs set status='queued', error=null, attempts=0, done_at=null where user_id=${u.id} and status='error'
+      and batch=(select max(batch) from ai_jobs where user_id=${u.id}) and batch > now() - interval '7 days' returning id`;
+    if (!open && !retried.length) {
       if (!team(u) && br.last_batch_at && Date.now() - new Date(br.last_batch_at) < 20 * 3600e3) return json(res, 429, { error: 'You can refresh once a day. Results also update automatically every week.' });
       await enqueue(u.id);
     }

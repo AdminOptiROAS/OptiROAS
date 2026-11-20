@@ -113,6 +113,7 @@ async function post(url, headers, body) {
   if (!r.ok) { const m = (j.error && (j.error.message || j.error.type)) || j.message || `HTTP ${r.status}`; const e = new Error(String(m).slice(0, 240)); e.status = r.status; throw e; }
   return j;
 }
+const NOLOC = { claude: new Set(), openai: new Set() };
 export const ENGINES = {
   chatgpt: {
     name: 'ChatGPT', key: 'OPENAI_API_KEY',
@@ -152,9 +153,12 @@ export const ENGINES = {
   claude: {
     name: 'Claude', key: 'ANTHROPIC_API_KEY',
     async ask(q, c) {
-      const j = await post('https://api.anthropic.com/v1/messages', { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
+      // Claude's web search doesn't accept every country (e.g. AE): ask without a location then; the system prompt still names the country.
+      const req = loc => post('https://api.anthropic.com/v1/messages', { 'x-api-key': process.env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01' },
         { model: process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5', max_tokens: 1500, system: sys(c), messages: [{ role: 'user', content: q }],
-          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3, user_location: { type: 'approximate', country: c } }] });
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3, ...(loc ? { user_location: { type: 'approximate', country: c } } : {}) }] });
+      let j;
+      try { j = await req(!NOLOC.claude.has(c)); } catch (e) { if (/country|location/i.test(e.message)) { NOLOC.claude.add(c); j = await req(false); } else throw e; }
       const tx = (j.content || []).filter(b => b.type === 'text');
       return { text: tx.map(b => b.text).join(''), cites: tx.flatMap(b => (b.citations || []).filter(x => x.url).map(x => ({ url: x.url, title: x.title }))) };
     }

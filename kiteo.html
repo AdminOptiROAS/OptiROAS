@@ -3370,6 +3370,7 @@ function aivTop10(){
 }
 function aivSays(el){
   const R=AIV.d.report,S=R&&R.says;
+  if(!S&&R&&R.progress){const P=R.progress;el.innerHTML=`<div class="card" style="padding:22px"><p><b>${TR('Your check is running','فحصك قيد التشغيل')}</b> · ${TR(`${P.done+P.failed} of ${P.n} answers so far`,`${P.done+P.failed} من ${P.n} إجابة حتى الآن`)}</p><p class="muted small">${TR('This tab fills in once the assistants have answered the questions about your brand. Keep this page open to finish faster, or come back later: everything is saved to your account.','يمتلئ هذا القسم بعد أن تجيب المساعدات عن الأسئلة المتعلقة بعلامتك. أبقِ الصفحة مفتوحة لينتهي أسرع، أو عد لاحقًا: كل شيء محفوظ في حسابك.')}</p></div>`;aivTick();return}
   if(!S){el.innerHTML=`<div class="card" style="padding:22px"><p>${TR('This appears after your next check. Each check now also asks every assistant what it knows about your brand, in Arabic and English.','يظهر هذا بعد فحصك القادم. كل فحص صار يسأل كل مساعد أيضًا ماذا يعرف عن علامتك، بالعربية والإنجليزية.')}</p><button class="btn" type="button" id="aivRun2">${TR('Run a check now','شغّل فحصًا الآن')}</button></div>`;const b=$('aivRun2');if(b)b.onclick=async()=>{if(await aivPost('/api/ai/run',{},b)){AIV.tab='recs';renderAi();aivTick()}};return}
   const sl={positive:TR('positive','إيجابي'),neutral:TR('neutral','محايد'),negative:TR('negative','سلبي'),mixed:TR('mixed','مختلط')},st={matches:TR('correct','صحيح'),wrong:TR('wrong','خطأ'),unverified:TR('not checked','غير مُتحقَّق')};
   const tot=Object.values(S.sentiment).reduce((a,b)=>a+b,0)||1;
@@ -3493,14 +3494,14 @@ async function renderAi(){
   const SY=R&&R.says;if(AIV.tab==='recs'&&SY&&(SY.unchecked||SY.wrong)){const bd=$('aivBody');bd.insertAdjacentHTML('afterbegin',`<div class="card aivnudge"><div><b>${SY.unchecked?TR(`AI states ${SY.unchecked} facts about your brand. Are they right?`,`يذكر الذكاء الاصطناعي ${SY.unchecked} معلومات عن علامتك. هل هي صحيحة؟`):TR(`${SY.wrong} wrong facts about your brand to fix`,`${SY.wrong} معلومات خاطئة عن علامتك تحتاج تصحيحًا`)}</b><span class="muted small">${TR('Check them in a minute and we’ll tell you where to fix the wrong ones.','تحقّق منها في دقيقة ونوضّح لك أين تصحّح الخاطئ منها.')}</span></div><button class="btn sm" type="button" id="aivToSays">${SY.unchecked?TR('Check facts','تحقّق من المعلومات'):TR('See fixes','اعرض التصحيحات')}</button></div>`);$('aivToSays').onclick=()=>{AIV.tab='says';renderAi();window.scrollTo(0,0)}}
 }
 async function aivPost(path,body,btn){
-  if(AIV.busy)return;AIV.busy=true;const t=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent=TR('Working…','جارٍ العمل…')}
+  if(AIV.busy){if(btn)toast(TR('Still working on your check. Results update on this page as answers come in.','ما زلنا نعمل على فحصك. تتحدّث النتائج هنا مع وصول الإجابات.'));return}AIV.busy=true;const t=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent=TR('Working…','جارٍ العمل…')}
   try{AIV.d=await api(path,{method:'POST',body:JSON.stringify(body||{})});return true}catch(e){toast(e.message,6000);return false}
   finally{AIV.busy=false;if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=t}}
 }
 // keeps answering queued questions while the page is open
 async function aivTick(){
   if(AIV.ticking)return;AIV.ticking=true;
-  try{while(ST.page==='ai'&&AIV.d&&AIV.d.report&&AIV.d.report.progress){if(!(await aivPost('/api/ai/tick')))break;if(AIV.tab==='recs')renderAi()}}finally{AIV.ticking=false}
+  try{while(ST.page==='ai'&&AIV.d&&AIV.d.report&&AIV.d.report.progress){if(!(await aivPost('/api/ai/tick')))break;if(AIV.tab==='recs'||AIV.tab==='says')renderAi()}}finally{AIV.ticking=false}
 }
 function aivRecs(el){
   const D=AIV.d,R=D.report,B=R.brand,P=R.progress,eng=D.engines;
@@ -3509,7 +3510,7 @@ function aivRecs(el){
       ${R.batch?`<br><span class="muted small">${TR('Results from','النتائج من')} ${new Date(R.batch).toLocaleString(LANG==='ar'?'ar':'en-GB',{dateStyle:'medium',timeStyle:'short'})} · ${TR('updates automatically every week','تتحدّث تلقائيًا كل أسبوع')}</span>`:''}</div>
       <button class="btn" type="button" id="aivRun"${!eng.length||P?' disabled':''}>${P?TR('Running…','قيد التشغيل…'):R.batch?TR('Run again now','شغّل الآن مجددًا'):TR('Run now','شغّل الآن')}</button></div>
     ${P?`<div class="card aivprog"><b>${TR('Asking the assistants…','نسأل المساعدات…')}</b> ${TR(`${P.done+P.failed} of ${P.n} answers`,`${P.done+P.failed} من ${P.n} إجابة`)}<div class="pbar"><i style="width:${Math.round((P.done+P.failed)/P.n*100)}%"></i></div><span class="muted small">${TR('Keep this page open to finish faster; otherwise it completes in the background within the hour.','أبقِ هذه الصفحة مفتوحة لتنتهي أسرع؛ وإلا تكتمل في الخلفية خلال ساعة.')}</span></div>`:''}
-    ${R.errors&&R.errors.length?`<div class="card aiverr"><b>${TR('Some answers failed','فشلت بعض الإجابات')}</b><ul class="small">${R.errors.map(e=>`<li>${esc(e.engine)} (${e.n}): ${esc(e.error||'')}</li>`).join('')}</ul></div>`:''}`;
+    ${R.errors&&R.errors.length?`<div class="card aiverr"><b>${TR('Some answers didn’t come through','لم تصل بعض الإجابات')}</b><ul class="small">${R.errors.map(e=>{const nm=(AIV.d.allEngines.find(x=>x.key===e.engine)||{}).name||e.engine;return `<li>${TR(`${nm} didn’t answer ${e.n} question${e.n===1?'':'s'}.`,`لم يُجب ${nm} عن ${e.n} سؤال.`)}${D.team?` <span class="muted">${esc(e.error||'')}</span>`:''}</li>`}).join('')}</ul><p class="small" style="margin:6px 0 0">${TR('Press “Run again now” to retry them. Retrying doesn’t count as a new check.','اضغط «شغّل مجددًا الآن» لإعادة المحاولة. لا تُحتسب إعادة المحاولة فحصًا جديدًا.')}</p></div>`:''}`;
   if(!R.total){el.innerHTML=head+`<div class="card" style="padding:22px"><p>${TR('No results yet. Press “Run now” to ask the assistants your questions.','لا توجد نتائج بعد. اضغط «شغّل الآن» لتسأل المساعدات أسئلتك.')}</p></div>`;aivWire(el);return}
   const own=R.total.brands[0],rank=[...R.total.brands].sort((a,b)=>b.rate-a.rate).findIndex(b=>b.own)+1;
   const tr=R.trend.map(t=>t.rate);
