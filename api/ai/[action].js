@@ -1,5 +1,5 @@
 import { ensureSchema, currentUser, sql, json, body, emailOk } from '../_lib/core.js';
-import { sendMail, layout, mailOn } from '../_lib/mail.js';
+import { sendMail, layout, mailOn, KITEO_SITE } from '../_lib/mail.js';
 import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
@@ -79,11 +79,11 @@ export default async function handler(req, res) {
     if (mailOn()) {
       const team = (process.env.ADMIN_EMAILS || 'admin@optiroas.com').split(',').map(x => x.trim()).filter(Boolean);
       const lines = [`Brand: ${f.brand}`, `Website: ${f.website || '-'}`, `Country: ${(COUNTRIES[f.country] || {}).en}`, `Name: ${f.name || '-'}`, `Email: ${email}`, `Phone / WhatsApp: ${f.phone || '-'}`, `Language: ${ar ? 'Arabic' : 'English'}`];
-      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open OptiROAS', link: 'https://www.optiroas.com/#ai-visibility', outro: 'Reply to the client within one working day.' }) }).catch(() => {});
+      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open Kiteo', link: `${KITEO_SITE()}/#ai-visibility`, outro: 'Reply to the client within one working day.', brand: 'kiteo' }) }).catch(() => {});
       await sendMail({ to: email, subject: ar ? 'استلمنا طلب فحص الظهور في الذكاء الاصطناعي' : 'We received your AI visibility check request', ...layout({ lang: ar ? 'ar' : 'en',
         title: ar ? 'شكرًا، استلمنا طلبك' : 'Thanks, we have your request',
         intro: ar ? `سنفحص كيف توصي مساعدات الذكاء الاصطناعي بـ ${f.brand} ونتواصل معك خلال يوم عمل واحد بالنتائج والخطوات التالية.` : `We’ll check how AI assistants recommend ${f.brand} and get back to you within one working day with the results and next steps.`,
-        button: ar ? 'زر OptiROAS' : 'Visit OptiROAS', link: `https://www.optiroas.com/?lang=${ar ? 'ar' : 'en'}`,
+        button: ar ? 'زر Kiteo' : 'Visit Kiteo', link: `${KITEO_SITE()}/?lang=${ar ? 'ar' : 'en'}`, brand: 'kiteo',
         outro: ar ? 'لديك سؤال؟ ردّ على هذا البريد.' : 'Questions? Just reply to this email.' }) }).catch(() => {});
     }
     return json(res, 200, { ok: true });

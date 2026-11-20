@@ -18,18 +18,21 @@ export async function sendMail({ to, subject, html, text, attachments }) {
 }
 
 // One simple branded layout, English or Arabic.
-export function layout({ lang, title, intro, button, link, outro, paras = [], unsub }) {
+// brand: 'optiroas' (default) or 'kiteo' (the AI visibility product)
+export const KITEO_SITE = () => process.env.KITEO_SITE_URL || 'https://www.kiteoai.com';
+export function layout({ lang, title, intro, button, link, outro, paras = [], unsub, brand }) {
+  const K = brand === 'kiteo', C = K ? '#5b3fd1' : '#0a6c86';
   const ar = lang === 'ar', dir = ar ? 'rtl' : 'ltr';
   const html = `<!doctype html><html lang="${ar ? 'ar' : 'en'}" dir="${dir}"><body style="margin:0;background:#f4f7f9;font-family:Segoe UI,Arial,sans-serif;color:#0f1f2b">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border-radius:12px;padding:32px;text-align:${ar ? 'right' : 'left'}">
-<tr><td style="font-size:22px;font-weight:800;color:#0f1f2b">Opti<span style="color:#0a6c86">ROAS</span></td></tr>
+<tr><td style="font-size:22px;font-weight:800;color:#0f1f2b">${K ? `<span style="color:${C}">◆</span> Kiteo` : 'Opti<span style="color:#0a6c86">ROAS</span>'}</td></tr>
 <tr><td style="padding-top:20px;font-size:18px;font-weight:700">${esc(title)}</td></tr>
 <tr><td style="padding-top:10px;font-size:15px;line-height:1.6;color:#3d4f5c">${esc(intro)}</td></tr>
-${paras.map(x => `<tr><td style="padding-top:10px;font-size:15px;line-height:1.6;color:#3d4f5c">${Array.isArray(x) ? `${esc(x[0])} <a href="${esc(x[1])}" style="color:#0a6c86;font-weight:600">${esc(x[2])}</a>` : esc(x)}</td></tr>`).join('')}
-<tr><td style="padding:24px 0"><a href="${esc(link)}" style="background:#0a6c86;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;display:inline-block">${esc(button)}</a></td></tr>
+${paras.map(x => `<tr><td style="padding-top:10px;font-size:15px;line-height:1.6;color:#3d4f5c">${Array.isArray(x) ? `${esc(x[0])} <a href="${esc(x[1])}" style="color:${C};font-weight:600">${esc(x[2])}</a>` : esc(x)}</td></tr>`).join('')}
+<tr><td style="padding:24px 0"><a href="${esc(link)}" style="background:${C};color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;display:inline-block">${esc(button)}</a></td></tr>
 <tr><td style="font-size:13px;line-height:1.6;color:#6b7c88">${esc(outro)}<br><br>${ar ? 'إذا لم يعمل الزر، انسخ هذا الرابط:' : 'If the button doesn’t work, copy this link:'}<br><span style="word-break:break-all">${esc(link)}</span></td></tr>
-</table><p style="font-size:12px;color:#8a99a4">OptiROAS, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? ` · <a href="${esc(unsub)}" style="color:#8a99a4">${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}</a>` : ''}</p></td></tr></table></body></html>`;
-  const text = `${title}\n\n${intro}\n\n${paras.map(x => (Array.isArray(x) ? `${x[0]} ${x[2]}: ${x[1]}` : x) + '\n\n').join('')}${button}: ${link}\n\n${outro}\n\nOptiROAS, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? `\n${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}: ${unsub}` : ''}`;
+</table><p style="font-size:12px;color:#8a99a4">${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? ` · <a href="${esc(unsub)}" style="color:#8a99a4">${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}</a>` : ''}</p></td></tr></table></body></html>`;
+  const text = `${title}\n\n${intro}\n\n${paras.map(x => (Array.isArray(x) ? `${x[0]} ${x[2]}: ${x[1]}` : x) + '\n\n').join('')}${button}: ${link}\n\n${outro}\n\n${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? `\n${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}: ${unsub}` : ''}`;
   return { html, text };
 }

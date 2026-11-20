@@ -1,5 +1,5 @@
 import { sql } from './core.js';
-import { sendMail, layout, SITE } from './mail.js';
+import { sendMail, layout, KITEO_SITE } from './mail.js';
 import { summary, COUNTRIES, host, ENGINES } from './ai.js';
 
 const pct = x => Math.round((x || 0) * 100) + '%';
@@ -103,7 +103,7 @@ export async function emailAlerts(userId) {
   const m = layout({ lang: ar ? 'ar' : 'en', title: L(ar, `AI visibility update: ${b.brand}`, `تحديث الظهور في الذكاء الاصطناعي: ${b.brand}`),
     intro: L(ar, 'Here’s what changed in this week’s AI answers.', 'إليك ما تغيّر في إجابات الذكاء الاصطناعي هذا الأسبوع.'),
     paras: al.map(a => (a.good ? '▲ ' : '▼ ') + (ar ? a.ar : a.en)),
-    button: L(ar, 'Open my AI visibility report', 'افتح تقرير ظهوري'), link: `${SITE()}/?lang=${ar ? 'ar' : 'en'}#ai-visibility`,
+    button: L(ar, 'Open my AI visibility report', 'افتح تقرير ظهوري'), link: `${KITEO_SITE()}/?lang=${ar ? 'ar' : 'en'}#ai-visibility`, brand: 'kiteo',
     outro: L(ar, 'You get this email when your weekly AI check finds changes.', 'تصلك هذه الرسالة عندما يجد الفحص الأسبوعي تغييرات.') });
   return sendMail({ to: u.email, subject: L(ar, `AI visibility: ${al.length} update${al.length === 1 ? '' : 's'} for ${b.brand}`, `الظهور في الذكاء الاصطناعي: ${al.length} تحديث لـ ${b.brand}`), ...m });
 }
@@ -129,7 +129,7 @@ export async function emailMonthly(userId) {
   ].filter(Boolean);
   const m = layout({ lang: ar ? 'ar' : 'en', title: L(ar, `Your monthly AI visibility summary: ${B}`, `ملخصك الشهري للظهور في الذكاء الاصطناعي: ${B}`),
     intro: L(ar, 'How AI assistants recommended you this month, and where to focus next.', 'كيف رشّحتك مساعدات الذكاء الاصطناعي هذا الشهر، وأين تركّز بعد ذلك.'), paras,
-    button: L(ar, 'See the full report', 'شاهد التقرير الكامل'), link: `${SITE()}/?lang=${ar ? 'ar' : 'en'}#ai-visibility`,
+    button: L(ar, 'See the full report', 'شاهد التقرير الكامل'), link: `${KITEO_SITE()}/?lang=${ar ? 'ar' : 'en'}#ai-visibility`, brand: 'kiteo',
     outro: L(ar, 'Want our team to work on these with you? Just reply to this email.', 'تريد أن يعمل فريقنا عليها معك؟ ردّ على هذا البريد فقط.') });
   const ok = await sendMail({ to: u.email, subject: L(ar, `Monthly AI visibility summary: ${B}`, `الملخص الشهري للظهور في الذكاء الاصطناعي: ${B}`), ...m });
   if (ok) await sql`update ai_brands set monthly_sent_at=now() where user_id=${userId}`;
