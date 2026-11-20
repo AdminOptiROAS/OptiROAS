@@ -104,7 +104,7 @@ export const ENGINES = {
   gemini: {
     name: 'Gemini', key: 'GEMINI_API_KEY',
     async ask(q, c) {
-      const m = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+      const m = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
       const j = await post(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { 'x-goog-api-key': process.env.GEMINI_API_KEY },
         { systemInstruction: { parts: [{ text: sys(c) }] }, contents: [{ role: 'user', parts: [{ text: q }] }], tools: [{ google_search: {} }] });
       const cand = (j.candidates || [])[0] || {};
@@ -114,12 +114,17 @@ export const ENGINES = {
     }
   },
   perplexity: {
+    // Perplexity's Agent API (replaced Sonar chat completions). effort 'fast' = the old 'sonar'.
     name: 'Perplexity', key: 'PERPLEXITY_API_KEY',
     async ask(q, c) {
-      const j = await post('https://api.perplexity.ai/chat/completions', { Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}` },
-        { model: process.env.PERPLEXITY_MODEL || 'sonar', messages: [{ role: 'system', content: sys(c) }, { role: 'user', content: q }], web_search_options: { user_location: { country: c } } });
-      const cites = (j.search_results || []).map(s => ({ url: s.url, title: s.title }));
-      return { text: (((j.choices || [])[0] || {}).message || {}).content || '', cites: cites.length ? cites : (j.citations || []).map(u => ({ url: u })) };
+      const h = { Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}` }, eff = process.env.PERPLEXITY_EFFORT || 'fast';
+      const req = loc => post('https://api.perplexity.ai/v1/responses', h, { effort: eff, instructions: sys(c), input: q, tools: [loc ? { type: 'web_search', user_location: { country: c } } : { type: 'web_search' }] });
+      let j;
+      try { j = await req(true); } catch (e) { if (e.status === 400 && /location/i.test(e.message)) j = await req(false); else throw e; }
+      const out = j.output || [];
+      const text = j.output_text || out.filter(o => o.type === 'message').flatMap(o => o.content || []).filter(p => p.type === 'output_text').map(p => p.text).join('\n');
+      const cites = out.filter(o => o.type === 'search_results').flatMap(o => o.results || []).filter(r => r.url).map(r => ({ url: r.url, title: r.title }));
+      return { text: String(text || '').replace(/\[(web:)?\d+\]/g, ''), cites };
     }
   },
   claude: {
