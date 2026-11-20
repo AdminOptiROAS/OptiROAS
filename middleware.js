@@ -1,7 +1,10 @@
+import { rewrite, next } from '@vercel/functions';
+
 // kiteoai.com is the same app under the Kiteo brand: serve kiteo.html (Kiteo title, description and preview image) there.
 export const config = { matcher: ['/', '/((?!api/|media/|_vercel|.*\\.).*)'] };
 export default function middleware(request) {
+  const host = (request.headers.get('host') || new URL(request.url).hostname).toLowerCase();
+  if (!/(^|\.)kiteoai\.com(:\d+)?$/.test(host)) return next();
   const url = new URL(request.url);
-  if (!/(^|\.)kiteoai\.com$/i.test(url.hostname)) return;
-  return new Response(null, { headers: { 'x-middleware-rewrite': new URL('/kiteo.html' + url.search, url).toString() } });
+  return rewrite(new URL('/kiteo.html' + url.search, request.url));
 }
