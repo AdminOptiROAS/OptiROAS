@@ -977,7 +977,14 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
 .lockn{display:block;margin-top:6px}
 .allsum{margin:0 0 12px}.allsum p{margin:0 0 8px}.ptag.First{background:#0a6c86;color:#fff}
 nav.top .links .aionly{display:none}body.aiok nav.top .links .aionly{display:inline-flex}
-.aivhead h1{margin:6px 0 4px}.aivtabs{margin:14px 0 16px}
+.aivhead h1{margin:6px 0 4px}
+.aivtabs .rtab:disabled{opacity:.4;cursor:not-allowed}
+.aivflow{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px;padding:0}
+.aivflow li{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card,#fff);opacity:.6}
+.aivflow li.on{opacity:1;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}.aivflow li.done{opacity:1}
+.aivflow .n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--mono);background:var(--accent-soft,#eef);color:var(--accent)}
+.aivflow li.on .n{background:var(--accent);color:#fff}.aivflow b{display:block;font-size:14px}.aivflow small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.35}
+@media(max-width:640px){.aivflow{grid-template-columns:1fr;gap:6px}.aivflow li{padding:9px 10px}.aivflow small{display:none}}.aivtabs{margin:14px 0 16px}
 .aivbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}
 .aivprog,.aiverr{padding:14px 18px;margin-bottom:14px}.aiverr{border-color:var(--bad);background:var(--bad-soft)}.aivprog .pbar{margin:10px 0 6px}.aivprog .pbar i{background:var(--accent)}
 .aivkpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}.aivkpi .card{padding:14px 16px;display:flex;flex-direction:column;gap:4px}.aivkpi b{font:700 28px/1.1 var(--display)}
@@ -3440,9 +3447,11 @@ async function renderAi(){
   const R=D.report,B=R&&R.brand;
   if(!B&&AIV.tab!=='setup')AIV.tab='setup';
   const nAl=(D.alerts||[]).filter(a=>R&&R.batch&&+new Date(a.batch)===+new Date(R.batch)).length;
-  const tabs=[['recs',TR('AI recommendations','توصيات الذكاء الاصطناعي')+(nAl?` <span class="aivbadge">${nAl}</span>`:'')],['says',TR('What AI says about you','ماذا يقول الذكاء الاصطناعي عنك')],['places',TR('Placements','الظهور في المواقع')],['reviews',TR('Reviews','التقييمات')],['demand',TR('Search demand','الطلب في البحث')],['visits',TR('Visits from AI','الزيارات من الذكاء الاصطناعي')],['setup',TR('Setup','الإعداد')]];
+  const tabs=[['setup',TR('Setup','الإعداد')],['recs',TR('AI recommendations','توصيات الذكاء الاصطناعي')+(nAl?` <span class="aivbadge">${nAl}</span>`:'')],['says',TR('What AI says about you','ماذا يقول الذكاء الاصطناعي عنك')],['places',TR('Placements','الظهور في المواقع')],['reviews',TR('Reviews','التقييمات')],['demand',TR('Search demand','الطلب في البحث')],['visits',TR('Visits from AI','الزيارات من الذكاء الاصطناعي')]];
+  const ran=!!(R&&R.batch),stp=!B?1:!ran?2:3;
   el.innerHTML=`<div class="aivhead"><span class="kicker"><i></i>${TR('AI visibility','الظهور في الذكاء الاصطناعي')}</span><h1>${B?esc(B.brand):TR('Set up your brand','أعدّ علامتك')}</h1>
     <p class="muted">${TR('How AI assistants recommend your brand, how many people search for it, and how many visits AI sends you.','كيف توصي مساعدات الذكاء الاصطناعي بعلامتك، وكم شخصًا يبحث عنها، وكم زيارة يرسلها لك الذكاء الاصطناعي.')}${B?` · ${esc(LANG==='ar'?(D.countries.find(c=>c.code===B.country)||{}).ar:(D.countries.find(c=>c.code===B.country)||{}).en)}`:''}</p></div>
+    ${stp<3?`<ol class="aivflow">${[[TR('Set up your brand','أعدّ علامتك'),TR('Brand, competitors and the questions your customers ask','العلامة والمنافسون والأسئلة التي يطرحها عملاؤك')],[TR('Run your first check','شغّل فحصك الأول'),TR('We ask ChatGPT, Gemini, Perplexity and Claude','نسأل ChatGPT وGemini وPerplexity وClaude')],[TR('See your results','شاهد نتائجك'),TR('Recommendations, what AI says about you, and next steps','التوصيات، وماذا يقول الذكاء الاصطناعي عنك، والخطوات التالية')]].map(([t,d],i)=>`<li class="${i+1<stp?'done':i+1===stp?'on':''}"><span class="n">${i+1<stp?'✓':i+1}</span><span><b>${t}</b><small>${d}</small></span></li>`).join('')}</ol>`:''}
     <div class="rtabs aivtabs" role="tablist">${tabs.map(([k,l])=>`<button class="rtab" type="button" role="tab" data-aitab="${k}" aria-selected="${AIV.tab===k}"${!B&&k!=='setup'?' disabled':''}>${l}</button>`).join('')}</div><div id="aivBody"></div>`;
   el.querySelectorAll('[data-aitab]').forEach(b=>b.onclick=()=>{AIV.tab=b.dataset.aitab;renderAi()});
   ({recs:aivRecs,says:aivSays,places:aivPlaces,reviews:aivReviews,demand:aivDemand,visits:aivVisits,setup:aivSetup})[AIV.tab]($('aivBody'));
@@ -3560,7 +3569,7 @@ function aivSetup(el){
     <h3>${TR('Keywords for search demand','كلمات مفتاحية لقياس الطلب')}</h3>
     <p class="muted small">${TR('One per line. Leave empty to use your brand name and its spellings.','كلمة في كل سطر. اتركها فارغة لاستخدام اسم علامتك وتهجئاتها.')}</p>
     <textarea name="keywords" rows="5" dir="auto">${esc((B.keywords||[]).join('\n'))}</textarea>
-    <div class="row"><button class="btn" type="submit">${TR('Save','حفظ')}</button>${B.brand?'':`<span class="muted small">${TR('After saving, press “Run now” on AI recommendations.','بعد الحفظ، اضغط «شغّل الآن» في توصيات الذكاء الاصطناعي.')}</span>`}</div></form>`;
+    <div class="row"><button class="btn" type="submit">${B.brand?TR('Save','حفظ'):TR('Save and run my first check','احفظ وشغّل فحصي الأول')}</button>${B.brand?'':`<span class="muted small">${TR('Your first check starts as soon as you save.','يبدأ فحصك الأول فور الحفظ.')}</span>`}</div></form>`;
   const F=$('aivForm');
   $('aivSuggest').onclick=()=>{const en=$('aivCatEn').value.trim(),ar=$('aivCatAr').value.trim(),c=D.countries.find(x=>x.code===F.country.value)||{},br=F.brand.value.trim(),c1=F.c0.value.trim();
     const cur={SA:'ريال',AE:'درهم',KW:'دينار',QA:'ريال',BH:'دينار',OM:'ريال',EG:'جنيه',US:'دولار'}[F.country.value]||'',curEn={SA:'riyals',AE:'dirhams',KW:'dinars',QA:'riyals',BH:'dinars',OM:'riyals',EG:'pounds',US:'dollars'}[F.country.value]||'';
@@ -3572,7 +3581,10 @@ function aivSetup(el){
   F.onsubmit=async e=>{e.preventDefault();const sp=s=>s.split(',').map(x=>x.trim()).filter(Boolean),ln=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
     const body={brand:F.brand.value,aliases:sp(F.aliases.value),website:F.website.value,country:F.country.value,
       competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value),facts:F.facts.value,category_en:F.category_en.value,category_ar:F.category_ar.value};
-    if(await aivPost('/api/ai/setup',body,F.querySelector('[type=submit]'))){toast(TR('Saved.','تم الحفظ.'));AIV.tab='recs';renderAi()}};
+    const first=!B.brand;
+    if(await aivPost('/api/ai/setup',body,F.querySelector('[type=submit]'))){AIV.tab='recs';
+      if(first&&body.prompts.length){toast(TR('Saved. Your first check is starting.','تم الحفظ. بدأ فحصك الأول.'));renderAi();if(await aivPost('/api/ai/run',{})){renderAi();aivTick()}}
+      else{toast(TR('Saved.','تم الحفظ.'));renderAi()}}};
   F.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>{const en=F.category_en.value.trim(),ar=F.category_ar.value.trim();if(!en&&!ar){toast(TR('Enter your product category first.','أدخل فئة المنتج أولًا.'));F.category_en.focus();return}
     const c=D.countries.find(x=>x.code===F.country.value)||{},S=AIV_SEASONS.find(x=>x.k===b.dataset.season);const q=[];
     if(ar)q.push(...S.ar.map(t=>t.replace(/\{cat\}/g,ar).replace(/\{country\}/g,c.ar||'')));if(en)q.push(...S.en.map(t=>t.replace(/\{cat\}/g,en).replace(/\{country\}/g,c.en||'')));
