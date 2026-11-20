@@ -1,8 +1,35 @@
 {
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides|ai-visibility)",
-      "destination": "/index.html"
+      "src": "^/media/(.*)$",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/(?!api/|media/|_vercel|.*\\.)(.*)$",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.kiteoai.com"
+        }
+      ],
+      "dest": "/kiteo.html"
+    },
+    {
+      "src": "^/(?!api/|media/|_vercel|.*\\.)(.*)$",
+      "has": [
+        {
+          "type": "host",
+          "value": "kiteoai.com"
+        }
+      ],
+      "dest": "/kiteo.html"
+    },
+    {
+      "src": "^/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides|ai-visibility)$",
+      "dest": "/index.html"
     }
   ],
   "functions": {
@@ -31,17 +58,6 @@
     {
       "path": "/api/ai/cron",
       "schedule": "25 * * * *"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/media/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400, stale-while-revalidate=604800"
-        }
-      ]
     }
   ]
 }
