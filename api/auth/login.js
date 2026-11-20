@@ -1,11 +1,11 @@
-import { ensureSchema, sql, json, body, checkPassword, startSession } from '../_lib/core.js';
+import { ensureSchema, sql, json, body, checkPassword, startSession, siteOf } from '../_lib/core.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Use POST' });
   const { email: e, password } = body(req);
   const email = String(e || '').trim().toLowerCase();
   await ensureSchema();
-  const r = await sql`select id,email,name,pass_hash from users where email=${email}`;
+  const r = await sql`select id,email,name,pass_hash from users where email=${email} and brand=${siteOf(req)}`;
   if (!r[0] || typeof password !== 'string' || !checkPassword(password, r[0].pass_hash))
     return json(res, 401, { error: 'That email and password don’t match.' });
   await startSession(res, r[0].id);

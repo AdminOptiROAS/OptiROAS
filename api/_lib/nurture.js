@@ -71,7 +71,7 @@ export async function runNurture(limit = 100) {
   let sent = 0, checked = 0;
   for (const { step, after } of STEPS) {
     const due = await sql`select u.id, u.email, u.lang, exists(select 1 from usage_reports r where r.user_id=u.id) as ran
-      from users u where u.created_at >= ${SERIES_START}::timestamptz and u.created_at <= now() - ${after}::interval
+      from users u where u.brand = 'optiroas' and u.created_at >= ${SERIES_START}::timestamptz and u.created_at <= now() - ${after}::interval
         and u.nurture_step = ${step - 1} and (u.nurture_at is null or u.nurture_at < now() - interval '40 hours')
         and u.mkt_unsub_at is null and coalesce(u.plan,'free') not in ('audit','starter','pro') and coalesce(u.audit_credits,0) = 0
         and lower(u.email) <> all(${skip}) order by u.created_at limit ${limit}`;

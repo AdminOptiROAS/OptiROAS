@@ -61,7 +61,9 @@ export default async function handler(req, res) {
   const one = async q => (await q)[0];
   const users = await one(sql`select count(*)::int as total,
       count(*) filter (where created_at > now() - interval '24 hours')::int as new24,
-      count(*) filter (where created_at > now() - interval '7 days')::int as new7
+      count(*) filter (where created_at > now() - interval '7 days')::int as new7,
+      count(*) filter (where brand = 'kiteo')::int as k_total,
+      count(*) filter (where brand = 'kiteo' and created_at > now() - interval '24 hours')::int as k_new24
     from users where lower(email) <> all(${ext})`);
   const bySource = await sql`select coalesce(utm_source,'direct / unknown') as src, coalesce(utm_campaign,'') as camp, count(*)::int as n from users
     where created_at > now() - interval '7 days' and lower(email) <> all(${ext}) group by 1,2 order by n desc limit 15`;
@@ -103,7 +105,7 @@ export default async function handler(req, res) {
   const paid = plans.map(p => `${esc(p.plan)}: ${p.n}`).join(' · ') || 'none';
   const html = `<div style="font:14px/1.5 Arial,sans-serif;color:#0f1a2b;max-width:620px">
     <h2 style="margin:0 0 4px">OptiROAS daily summary</h2><p style="margin:0 0 16px;color:#5b667a">Last 24 hours, customers only (team and reviewer accounts excluded).</p>
-    <table style="border-collapse:collapse">${row('Visitors', `${visits.visitors} (${visits.views} page views, ${dur(visits.secs / Math.max(1, visits.visitors))} on the site each on average)`)}${row('New sign-ups', users.new24)}${row('Sign-ups, last 7 days', users.new7)}${row('Customer accounts in total', users.total)}
+    <table style="border-collapse:collapse">${row('Visitors', `${visits.visitors} (${visits.views} page views, ${dur(visits.secs / Math.max(1, visits.visitors))} on the site each on average)`)}${row('New sign-ups', users.k_total ? `${users.new24} (Kiteo: ${users.k_new24} today, ${users.k_total} in total)` : users.new24)}${row('Sign-ups, last 7 days', users.new7)}${row('Customer accounts in total', users.total)}
     ${row('Asked to email the audit link', `${leads.new24} (${leads.total} in total)`)}${row('Audits run', `${audits.n} (by ${audits.people} ${audits.people === 1 ? 'person' : 'people'})`)}${row('AED 55 pop-up', `${ev.offer} seen, ${ev.offer_click} clicked`)}${row('Unlock offers seen', ev.paywall)}${row('Checkouts started', ev.checkout)}
     ${row('New subscriptions', subs24.n)}${row('Full reports unlocked', unlocks.n)}${row('Paying accounts now', paid)}
     ${row('Ad accounts connected (all users)', `Meta ${conns.meta} · Google ${conns.google} · Snapchat ${conns.snap} · TikTok ${conns.tiktok}`)}</table>

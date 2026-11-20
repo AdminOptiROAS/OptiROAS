@@ -58,6 +58,10 @@ export function ensureSchema() {
       id bigserial primary key, user_id uuid, email text, rating int, message text, page text, lang text, ua text,
       created_at timestamptz not null default now())`;
     await sql`alter table users add column if not exists plan text not null default 'free'`;
+    // OptiROAS and Kiteo keep separate accounts: the same email can sign up on each site.
+    await sql`alter table users add column if not exists brand text not null default 'optiroas'`;
+    await sql`alter table users drop constraint if exists users_email_key`;
+    await sql`create unique index if not exists users_email_brand on users(email, brand)`;
     await sql`alter table users add column if not exists stripe_customer_id text`;
     await sql`alter table users add column if not exists vertical text`;
     await sql`create table if not exists api_log(
@@ -163,6 +167,10 @@ export function checkPassword(pw, stored) {
   return want.length === key.length && crypto.timingSafeEqual(want, key);
 }
 
+/* ---------- which site (separate accounts per site) ---------- */
+export const brandOf = req => /(^|\.)kiteoai\.com(:\d+)?$/i.test(String((req && req.headers && (req.headers['x-forwarded-host'] || req.headers.host)) || '')) ? 'kiteo' : '';
+export const siteOf = req => brandOf(req) || 'optiroas';
+
 /* ---------- sessions ---------- */
 const SESSION_DAYS = 30;
 export const sha = t => crypto.createHash('sha256').update(t).digest('hex');
@@ -175,7 +183,7 @@ export async function currentUser(req) {
   const t = cookies(req).or_session; if (!t) return null;
   await ensureSchema();
   const r = await sql`select u.id,u.email,u.name,u.plan,u.email_verified_at,u.vertical from sessions s join users u on u.id=s.user_id
-    where s.token_hash=${sha(t)} and s.expires_at>now()`;
+    where s.token_hash=${sha(t)} and s.expires_at>now() and u.brand=${siteOf(req)}`;
   return r[0] || null;
 }
 export async function endSession(req, res) {

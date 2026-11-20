@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
-import { sql, sha } from './core.js';
+import { sql, sha, brandOf } from './core.js';
+export { brandOf };
 import { sendMail, layout, SITE, KITEO_SITE } from './mail.js';
 
-// Which site the request came from, so emailed links and branding match it.
-export const brandOf = req => /(^|\.)kiteoai\.com(:\d+)?$/i.test(String((req && req.headers && (req.headers['x-forwarded-host'] || req.headers.host)) || '')) ? 'kiteo' : '';
 
 // Single-use email tokens: 'reset' (1 hour) and 'verify' (3 days). Only the SHA-256 hash is stored.
 export async function issueToken(userId, kind) {

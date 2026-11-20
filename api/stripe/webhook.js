@@ -41,14 +41,14 @@ export default async function handler(req, res) {
     // $14.99 single audit: one credit per paid checkout, counted once even if Stripe retries the event
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
-    const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email}`;
+    const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email} and brand='optiroas'`;
     if (!u[0]) { console.error('stripe webhook: no OptiROAS user for audit payment', o.id); return json(res, 200, { received: true }); }
     const ins = await sql`insert into audit_payments(session_id, user_id, amount) values(${o.id}, ${u[0].id}, ${o.amount_total || 0}) on conflict do nothing returning session_id`;
     if (ins.length) await sql`update users set audit_credits = audit_credits + 1 where id=${u[0].id}`;
   } else if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
-    const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email}`;
+    const u = ref ? await sql`select id from users where id=${ref}` : await sql`select id from users where email=${email} and brand='optiroas'`;
     const audit = o.payment_link === AUDIT_LINK();
     if (u[0] && audit) await sql`update users set stripe_customer_id=${o.customer}, plan=case when plan in ('free','audit') then 'audit' else plan end,
         period_start=coalesce(period_start, now()), period_end=coalesce(period_end, now() + interval '1 month') where id=${u[0].id}`;

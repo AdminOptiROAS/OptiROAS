@@ -1,4 +1,4 @@
-import { ensureSchema, sql, json, body, emailOk, hashPassword, startSession } from '../_lib/core.js';
+import { ensureSchema, sql, json, body, emailOk, hashPassword, startSession, siteOf } from '../_lib/core.js';
 import { sendVerify, brandOf } from '../_lib/tokens.js';
 import { mailOn } from '../_lib/mail.js';
 
@@ -13,9 +13,9 @@ export default async function handler(req, res) {
   const allow = (process.env.ALLOWED_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
   if (process.env.INVITE_ONLY === 'true' && !allow.includes(email)) return json(res, 403, { error: 'Accounts are invite-only during early access. Join the waitlist and we’ll send you an invite.' });
   await ensureSchema();
-  const exists = await sql`select 1 from users where email=${email}`;
+  const exists = await sql`select 1 from users where email=${email} and brand=${siteOf(req)}`;
   if (exists.length) return json(res, 409, { error: 'An account with this email already exists. Sign in instead, or reset your password.' });
-  const r = await sql`insert into users(email,name,pass_hash,utm_source,utm_campaign,lang) values(${email},${String(name || '').trim().slice(0, 120) || null},${hashPassword(password)},${clip(U.source)},${clip(U.campaign)},${lang === 'ar' ? 'ar' : 'en'}) returning id,email,name`;
+  const r = await sql`insert into users(brand,email,name,pass_hash,utm_source,utm_campaign,lang) values(${siteOf(req)},${email},${String(name || '').trim().slice(0, 120) || null},${hashPassword(password)},${clip(U.source)},${clip(U.campaign)},${lang === 'ar' ? 'ar' : 'en'}) returning id,email,name`;
   await startSession(res, r[0].id);
   let sent = false;
   if (mailOn() && !allow.includes(email)) sent = await sendVerify(r[0], lang, brandOf(req));
