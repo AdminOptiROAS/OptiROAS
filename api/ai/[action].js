@@ -1,6 +1,6 @@
 import { ensureSchema, currentUser, sql, json, body, emailOk } from '../_lib/core.js';
 import { sendMail, layout, mailOn, KITEO_SITE } from '../_lib/mail.js';
-import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
+import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, factKey, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
 import { pullGa4, gaEmail, cleanProperty } from '../_lib/ga4.js';
@@ -110,7 +110,8 @@ export default async function handler(req, res) {
     const website = clean(b.website, 120).replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '').toLowerCase() || null;
     await sql`insert into ai_brands(user_id, brand, aliases, website, country, competitors, keywords) values(${u.id}, ${brand}, ${JSON.stringify(aliases)}, ${website}, ${country}, ${JSON.stringify(competitors)}, ${JSON.stringify(keywords)})
       on conflict(user_id) do update set brand=excluded.brand, aliases=excluded.aliases, website=excluded.website, country=excluded.country, competitors=excluded.competitors, keywords=excluded.keywords, active=true, updated_at=now()`;
-    await sql`update ai_brands set facts=${facts}, category_en=${catEn}, category_ar=${catAr} where user_id=${u.id}`;
+    if (b.facts !== undefined) await sql`update ai_brands set facts=${facts} where user_id=${u.id}`;
+    await sql`update ai_brands set category_en=${catEn}, category_ar=${catAr} where user_id=${u.id}`;
     // keep questions that didn't change, so their history stays linked
     const old = await sql`select id, text from ai_prompts where user_id=${u.id}`;
     const keep = new Set(prompts);
@@ -197,6 +198,18 @@ export default async function handler(req, res) {
       if ((rating != null && !(rating >= 0 && rating <= 5)) || (count != null && !(count >= 0))) return json(res, 400, { error: 'Rating must be 0–5 and the number of reviews 0 or more.' });
       await sql`insert into ai_reviews(user_id, platform, rating, count, url) values(${u.id}, ${platform}, ${rating}, ${count}, ${clean(b.url, 300) || null})`;
     }
+    return json(res, 200, await state(u));
+  }
+
+  // the client confirms or corrects a fact AI states about the brand
+  if (action === 'fact' && req.method === 'POST') {
+    const claim = clean(b.claim, 300), key = factKey(claim);
+    if (!claim || key !== b.key) return json(res, 400, { error: 'Unknown fact.' });
+    if (b.verdict === 'right' || b.verdict === 'wrong') {
+      const correct = b.verdict === 'wrong' ? clean(b.correct, 300) || null : null;
+      await sql`insert into ai_facts(user_id, key, claim, verdict, correct) values(${u.id}, ${key}, ${claim}, ${b.verdict}, ${correct})
+        on conflict(user_id, key) do update set claim=excluded.claim, verdict=excluded.verdict, correct=excluded.correct, updated_at=now()`;
+    } else await sql`delete from ai_facts where user_id=${u.id} and key=${key}`;
     return json(res, 200, await state(u));
   }
 

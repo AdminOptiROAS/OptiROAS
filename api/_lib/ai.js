@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { sql } from './core.js';
 import { isAdmin, isReviewer } from './plan.js';
 import { extractBrands, checkClaims } from './ai-llm.js';
@@ -56,6 +57,9 @@ export function ensureAi() {
     await sql`create table if not exists ai_reviews(id bigserial primary key, user_id uuid not null references users(id) on delete cascade, platform text not null,
       rating numeric, count int, url text, source text not null default 'manual', detail jsonb, recorded_at timestamptz not null default now())`;
     await sql`create index if not exists ai_reviews_user on ai_reviews(user_id, platform, recorded_at desc)`;
+    // facts AI states about the brand, as confirmed or corrected by the client
+    await sql`create table if not exists ai_facts(user_id uuid not null references users(id) on delete cascade, key text not null, claim text not null,
+      verdict text not null, correct text, updated_at timestamptz not null default now(), primary key(user_id, key))`;
     await sql`create table if not exists ai_placements(id bigserial primary key, user_id uuid not null references users(id) on delete cascade, url text not null,
       domain text, note text, added_at timestamptz not null default now())`;
   })().catch(e => { ready = null; throw e; });
@@ -201,7 +205,7 @@ async function runJob(j) {
     // second pass (best effort): every brand the answer recommends, or what it says about the client's brand
     let brands = null, analysis = null;
     try {
-      if (j.kind === 'brand') analysis = await checkClaims({ brand: brand.brand, facts: brand.facts, country: (COUNTRIES[brand.country] || COUNTRIES.SA).en, question: j.prompt, answer: r.text, lang: j.lang });
+      if (j.kind === 'brand') analysis = await checkClaims({ brand: brand.brand, facts: factsText(brand, await verifiedFacts(brand.user_id)), country: (COUNTRIES[brand.country] || COUNTRIES.SA).en, question: j.prompt, answer: r.text, lang: j.lang });
       else brands = await extractBrands(j.prompt, r.text);
     } catch (e) { /* the answer still counts without the extra analysis */ }
     await sql`update ai_jobs set status='done', done_at=now(), error=null, answer=${String(r.text || '').slice(0, 6000)}, found=${JSON.stringify(found)}, citations=${JSON.stringify(cites)},
@@ -270,7 +274,7 @@ export async function summary(userId) {
   const earlier = await sql`select citations, found from ai_jobs where user_id=${userId} and kind='market' and status='done' and batch < ${latest.batch} and batch > ${latest.batch}::timestamptz - interval '120 days'`;
   return { ...out, batch: latest.batch, total: stat(rows), byEngine: group('engine'), byLang: group('lang'),
     domains: [...dom].sort((a, b) => b[1] - a[1]).slice(0, 15).map(([d, n]) => ({ domain: d, share: n / (rows.length || 1) })), prompts,
-    top: topBrands(rows, brand), says: brandSays(brandRows), sources: sourcesFor(rows, earlier) };
+    top: topBrands(rows, brand), says: brandSays(brandRows, await verifiedFacts(userId)), sources: sourcesFor(rows, earlier) };
 }
 
 // ---------- top brands across the client's questions ----------
@@ -298,13 +302,38 @@ export function topBrands(rows, brand) {
 }
 
 // ---------- what AI says about the brand ----------
-export function brandSays(rows) {
+// ---------- facts AI states about the brand ----------
+const normClaim = t => String(t || '').toLowerCase().replace(/[\u064B-\u0652\u0640]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+export const factKey = claim => crypto.createHash('sha1').update(normClaim(claim)).digest('hex').slice(0, 16);
+export const verifiedFacts = userId => sql`select key, claim, verdict, correct, updated_at from ai_facts where user_id=${userId}`;
+// What the claim check compares against: anything the brand wrote, plus every fact the client confirmed or corrected.
+export function factsText(brand, verified) {
+  const lines = (verified || []).map(v => v.verdict === 'right' ? `True: ${v.claim}` : `Not true: ${v.claim}${v.correct ? `. Correct: ${v.correct}` : ''}`);
+  return [brand.facts, ...lines].filter(Boolean).join('\n').slice(0, 4000);
+}
+export function brandSays(rows, verified = []) {
   if (!rows.length) return null;
   const qs = [...new Set(rows.map(r => r.prompt))];
   const an = rows.map(r => r.analysis).filter(Boolean);
   const sent = { positive: 0, neutral: 0, negative: 0, mixed: 0 }; an.forEach(a => sent[a.sentiment] = (sent[a.sentiment] || 0) + 1);
-  const wrong = an.flatMap(a => (a.claims || []).filter(c => c.status === 'wrong'));
-  return { answers: rows.length, analysed: an.length, sentiment: sent, unknown: an.filter(a => a.known === false).length, wrong: wrong.length,
+  // every claim across the answers, merged, with the client's verdict
+  const V = new Map(verified.map(v => [v.key, v])), F = new Map();
+  for (const r of rows) for (const c of ((r.analysis || {}).claims || [])) {
+    const k = factKey(c.claim); if (!k) continue;
+    const f = F.get(k) || { key: k, claim: c.claim, n: 0, engines: new Set(), sources: new Set(), auto: 'unverified', fix: '' };
+    f.n++; f.engines.add(r.engine); (r.citations || []).forEach(x => x.domain && f.sources.add(x.domain));
+    if (c.status === 'wrong') { f.auto = 'wrong'; f.fix = f.fix || c.fix || ''; } else if (c.status === 'matches' && f.auto !== 'wrong') f.auto = 'matches';
+    F.set(k, f);
+  }
+  const facts = [...F.values()].sort((a, b) => b.n - a.n).slice(0, 40).map(f => {
+    const v = V.get(f.key);
+    return { key: f.key, claim: f.claim, n: f.n, engines: [...f.engines], sources: [...f.sources].slice(0, 6), auto: f.auto, autoFix: f.fix,
+      verdict: v ? v.verdict : null, correct: v ? v.correct : null };
+  });
+  const isWrong = f => f.verdict === 'wrong' || (!f.verdict && f.auto === 'wrong');
+  const fixed = verified.filter(v => v.verdict === 'wrong' && !F.has(v.key)).map(v => ({ key: v.key, claim: v.claim, correct: v.correct }));
+  return { answers: rows.length, analysed: an.length, sentiment: sent, unknown: an.filter(a => a.known === false).length,
+    wrong: facts.filter(isWrong).length, unchecked: facts.filter(f => !f.verdict).length, facts, fixed,
     questions: qs.map(q => ({ text: q, lang: rows.find(r => r.prompt === q).lang,
       engines: rows.filter(r => r.prompt === q).map(r => ({ engine: r.engine, answer: (r.answer || '').slice(0, 1500), analysis: r.analysis,
         sources: [...new Set((r.citations || []).map(c => c.domain).filter(Boolean))].slice(0, 5) })) })) };

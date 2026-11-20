@@ -979,6 +979,16 @@ html[dir=rtl] .segb i{border-radius:4px 0 0 4px}
 nav.top .links .aionly{display:none}body.aiok nav.top .links .aionly{display:inline-flex}
 .aivhead h1{margin:6px 0 4px}
 .aivtabs .rtab:disabled{opacity:.4;cursor:not-allowed}
+.aivfactl,.aivfixl{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:8px}
+.aivfact{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+.aivfact.right{background:color-mix(in srgb,var(--ok,#1a7f4b) 6%,transparent)}.aivfact.wrong{background:color-mix(in srgb,var(--bad,#c0392b) 6%,transparent)}
+.aivfact .ft{display:grid;gap:3px;min-width:0}.aivfact .fb{display:flex;gap:6px;align-items:center;flex:none;flex-wrap:nowrap;justify-content:flex-end}
+.aivfixf{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.aivfixf input{min-width:200px}
+.aivfixl>li{padding:12px;border:1px solid var(--line);border-radius:10px;display:grid;gap:6px}.aivfix{border-color:var(--bad,#c0392b)}
+.aivnudge{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;margin-bottom:14px;border-color:var(--accent)}.aivnudge>div{display:grid;gap:2px}
+.aivsub{margin:22px 0 10px}.aivkpi b.amber,.small.amber{color:#b26a00}
+.aivfix,.aivfacts{padding:18px 20px;margin-bottom:14px}.aivfix h3,.aivfacts h3{margin:0 0 4px}.aivfix .aivsvc{margin-top:12px}
+@media(max-width:640px){.aivkpi{grid-template-columns:1fr 1fr;gap:8px}.aivkpi .card{padding:10px 12px}.aivfact{flex-direction:column;align-items:stretch}.aivfact .fb{justify-content:flex-start}.aivnudge{flex-direction:column;align-items:stretch}}
 .aivflow{list-style:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 4px;padding:0}
 .aivflow li{display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--card,#fff);opacity:.6}
 .aivflow li.on{opacity:1;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}.aivflow li.done{opacity:1}
@@ -3363,16 +3373,41 @@ function aivSays(el){
   if(!S){el.innerHTML=`<div class="card" style="padding:22px"><p>${TR('This appears after your next check. Each check now also asks every assistant what it knows about your brand, in Arabic and English.','يظهر هذا بعد فحصك القادم. كل فحص صار يسأل كل مساعد أيضًا ماذا يعرف عن علامتك، بالعربية والإنجليزية.')}</p><button class="btn" type="button" id="aivRun2">${TR('Run a check now','شغّل فحصًا الآن')}</button></div>`;const b=$('aivRun2');if(b)b.onclick=async()=>{if(await aivPost('/api/ai/run',{},b)){AIV.tab='recs';renderAi();aivTick()}};return}
   const sl={positive:TR('positive','إيجابي'),neutral:TR('neutral','محايد'),negative:TR('negative','سلبي'),mixed:TR('mixed','مختلط')},st={matches:TR('correct','صحيح'),wrong:TR('wrong','خطأ'),unverified:TR('not checked','غير مُتحقَّق')};
   const tot=Object.values(S.sentiment).reduce((a,b)=>a+b,0)||1;
+  const FA=S.facts||[],eng=k=>esc((AIV.d.allEngines.find(x=>x.key===k)||{}).name||k),site=R.brand.website;
+  const isW=f=>f.verdict==='wrong'||(!f.verdict&&f.auto==='wrong'),W=FA.filter(isW);
+  const factLi=f=>`<li class="aivfact ${f.verdict||''}" data-fk="${f.key}"><div class="ft"><span class="notr" dir="auto">${esc(f.claim)}</span>
+      <span class="muted small">${TR('Said by','قاله')} ${f.engines.map(eng).join(TR(', ','، '))} · ${TR(f.n===1?'1 answer':`${f.n} answers`,f.n===1?'إجابة واحدة':`${f.n} إجابات`)}</span>
+      ${!f.verdict&&f.auto==='wrong'?`<span class="small neg">${TR('Looks wrong based on what you told us','يبدو خاطئًا بحسب ما أخبرتنا')}${f.autoFix?`: <span class="notr" dir="auto">${esc(f.autoFix)}</span>`:''}</span>`:''}
+      ${f.verdict==='wrong'&&f.correct?`<span class="small">${TR('Correct:','الصحيح:')} <b class="notr" dir="auto">${esc(f.correct)}</b></span>`:''}</div>
+    <div class="fb">${f.verdict?`<span class="aivpill ${f.verdict==='right'?'ok':'bad'}">${f.verdict==='right'?TR('You confirmed','أكّدتَه'):TR('You flagged as wrong','حدّدتَه كخطأ')}</span><button type="button" class="linkbtn small" data-fv="">${TR('Undo','تراجع')}</button>`
+      :`<button type="button" class="btn quiet sm" data-fv="right">✓ ${TR('Correct','صحيح')}</button><button type="button" class="btn quiet sm" data-fv="wrong">✗ ${TR('Wrong','خطأ')}</button>`}</div></li>`;
   el.innerHTML=`<div class="aivkpi">
       <div class="card"><span class="eyebrow">${TR('Tone','النبرة')}</span><b>${aPct(S.sentiment.positive/tot)}</b><span class="muted small">${TR('of answers are positive about you','من الإجابات إيجابية عنك')}</span></div>
-      <div class="card"><span class="eyebrow">${TR('Wrong facts','معلومات خاطئة')}</span><b class="${S.wrong?'neg':''}">${S.wrong}</b><span class="muted small">${R.brand.facts?TR('compared with the facts you gave us','مقارنةً بالمعلومات التي زوّدتنا بها'):TR('add your facts in Setup to check these','أضف معلوماتك في الإعداد لنتحقق منها')}</span></div>
+      <div class="card"><span class="eyebrow">${TR('Facts to check','معلومات تحتاج تأكيدك')}</span><b class="${S.unchecked?'amber':''}">${S.unchecked||0}</b><span class="muted small">${TR(`of ${FA.length} facts AI states about you`,`من ${FA.length} معلومة يذكرها الذكاء الاصطناعي عنك`)}</span></div>
+      <div class="card"><span class="eyebrow">${TR('Wrong facts','معلومات خاطئة')}</span><b class="${S.wrong?'neg':''}">${S.wrong}</b><span class="muted small">${TR('to fix','تحتاج تصحيحًا')}</span></div>
       <div class="card"><span class="eyebrow">${TR('Doesn’t know you','لا يعرفك')}</span><b class="${S.unknown?'neg':''}">${S.unknown}</b><span class="muted small">${TR(`of ${S.answers} answers`,`من ${S.answers} إجابة`)}</span></div></div>
+    ${W.length?`<div class="card aivfix"><h3>${TR('To fix','للتصحيح')}</h3><p class="muted small">${TR('AI is giving shoppers these wrong facts. Correct them in the places below; AI usually picks up the change within a few weeks.','يقدّم الذكاء الاصطناعي للمتسوقين هذه المعلومات الخاطئة. صحّحها في الأماكن أدناه، وعادةً يلتقط الذكاء الاصطناعي التغيير خلال أسابيع.')}</p>
+      <ol class="aivfixl">${W.map(f=>`<li><div><span class="aivpill bad">${TR('AI says','يقول الذكاء الاصطناعي')}</span> <span class="notr" dir="auto">${esc(f.claim)}</span></div>
+        ${f.correct||f.autoFix?`<div><span class="aivpill ok">${TR('Correct','الصحيح')}</span> <b class="notr" dir="auto">${esc(f.correct||f.autoFix)}</b></div>`:`<div class="small amber">${TR('Tell us the correct information so we can include it in the fix.','أخبرنا بالمعلومة الصحيحة لنضمّنها في التصحيح.')}</div>`}
+        <div class="small"><b>${TR('Fix it on:','صحّحها في:')}</b> ${[site?`<span class="notr">${esc(site)}</span> ${TR('(your website and product pages)','(موقعك وصفحات منتجاتك)')}`:TR('your website and product pages','موقعك وصفحات منتجاتك'),TR('your Google Business Profile','ملفك في Google Business'),...f.sources.filter(d=>!site||d.indexOf(site)<0).map(d=>`<span class="notr">${esc(d)}</span>`)].join(' · ')}</div></li>`).join('')}</ol>
+      ${aivServiceCta('content',TR('Want our team to fix these for you?','تريد أن يصحّحها فريقنا نيابةً عنك؟'))}</div>`:''}
+    <div class="card aivfacts"><h3>${TR('Check the facts AI gives about you','تحقّق من المعلومات التي يذكرها الذكاء الاصطناعي عنك')}</h3>
+      <p class="muted small">${TR('These are the facts ChatGPT, Gemini, Perplexity and Claude tell shoppers about your brand. Mark each one correct or wrong. For wrong ones, tell us what’s right and we’ll show you where to fix it.','هذه المعلومات التي يخبر بها ChatGPT وGemini وPerplexity وClaude المتسوقين عن علامتك. حدّد كل واحدة صحيحة أو خاطئة. وللخاطئة، أخبرنا بالصحيح ونوضّح لك أين تصحّحها.')}</p>
+      ${FA.length?`<ul class="aivfactl">${[...FA.filter(f=>!f.verdict),...FA.filter(f=>f.verdict)].map(factLi).join('')}</ul>`:`<p class="small">${TR('The assistants didn’t state specific facts about your brand in the latest check.','لم تذكر المساعدات معلومات محددة عن علامتك في آخر فحص.')}</p>`}
+      ${(S.fixed||[]).length?`<h4>${TR('Fixed','تم تصحيحه')}</h4><ul class="aivfactl">${S.fixed.map(f=>`<li class="aivfact right"><div class="ft"><span class="notr" dir="auto">${esc(f.claim)}</span><span class="small ok">${TR('AI no longer says this','لم يعد الذكاء الاصطناعي يقول هذا')}</span></div></li>`).join('')}</ul>`:''}</div>
+    <h3 class="aivsub">${TR('Answers by question','الإجابات حسب السؤال')}</h3>
     ${S.questions.map(q=>`<details class="card aivsay"${S.wrong?'':''}><summary><span class="notr" dir="auto">${esc(q.text)}</span></summary>
       ${q.engines.map(e=>{const a=e.analysis;return `<div class="aivans"><div class="ah"><b style="color:${AIE[e.engine]}">${esc((AIV.d.allEngines.find(x=>x.key===e.engine)||{}).name||e.engine)}</b>${a?` <span class="aivpill ${a.sentiment==='negative'?'bad':a.sentiment==='positive'?'ok':'no'}">${sl[a.sentiment]||''}</span>${a.known===false?` <span class="aivpill bad">${TR('doesn’t know you','لا يعرفك')}</span>`:''}`:''}</div>
         ${a&&a.summary?`<p class="small notr" dir="auto"><b>${esc(a.summary)}</b></p>`:''}
         ${a&&a.claims&&a.claims.length?`<ul class="aivclaims">${a.claims.map(c=>`<li class="${c.status}"><span class="aivpill ${c.status==='wrong'?'bad':c.status==='matches'?'ok':'no'}">${st[c.status]}</span> <span class="notr" dir="auto">${esc(c.claim)}</span>${c.fix?`<div class="small notr" dir="auto">${TR('Correct:','الصحيح:')} ${esc(c.fix)}</div>`:''}</li>`).join('')}</ul>`:''}
         <details class="small"><summary>${TR('Full answer','الإجابة كاملة')}</summary><div class="at notr" dir="auto">${esc(e.answer)}</div>${e.sources.length?`<div class="muted">${TR('Sources','المصادر')}: ${e.sources.map(esc).join(' · ')}</div>`:''}</details></div>`}).join('')}</details>`).join('')}
-    <p class="muted small">${TR('How to fix wrong facts: correct them on your website and product pages, then on the marketplaces and review sites the assistants cite. Changes usually show within a few weeks.','كيف تصحّح المعلومات الخاطئة: صحّحها في موقعك وصفحات منتجاتك، ثم في المتاجر ومواقع التقييم التي تستشهد بها المساعدات. التغييرات تظهر عادةً خلال أسابيع.')}</p>`;
+`;
+  aivServiceWire(el);
+  const send=async(f,verdict,correct,btn)=>{if(await aivPost('/api/ai/fact',{key:f.key,claim:f.claim,verdict,correct},btn)){renderAi();toast(verdict==='wrong'?TR('Flagged. It’s now in your list to fix.','تم التحديد. أُضيفت إلى قائمة التصحيح.'):verdict==='right'?TR('Confirmed.','تم التأكيد.'):TR('Undone.','تم التراجع.'))}};
+  el.querySelectorAll('[data-fk]').forEach(li=>{const f=FA.find(x=>x.key===li.dataset.fk);li.querySelectorAll('[data-fv]').forEach(b=>b.onclick=()=>{
+    if(b.dataset.fv!=='wrong')return send(f,b.dataset.fv,'',b);
+    const fb=li.querySelector('.fb');fb.innerHTML=`<form class="aivfixf"><input name="c" dir="auto" placeholder="${TR('What’s correct? (optional)','ما الصحيح؟ (اختياري)')}" maxlength="300"><button class="btn sm" type="submit">${TR('Save','حفظ')}</button><button class="linkbtn small" type="button" data-cx>${TR('Cancel','إلغاء')}</button></form>`;
+    const fm=fb.querySelector('form');fm.c.focus();fm.querySelector('[data-cx]').onclick=()=>renderAi();fm.onsubmit=e=>{e.preventDefault();send(f,'wrong',fm.c.value,fm.querySelector('[type=submit]'))}})});
 }
 function aivPlaces(el){
   const R=AIV.d.report,S=(R&&R.sources)||{withYou:[],targets:[]},P=AIV.d.placements||[];
@@ -3455,6 +3490,7 @@ async function renderAi(){
     <div class="rtabs aivtabs" role="tablist">${tabs.map(([k,l])=>`<button class="rtab" type="button" role="tab" data-aitab="${k}" aria-selected="${AIV.tab===k}"${!B&&k!=='setup'?' disabled':''}>${l}</button>`).join('')}</div><div id="aivBody"></div>`;
   el.querySelectorAll('[data-aitab]').forEach(b=>b.onclick=()=>{AIV.tab=b.dataset.aitab;renderAi()});
   ({recs:aivRecs,says:aivSays,places:aivPlaces,reviews:aivReviews,demand:aivDemand,visits:aivVisits,setup:aivSetup})[AIV.tab]($('aivBody'));
+  const SY=R&&R.says;if(AIV.tab==='recs'&&SY&&(SY.unchecked||SY.wrong)){const bd=$('aivBody');bd.insertAdjacentHTML('afterbegin',`<div class="card aivnudge"><div><b>${SY.unchecked?TR(`AI states ${SY.unchecked} facts about your brand. Are they right?`,`يذكر الذكاء الاصطناعي ${SY.unchecked} معلومات عن علامتك. هل هي صحيحة؟`):TR(`${SY.wrong} wrong facts about your brand to fix`,`${SY.wrong} معلومات خاطئة عن علامتك تحتاج تصحيحًا`)}</b><span class="muted small">${TR('Check them in a minute and we’ll tell you where to fix the wrong ones.','تحقّق منها في دقيقة ونوضّح لك أين تصحّح الخاطئ منها.')}</span></div><button class="btn sm" type="button" id="aivToSays">${SY.unchecked?TR('Check facts','تحقّق من المعلومات'):TR('See fixes','اعرض التصحيحات')}</button></div>`);$('aivToSays').onclick=()=>{AIV.tab='says';renderAi();window.scrollTo(0,0)}}
 }
 async function aivPost(path,body,btn){
   if(AIV.busy)return;AIV.busy=true;const t=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent=TR('Working…','جارٍ العمل…')}
@@ -3563,9 +3599,6 @@ function aivSetup(el){
     <button type="button" class="btn quiet sm" id="aivSuggest">${TR('Suggest questions','اقترح أسئلة')}</button>
     <textarea name="prompts" rows="10" dir="auto" placeholder="أفضل محل عود في الرياض&#10;best oud perfume gift under 500 riyals">${esc(ps.join('\n'))}</textarea>
     ${aivSeasons(B)}
-    <h3>${TR('Facts about your brand','معلومات عن علامتك')}</h3>
-    <p class="muted small">${TR('Prices, main products, where you sell, branches, delivery, warranty, returns. We use these to check whether AI says the right things about you.','الأسعار، المنتجات الرئيسية، أين تبيع، الفروع، التوصيل، الضمان، الاسترجاع. نستخدمها لنتحقق هل يقول الذكاء الاصطناعي معلومات صحيحة عنك.')}</p>
-    <textarea name="facts" rows="5" dir="auto" placeholder="${TR('e.g. YOYO stroller SAR 2,499. Sold on our website and Mumzworld. Free delivery in Riyadh. 2-year warranty.','مثال: عربة YOYO بسعر 2,499 ريال. نبيع في موقعنا وممزورلد. توصيل مجاني في الرياض. ضمان سنتين.')}">${esc(B.facts||'')}</textarea>
     <h3>${TR('Keywords for search demand','كلمات مفتاحية لقياس الطلب')}</h3>
     <p class="muted small">${TR('One per line. Leave empty to use your brand name and its spellings.','كلمة في كل سطر. اتركها فارغة لاستخدام اسم علامتك وتهجئاتها.')}</p>
     <textarea name="keywords" rows="5" dir="auto">${esc((B.keywords||[]).join('\n'))}</textarea>
@@ -3580,7 +3613,7 @@ function aivSetup(el){
     const cur0=F.prompts.value.split('\n').map(s=>s.trim()).filter(Boolean);F.prompts.value=[...new Set([...cur0,...q])].join('\n')};
   F.onsubmit=async e=>{e.preventDefault();const sp=s=>s.split(',').map(x=>x.trim()).filter(Boolean),ln=s=>s.split('\n').map(x=>x.trim()).filter(Boolean);
     const body={brand:F.brand.value,aliases:sp(F.aliases.value),website:F.website.value,country:F.country.value,
-      competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value),facts:F.facts.value,category_en:F.category_en.value,category_ar:F.category_ar.value};
+      competitors:[0,1,2,3,4].map(i=>({name:F['c'+i].value.trim(),aliases:sp(F['ca'+i].value)})).filter(c=>c.name),prompts:ln(F.prompts.value),keywords:ln(F.keywords.value),category_en:F.category_en.value,category_ar:F.category_ar.value};
     const first=!B.brand;
     if(await aivPost('/api/ai/setup',body,F.querySelector('[type=submit]'))){AIV.tab='recs';
       if(first&&body.prompts.length){toast(TR('Saved. Your first check is starting.','تم الحفظ. بدأ فحصك الأول.'));renderAi();if(await aivPost('/api/ai/run',{})){renderAi();aivTick()}}
