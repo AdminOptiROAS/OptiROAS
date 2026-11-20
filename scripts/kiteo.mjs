@@ -1,4 +1,4 @@
-// Build step: writes kiteo.html, the same app as index.html but with Kiteo's title, description and preview image
+// Run before each commit (git pre-commit hook): writes kiteo.html, the same app as index.html but with Kiteo's title, description and preview image
 // in the HTML itself (so link previews and search engines see Kiteo). middleware.js serves it on kiteoai.com.
 import fs from 'node:fs';
 let s = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');

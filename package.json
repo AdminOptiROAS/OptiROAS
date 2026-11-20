@@ -7,8 +7,5 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0"
-  },
-  "scripts": {
-    "build": "node scripts/kiteo.mjs"
   }
 }
