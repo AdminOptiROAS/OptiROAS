@@ -17,7 +17,8 @@ async function kpAccount() {
   return { access: await accessFromRefresh(decrypt(r.token_enc)), cid, login: r.login_customer_id };
 }
 async function call(acc, method, body) {
-  const h = { Authorization: `Bearer ${acc.access}`, 'Content-Type': 'application/json', 'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '' };
+  const h = { Authorization: `Bearer ${acc.access}`, 'Content-Type': 'application/json' };
+  if (process.env.GOOGLE_ADS_DEVELOPER_TOKEN) h['developer-token'] = process.env.GOOGLE_ADS_DEVELOPER_TOKEN; // retired by Google; only sent if set
   if (acc.login) h['login-customer-id'] = String(acc.login).replace(/-/g, '');
   const r = await fetch(`${GADS()}/customers/${acc.cid}:${method}`, { method: 'POST', headers: h, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
   const j = await r.json().catch(() => ({}));
