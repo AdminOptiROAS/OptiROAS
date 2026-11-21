@@ -21,7 +21,7 @@ export async function sendMail({ to, subject, html, text, attachments }) {
 // brand: 'optiroas' (default) or 'kiteo' (the AI visibility product)
 export const KITEO_SITE = () => process.env.KITEO_SITE_URL || 'https://www.kiteoai.com';
 export function layout({ lang, title, intro, button, link, outro, paras = [], unsub, brand }) {
-  const K = brand === 'kiteo', C = K ? '#5b3fd1' : '#0a6c86';
+  const K = brand === 'kiteo', C = K ? '#1e4fd8' : '#0a6c86';
   const ar = lang === 'ar', dir = ar ? 'rtl' : 'ltr';
   const html = `<!doctype html><html lang="${ar ? 'ar' : 'en'}" dir="${dir}"><body style="margin:0;background:#f4f7f9;font-family:Segoe UI,Arial,sans-serif;color:#0f1f2b">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px"><tr><td align="center">

@@ -91,7 +91,7 @@ export default async function handler(req, res) {
   if (action === 'request' && req.method === 'POST') {
     const b = body(req), ar = b.lang === 'ar';
     if (String(b.website2 || '')) return json(res, 200, { ok: true }); // honeypot
-    const service = ['reviews', 'content', 'listings'].includes(b.service) ? b.service : 'check';
+    const service = ['reviews', 'content', 'listings', 'commerce'].includes(b.service) ? b.service : 'check';
     const email = String(b.email || '').trim().toLowerCase(), f = { name: clean(b.name, 80), phone: clean(b.phone, 30), brand: clean(b.brand, 80), website: clean(b.website, 120), country: COUNTRIES[b.country] ? b.country : 'SA' };
     if (!emailOk(email)) return json(res, 400, { error: ar ? 'أدخل بريدًا إلكترونيًا صحيحًا.' : 'Enter a valid email address.' });
     if (!f.brand) return json(res, 400, { error: ar ? 'أدخل اسم علامتك التجارية.' : 'Enter your brand name.' });
@@ -105,8 +105,13 @@ export default async function handler(req, res) {
     if (mailOn()) {
       const team = (process.env.ADMIN_EMAILS || 'admin@optiroas.com').split(',').map(x => x.trim()).filter(Boolean);
       const lines = [`Brand: ${f.brand}`, `Website: ${f.website || '-'}`, `Country: ${(COUNTRIES[f.country] || {}).en}`, `Name: ${f.name || '-'}`, `Email: ${email}`, `Phone / WhatsApp: ${f.phone || '-'}`, `Language: ${ar ? 'Arabic' : 'English'}`];
-      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: 'New AI visibility check request', intro: 'Someone asked for a free AI visibility check on optiroas.com.', paras: lines, button: 'Open Kiteo', link: `${KITEO_SITE()}/#ai-visibility`, outro: 'Reply to the client within one working day.', brand: 'kiteo' }) }).catch(() => {});
-      await sendMail({ to: email, subject: ar ? 'استلمنا طلب فحص الظهور في الذكاء الاصطناعي' : 'We received your AI visibility check request', ...layout({ lang: ar ? 'ar' : 'en',
+      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements', commerce: 'Kiteo Commerce waitlist' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: service === 'commerce' ? 'New Kiteo Commerce waitlist sign-up' : 'New AI visibility check request', intro: service === 'commerce' ? 'Someone joined the Kiteo Commerce waitlist on kiteoai.com.' : 'Someone asked for a free AI visibility check on kiteoai.com.', paras: lines, button: 'Open Kiteo', link: `${KITEO_SITE()}/#ai-visibility`, outro: 'Reply to the client within one working day.', brand: 'kiteo' }) }).catch(() => {});
+      if (service === 'commerce') await sendMail({ to: email, subject: ar ? 'أنت على قائمة انتظار Kiteo Commerce' : 'You’re on the Kiteo Commerce waitlist', ...layout({ lang: ar ? 'ar' : 'en',
+        title: ar ? 'شكرًا، تم تسجيلك' : 'Thanks, you’re on the list',
+        intro: ar ? `سنراسلك قبل إطلاق التسوق والدفع داخل مساعدات الذكاء الاصطناعي في الخليج، لنجهّز ${f.brand} من أول يوم.` : `We’ll email you before shopping and checkout inside AI assistants launches in the Gulf, so ${f.brand} is ready from day one.`,
+        button: ar ? 'زر Kiteo' : 'Visit Kiteo', link: `${KITEO_SITE()}/?lang=${ar ? 'ar' : 'en'}`, brand: 'kiteo',
+        outro: ar ? 'لديك سؤال؟ ردّ على هذا البريد.' : 'Questions? Just reply to this email.' }) }).catch(() => {});
+      else await sendMail({ to: email, subject: ar ? 'استلمنا طلب فحص الظهور في الذكاء الاصطناعي' : 'We received your AI visibility check request', ...layout({ lang: ar ? 'ar' : 'en',
         title: ar ? 'شكرًا، استلمنا طلبك' : 'Thanks, we have your request',
         intro: ar ? `سنفحص كيف توصي مساعدات الذكاء الاصطناعي بـ ${f.brand} ونتواصل معك خلال يوم عمل واحد بالنتائج والخطوات التالية.` : `We’ll check how AI assistants recommend ${f.brand} and get back to you within one working day with the results and next steps.`,
         button: ar ? 'زر Kiteo' : 'Visit Kiteo', link: `${KITEO_SITE()}/?lang=${ar ? 'ar' : 'en'}`, brand: 'kiteo',
