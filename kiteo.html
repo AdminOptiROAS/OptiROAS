@@ -4,16 +4,12 @@
 <meta charset="utf-8">
 <script>(function(){var k=/(^|\.)kiteoai\.com$/i.test(location.hostname)||/[?&]brand=kiteo\b/.test(location.search);window.KITEO=k;if(k)document.documentElement.setAttribute("data-brand","kiteo")})();</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18545659551"></script>
+<!-- Google tag (Kiteo: GTM-WZQ88VNH) -->
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-WZQ88VNH"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  // page_location keeps only campaign parameters (utm_*, click ids), so reset tokens and report links never reach Google
-  var __loc = (function () { try { var u = new URL(location.href), k = new URLSearchParams(); u.searchParams.forEach(function (v, n) { if (/^(utm_|gclid$|gbraid$|wbraid$|fbclid$|ScCid$)/i.test(n)) k.set(n, v); }); var q = k.toString(); return location.origin + location.pathname + (q ? '?' + q : ''); } catch (e) { return location.origin + location.pathname; } })();
-  gtag('config', 'AW-18545659551', { page_location: __loc });
-  gtag('config', 'G-LPFF077DY1', { page_location: __loc });
 </script>
 <!-- Vercel Web Analytics: cookie-free visit counts -->
 <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
