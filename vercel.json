@@ -28,7 +28,14 @@
       "dest": "/kiteo.html"
     },
     {
-      "src": "^/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides|ai-visibility)$",
+      "src": "^/ai-visibility/?$",
+      "status": 308,
+      "headers": {
+        "Location": "/"
+      }
+    },
+    {
+      "src": "^/(privacy|terms|data-deletion|waitlist|welcome|reset|pricing|faq|how|platforms|start|delivered|pillars|calculator|checks|account|guides)$",
       "dest": "/index.html"
     }
   ],

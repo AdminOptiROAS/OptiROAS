@@ -1,4 +1,4 @@
-import { ensureSchema, currentUser, sql, json, body, emailOk } from '../_lib/core.js';
+import { ensureSchema, currentUser, sql, json, body, emailOk, brandOf } from '../_lib/core.js';
 import { sendMail, layout, mailOn, KITEO_SITE } from '../_lib/mail.js';
 import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, factKey, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
@@ -51,10 +51,15 @@ async function prefill(u) {
 
 export default async function handler(req, res) {
   const action = String((req.query && req.query.action) || new URL(req.url, 'https://x').pathname.split('/').pop());
+  // AI visibility lives on Kiteo only; OptiROAS doesn't offer it (local development hosts allowed for testing)
+  const host = String(req.headers['x-forwarded-host'] || req.headers.host || '');
+  if (action !== 'cron' && brandOf(req) !== 'kiteo' && !/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return json(res, 404, { error: 'Not found.' });
   await ensureSchema(); await ensureAi();
 
   if (action === 'cron') {
     if (!process.env.CRON_SECRET || req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) return json(res, 401, { error: 'Unauthorized' });
+    // OptiROAS accounts no longer get AI tracking: pause theirs (data kept), so only Kiteo accounts are checked and emailed
+    await sql`update ai_brands set active=false where active and user_id in (select id from users where brand='optiroas')`;
     let started = 0;
     if (enginesOn().length) {
       const due = await sql`select b.user_id from ai_brands b join users u on u.id=b.user_id where b.active and (b.last_batch_at is null or b.last_batch_at < now() - interval '7 days') limit 50`;
