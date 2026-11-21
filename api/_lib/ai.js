@@ -57,6 +57,8 @@ export function ensureAi() {
     await sql`create table if not exists ai_reviews(id bigserial primary key, user_id uuid not null references users(id) on delete cascade, platform text not null,
       rating numeric, count int, url text, source text not null default 'manual', detail jsonb, recorded_at timestamptz not null default now())`;
     await sql`create index if not exists ai_reviews_user on ai_reviews(user_id, platform, recorded_at desc)`;
+    await sql`alter table ai_reviews add column if not exists subject text`; // null = the client's brand, otherwise a competitor's name
+    await sql`alter table ai_brands add column if not exists reviews_at timestamptz`;
     // facts AI states about the brand, as confirmed or corrected by the client
     await sql`create table if not exists ai_facts(user_id uuid not null references users(id) on delete cascade, key text not null, claim text not null,
       verdict text not null, correct text, updated_at timestamptz not null default now(), primary key(user_id, key))`;

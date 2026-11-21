@@ -4,7 +4,8 @@ import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, factKey, e
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
 import { pullGa4, gaEmail, cleanProperty } from '../_lib/ga4.js';
-import { alertsFor, listAlerts, googleReviews, reviewsState, placementsState, addPlacement, emailAlerts, emailMonthly } from '../_lib/ai-extra.js';
+import { runSiteCheck, siteState } from '../_lib/ai-site.js';
+import { alertsFor, listAlerts, googleReviews, refreshReviews, reviewsState, placementsState, addPlacement, emailAlerts, emailMonthly } from '../_lib/ai-extra.js';
 
 // Pull the last 28 days from the linked GA4 property and store it like an upload. Errors are kept on the brand.
 async function syncGa(userId, property) {
@@ -33,7 +34,7 @@ async function state(u) {
   return { allowed: true, team: team(u), engines: enginesOn().map(k => ({ key: k, name: ENGINES[k].name })), allEngines: Object.keys(ENGINES).map(k => ({ key: k, name: ENGINES[k].name })),
     runs: RUNS(), countries: Object.entries(COUNTRIES).map(([k, v]) => ({ code: k, en: v.en, ar: v.ar })), prompts, report: s, keywords: kw, visits,
     kpReady: !!(process.env.GOOGLE_KP_EMAIL && process.env.GOOGLE_KP_CUSTOMER_ID), gaEmail: gaEmail(),
-    alerts: await listAlerts(u.id), reviews: await reviewsState(u.id), placements: await placementsState(u.id, s), prefill: s ? null : await prefill(u) };
+    alerts: await listAlerts(u.id), reviews: await reviewsState(u.id), placements: await placementsState(u.id, s), site: s ? await siteState(u.id) : null, prefill: s ? null : await prefill(u) };
 }
 // What we already know when a client sets up their brand: details from sign-up, then their free-check request, then their email's domain.
 const FREE_MAIL = /^(gmail|googlemail|hotmail|outlook|live|yahoo|icloud|me|aol|proton|protonmail|msn|ymail|gmx|mail|zoho)\./i;
@@ -61,7 +62,16 @@ export default async function handler(req, res) {
     }
     // weekly Google Analytics refresh for linked properties
     if (gaEmail()) for (const g of await sql`select user_id, ga_property from ai_brands where active and ga_property is not null and (ga_synced_at is null or ga_synced_at < now() - interval '6 days') limit 30`) await syncGa(g.user_id, g.ga_property);
-    const done = await work({ ms: 220000, parallel: 8 });
+    // weekly: website check and reviews (client + competitors), a couple of brands per hourly run
+    const t0 = Date.now(), cap = (p, ms) => Promise.race([p, new Promise(r => setTimeout(r, ms))]);
+    try {
+      await sql`create table if not exists ai_site(user_id uuid primary key references users(id) on delete cascade, website text, score int, result jsonb, checked_at timestamptz not null default now())`;
+      const sites = await sql`select b.user_id from ai_brands b left join ai_site s on s.user_id=b.user_id where b.active and b.website is not null and b.website<>'' and (s.checked_at is null or s.checked_at < now() - interval '7 days') limit 2`;
+      await cap(Promise.allSettled(sites.map(x => runSiteCheck(x.user_id))), 60000);
+      const revs = await sql`select user_id from ai_brands where active and (reviews_at is null or reviews_at < now() - interval '7 days') order by reviews_at nulls first limit 2`;
+      await cap(Promise.allSettled(revs.map(x => refreshReviews(x.user_id))), 90000);
+    } catch (e) { console.error('ai weekly extras', e.message); }
+    const done = await work({ ms: Math.max(60000, 220000 - (Date.now() - t0)), parallel: 8 });
     let mailed = 0, monthly = 0;
     for (const b of await sql`select user_id from ai_brands where active and last_batch_at is not null and (alerts_batch is null or alerts_batch < last_batch_at) limit 40`) {
       try { await alertsFor(b.user_id); if (await emailAlerts(b.user_id)) mailed++; } catch (e) { console.error('ai alerts cron', e.message); }
@@ -69,7 +79,6 @@ export default async function handler(req, res) {
     for (const b of await sql`select b.user_id from ai_brands b where b.active and b.alerts_batch is not null and b.created_at < now() - interval '7 days' and (b.monthly_sent_at is null or b.monthly_sent_at < now() - interval '30 days') limit 20`) {
       try { if (await emailMonthly(b.user_id)) monthly++; } catch (e) { console.error('ai monthly', e.message); }
     }
-    if (process.env.GOOGLE_PLACES_API_KEY) for (const b of await sql`select user_id from ai_brands where active and (places_at is null or places_at < now() - interval '7 days') limit 20`) { try { await googleReviews(b.user_id); } catch (e) { console.error('ai places', e.message); } }
     return json(res, 200, { ok: true, started, done, mailed, monthly });
   }
 
@@ -205,14 +214,25 @@ export default async function handler(req, res) {
   if (action === 'reviews' && req.method === 'POST') {
     if (b.remove) await sql`delete from ai_reviews where user_id=${u.id} and id=${+b.remove}`;
     else if (b.refresh) {
-      if (!process.env.GOOGLE_PLACES_API_KEY) return json(res, 503, { error: 'Google reviews aren’t switched on yet.' });
-      try { await googleReviews(u.id); } catch (e) { return json(res, 400, { error: e.message }); }
+      const last = (await sql`select reviews_at from ai_brands where user_id=${u.id}`)[0];
+      if (!team(u) && last && last.reviews_at && Date.now() - new Date(last.reviews_at) < 20 * 3600e3) return json(res, 429, { error: 'Reviews can be updated once a day. They also update automatically every week.' });
+      try { await refreshReviews(u.id); } catch (e) { return json(res, 400, { error: e.message }); }
     } else {
       const platform = clean(b.platform, 40), rating = b.rating === '' || b.rating == null ? null : +b.rating, count = b.count === '' || b.count == null ? null : Math.round(+b.count);
       if (!platform) return json(res, 400, { error: 'Choose a platform.' });
       if ((rating != null && !(rating >= 0 && rating <= 5)) || (count != null && !(count >= 0))) return json(res, 400, { error: 'Rating must be 0–5 and the number of reviews 0 or more.' });
       await sql`insert into ai_reviews(user_id, platform, rating, count, url) values(${u.id}, ${platform}, ${rating}, ${count}, ${clean(b.url, 300) || null})`;
     }
+    return json(res, 200, await state(u));
+  }
+
+  // website check: what the site is missing for AI to read, trust and recommend it
+  if (action === 'site' && req.method === 'POST') {
+    const cur = await siteState(u.id);
+    if (!team(u) && cur && cur.checkedAt && Date.now() - new Date(cur.checkedAt) < 10 * 60e3) return json(res, 429, { error: 'Checked a few minutes ago. Try again in 10 minutes.' });
+    const r = await runSiteCheck(u.id);
+    if (!r) return json(res, 400, { error: 'Add your website in Setup first.' });
+    if (r.error) return json(res, 400, { error: 'Add your website in Setup first.' });
     return json(res, 200, await state(u));
   }
 

@@ -64,19 +64,108 @@ export async function googleReviews(userId) {
   if (!r.ok) throw new Error((j.error && j.error.message) || `Google Places returned ${r.status}`);
   const places = (j.places || []).filter(p => p.userRatingCount).map(p => ({ name: (p.displayName || {}).text, rating: p.rating, count: p.userRatingCount, url: p.googleMapsUri, address: p.formattedAddress })).slice(0, 10);
   const count = places.reduce((s, p) => s + p.count, 0), rating = count ? places.reduce((s, p) => s + p.rating * p.count, 0) / count : null;
-  await sql`insert into ai_reviews(user_id, platform, rating, count, url, source, detail) values(${userId}, 'Google Maps', ${rating ? Math.round(rating * 100) / 100 : null}, ${count}, ${places[0] ? places[0].url : null}, 'google', ${JSON.stringify(places)})`;
+  await sql`insert into ai_reviews(user_id, platform, rating, count, url, source, detail) values(${userId}, 'Google', ${rating ? Math.round(rating * 100) / 100 : null}, ${count}, ${places[0] ? places[0].url : null}, 'google', ${JSON.stringify(places)})`;
   await sql`update ai_brands set places_at=now() where user_id=${userId}`;
   return { rating, count, places };
 }
+// ---------- reviews found automatically on the web (client + competitors) ----------
+const AMZ = { SA: 'amazon.sa', AE: 'amazon.ae', EG: 'amazon.eg' };
+const KNOWN = [[/google/i, 'Google', /google\.|goo\.gl|g\.page/i], [/amazon/i, 'Amazon', /amazon\.|amzn\./i], [/noon/i, 'Noon', /noon\.com/i], [/trustpilot/i, 'Trustpilot', /trustpilot\.com/i]];
+export const canonPlatform = p => { const k = KNOWN.find(([re]) => re.test(p || '')); return k ? k[1] : String(p || '').trim().slice(0, 40); };
+const PLAT_ORDER = ['Google', 'Amazon', 'Noon', 'Trustpilot'];
+
+async function askWeb(prompt) {
+  if (process.env.OPENAI_API_KEY) {
+    const r = await fetch('https://api.openai.com/v1/responses', { method: 'POST', signal: AbortSignal.timeout(120000),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify({ model: process.env.REVIEWS_MODEL || process.env.OPENAI_MODEL || 'gpt-5-mini', input: prompt, tools: [{ type: 'web_search' }] }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || `HTTP ${r.status}`);
+    return (j.output || []).filter(o => o.type === 'message').flatMap(o => o.content || []).filter(p => p.type === 'output_text').map(p => p.text).join('\n');
+  }
+  if (process.env.GEMINI_API_KEY) {
+    const m = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${process.env.GEMINI_API_KEY}`, { method: 'POST', signal: AbortSignal.timeout(120000),
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: prompt }] }], tools: [{ google_search: {} }] }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((j.error && j.error.message) || `HTTP ${r.status}`);
+    return ((((j.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || '').join('');
+  }
+  throw new Error('No assistant with web search is switched on.');
+}
+
+// One web search per brand: rating and number of reviews on Google, Amazon, Noon, Trustpilot and other local sites.
+export async function findReviews(name, { website, country = 'SA' } = {}) {
+  const cn = (COUNTRIES[country] || COUNTRIES.SA).en, amz = AMZ[country] || 'amazon.ae';
+  const txt = await askWeb(`Find the current customer star rating (out of 5) and the number of ratings or reviews for the brand "${name}"${website ? ` (official website ${website})` : ''} in ${cn}, on each of these platforms:
+- Google (the brand's Google Maps / Google Business Profile listing; if it has several branches, use the main or highest-reviewed one)
+- Amazon (${amz})
+- Noon (noon.com)
+- Trustpilot
+- any other major shopping or review site in ${cn} where this brand has its own page (for example Mumzworld, Namshi, Talabat, its Salla or Zid store, Booking, Tripadvisor)
+Search the web for each one. Only include a platform if you found a page that is clearly for this brand (its listing, store page, or its main product) and you can see the rating. On marketplaces, use the brand's store rating if shown, otherwise its best-selling product and name it in "note". Never guess or estimate.
+Reply with JSON only, no other text:
+{"platforms":[{"platform":"Google","rating":4.6,"count":1203,"url":"https://...","note":""}]}`);
+  const m = String(txt || '').match(/\{[\s\S]*\}/); let j = null; try { j = m && JSON.parse(m[0]); } catch {}
+  const out = new Map();
+  for (const p of ((j && j.platforms) || [])) {
+    const platform = canonPlatform(p.platform), rating = p.rating == null || p.rating === '' ? null : +p.rating, count = p.count == null || p.count === '' ? null : Math.round(+String(p.count).replace(/[^\d.]/g, ''));
+    const url = /^https?:\/\//i.test(p.url || '') ? String(p.url).slice(0, 400) : null;
+    if (!platform || rating == null || !(rating >= 0 && rating <= 5) || (count != null && !(count >= 0))) continue;
+    const k = KNOWN.find(x => x[1] === platform); if (k && url && !k[2].test(url)) continue; // URL must be on that platform
+    if (!out.has(platform)) out.set(platform, { platform, rating: Math.round(rating * 10) / 10, count: Number.isFinite(count) ? count : null, url, note: String(p.note || '').slice(0, 120) });
+  }
+  return [...out.values()];
+}
+
+// Refresh the client's and competitors' ratings (parallel web searches), store them with history.
+export async function refreshReviews(userId) {
+  const b = (await sql`select brand, website, country, competitors from ai_brands where user_id=${userId}`)[0];
+  if (!b) return null;
+  const comps = (Array.isArray(b.competitors) ? b.competitors : []).map(c => typeof c === 'string' ? c : c && c.name).filter(Boolean).slice(0, 5);
+  const subjects = [[null, b.brand, b.website], ...comps.map(c => [c, c, null])];
+  await sql`update ai_brands set reviews_at=now() where user_id=${userId}`;
+  const res = await Promise.allSettled(subjects.map(([, name, site]) => findReviews(name, { website: site, country: b.country })));
+  let n = 0;
+  for (let i = 0; i < subjects.length; i++) {
+    if (res[i].status !== 'fulfilled') { console.error('reviews', subjects[i][1], res[i].reason && res[i].reason.message); continue; }
+    for (const p of res[i].value) {
+      // the Google Places API (when switched on) is the more exact source for the client's Google rating
+      if (!subjects[i][0] && p.platform === 'Google' && process.env.GOOGLE_PLACES_API_KEY) continue;
+      await sql`insert into ai_reviews(user_id, subject, platform, rating, count, url, source, detail) values(${userId}, ${subjects[i][0]}, ${p.platform}, ${p.rating}, ${p.count}, ${p.url}, 'web', ${JSON.stringify({ note: p.note })})`;
+      n++;
+    }
+  }
+  if (process.env.GOOGLE_PLACES_API_KEY) { try { await googleReviews(userId); } catch (e) { console.error('places', e.message); } }
+  return n;
+}
+
 export async function reviewsState(userId) {
-  const rows = await sql`select id, platform, rating, count, url, source, detail, recorded_at from ai_reviews where user_id=${userId} order by recorded_at desc limit 200`;
-  const by = new Map();
-  for (const r of rows) { const a = by.get(r.platform) || []; a.push(r); by.set(r.platform, a); }
-  return { google: !!process.env.GOOGLE_PLACES_API_KEY, platforms: [...by].map(([platform, h]) => {
+  const rows = await sql`select id, subject, platform, rating, count, url, source, detail, recorded_at from ai_reviews where user_id=${userId} order by recorded_at desc limit 600`;
+  const b = (await sql`select brand, competitors, reviews_at from ai_brands where user_id=${userId}`)[0] || {};
+  const mine = rows.filter(r => !r.subject), by = new Map();
+  for (const r of mine) { const k = canonPlatform(r.platform), a = by.get(k) || []; a.push(r); by.set(k, a); }
+  const platforms = [...by].map(([platform, h]) => {
     const now = h[0], month = h.find(x => Date.now() - new Date(x.recorded_at) > 25 * 864e5);
-    return { platform, rating: now.rating != null ? +now.rating : null, count: now.count, url: now.url, source: now.source, detail: now.detail, at: now.recorded_at, id: now.id,
+    return { platform, rating: now.rating != null ? +now.rating : null, count: now.count, url: now.url, source: now.source, note: (now.detail && now.detail.note) || '', at: now.recorded_at, id: now.id,
       was: month ? { rating: month.rating != null ? +month.rating : null, count: month.count, at: month.recorded_at } : null };
-  }) };
+  }).sort((x, y) => (PLAT_ORDER.indexOf(x.platform) + 1 || 99) - (PLAT_ORDER.indexOf(y.platform) + 1 || 99));
+  // latest rating per brand and platform (last 60 days) for the comparison table
+  const comps = (Array.isArray(b.competitors) ? b.competitors : []).map(c => typeof c === 'string' ? c : c && c.name).filter(Boolean);
+  const recent = rows.filter(r => Date.now() - new Date(r.recorded_at) < 60 * 864e5);
+  const cell = (subj, plat) => { const r = recent.find(x => (x.subject || null) === subj && canonPlatform(x.platform) === plat); return r ? { rating: r.rating != null ? +r.rating : null, count: r.count, url: r.url } : null; };
+  const plats = [...new Set(recent.map(r => canonPlatform(r.platform)))].sort((x, y) => (PLAT_ORDER.indexOf(x) + 1 || 99) - (PLAT_ORDER.indexOf(y) + 1 || 99)).slice(0, 6);
+  const brands = [[null, b.brand, true], ...comps.map(c => [c, c, false])].map(([subj, name, you]) => {
+    const cells = Object.fromEntries(plats.map(p => [p, cell(subj, p)]));
+    const v = Object.values(cells).filter(c => c && c.rating != null), tc = v.reduce((a, c) => a + (c.count || 0), 0);
+    // average weighted by number of reviews (platforms without a count weigh 1)
+    const w = v.reduce((a, c) => a + (c.count || 1), 0), avg = v.length ? v.reduce((a, c) => a + c.rating * (c.count || 1), 0) / w : null;
+    return { name, you, cells, avg: avg != null ? Math.round(avg * 100) / 100 : null, total: tc, found: v.length };
+  });
+  const ranked = brands.filter(x => x.avg != null).sort((a, c) => c.avg - a.avg || c.total - a.total);
+  brands.forEach(x => { x.rank = x.avg != null ? ranked.indexOf(x) + 1 : null; });
+  return { google: !!process.env.GOOGLE_PLACES_API_KEY, platforms, compare: { platforms: plats, brands, of: ranked.length }, at: b.reviews_at,
+    canSearch: !!(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY) };
 }
 
 // ---------- placements the client won (logged by them), and whether AI cites them yet ----------
