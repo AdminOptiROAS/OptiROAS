@@ -14,5 +14,6 @@ rep(/<meta property="og:description" content="[^"]*">/, `<meta property="og:desc
 rep(/<meta property="og:url" content="[^"]*">/, '<meta property="og:url" content="https://www.kiteoai.com/">');
 rep(/<meta property="og:image" content="[^"]*">/, '<meta property="og:image" content="https://www.kiteoai.com/kiteo-og.png">');
 rep(/<link rel="icon" href="[^"]*">/, `<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1f5c'/%3E%3Cpath d='M32 10 50 30 32 50 14 30Z' fill='%233d6bff'/%3E%3Cpath d='M32 50c-2 4 2 6 0 10' stroke='%23ffc83d' stroke-width='3' fill='none'/%3E%3C/svg%3E">`);
+rep(/<a class="btn sm navcta" href="#audit">Start free<\/a>/, '<a class="btn sm navcta" href="#kbook">Book a free check</a>');
 fs.writeFileSync(new URL('../kiteo.html', import.meta.url), s);
 console.log('kiteo.html written', s.length);
