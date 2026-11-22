@@ -65,6 +65,10 @@
     {
       "path": "/api/ai/cron",
       "schedule": "25 * * * *"
+    },
+    {
+      "path": "/api/cron/kiteo-report",
+      "schedule": "15 4 * * *"
     }
   ]
 }

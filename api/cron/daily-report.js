@@ -21,7 +21,7 @@ async function customerWorkbook(ext) {
         case when exists(select 1 from tiktok_connections c where c.user_id=u.id) then 'TikTok' end,
         case when exists(select 1 from snap_connections c where c.user_id=u.id) then 'Snapchat' end,
         case when exists(select 1 from salla_connections c where c.user_id=u.id) then 'Salla' end) as connected
-    from users u where lower(u.email) <> all(${ext}) order by u.created_at desc limit 20000`;
+    from users u where u.brand='optiroas' and lower(u.email) <> all(${ext}) order by u.created_at desc limit 20000`;
   const subOf = u => PLAN[u.plan] || (u.audit_credits > 0 ? `Pay per audit (${u.audit_credits} left)` : '');
   const stage = u => subOf(u) ? '3. Subscribed' : u.audits > 0 ? '2. Ran an audit' : '1. Signed up';
   const rows = [['Email', 'Name', 'Stage', 'Signed up (UAE)', 'Email confirmed', 'Ran audit', 'Audits run', 'Last audit (UAE)', 'Full reports unlocked',
@@ -61,14 +61,12 @@ export default async function handler(req, res) {
   const one = async q => (await q)[0];
   const users = await one(sql`select count(*)::int as total,
       count(*) filter (where created_at > now() - interval '24 hours')::int as new24,
-      count(*) filter (where created_at > now() - interval '7 days')::int as new7,
-      count(*) filter (where brand = 'kiteo')::int as k_total,
-      count(*) filter (where brand = 'kiteo' and created_at > now() - interval '24 hours')::int as k_new24
-    from users where lower(email) <> all(${ext})`);
+      count(*) filter (where created_at > now() - interval '7 days')::int as new7
+    from users where brand='optiroas' and lower(email) <> all(${ext})`);
   const bySource = await sql`select coalesce(utm_source,'direct / unknown') as src, coalesce(utm_campaign,'') as camp, count(*)::int as n from users
-    where created_at > now() - interval '7 days' and lower(email) <> all(${ext}) group by 1,2 order by n desc limit 15`;
+    where brand='optiroas' and created_at > now() - interval '7 days' and lower(email) <> all(${ext}) group by 1,2 order by n desc limit 15`;
   const newList = await sql`select email, name, created_at, utm_source, utm_campaign, email_verified_at is not null as verified from users
-    where created_at > now() - interval '24 hours' and lower(email) <> all(${ext}) order by created_at desc limit 25`;
+    where brand='optiroas' and created_at > now() - interval '24 hours' and lower(email) <> all(${ext}) order by created_at desc limit 25`;
   const audits = await one(sql`select count(*)::int as n, count(distinct r.user_id)::int as people from usage_reports r join users u on u.id=r.user_id
     where r.at > now() - interval '24 hours' and lower(u.email) <> all(${ext})`);
   const unlocks = await one(sql`select count(*)::int as n from audit_unlocks a join users u on u.id=a.user_id
@@ -77,8 +75,8 @@ export default async function handler(req, res) {
       count(*) filter (where ev='offer_open')::int as offer, count(*) filter (where ev='offer_click')::int as offer_click
     from site_events where at > now() - interval '24 hours'`);
   const leads = await one(sql`select count(*) filter (where created_at > now() - interval '24 hours')::int as new24, count(*)::int as total from leads where email <> all(${ext})`);
-  const plans = await sql`select plan, count(*)::int as n from users where plan <> 'free' and lower(email) <> all(${ext}) group by plan order by plan`;
-  const subs24 = await one(sql`select count(*)::int as n from users where plan <> 'free' and period_start > now() - interval '24 hours' and lower(email) <> all(${ext})`);
+  const plans = await sql`select plan, count(*)::int as n from users where brand='optiroas' and plan <> 'free' and lower(email) <> all(${ext}) group by plan order by plan`;
+  const subs24 = await one(sql`select count(*)::int as n from users where brand='optiroas' and plan <> 'free' and period_start > now() - interval '24 hours' and lower(email) <> all(${ext})`);
   const conns = await one(sql`select (select count(*) from meta_connections)::int as meta, (select count(*) from google_connections)::int as google,
     (select count(*) from snap_connections)::int as snap, (select count(*) from tiktok_connections)::int as tiktok`);
   // Visits recorded by the site itself; browsers that ever signed in with a team account are left out
@@ -105,7 +103,7 @@ export default async function handler(req, res) {
   const paid = plans.map(p => `${esc(p.plan)}: ${p.n}`).join(' · ') || 'none';
   const html = `<div style="font:14px/1.5 Arial,sans-serif;color:#0f1a2b;max-width:620px">
     <h2 style="margin:0 0 4px">OptiROAS daily summary</h2><p style="margin:0 0 16px;color:#5b667a">Last 24 hours, customers only (team and reviewer accounts excluded).</p>
-    <table style="border-collapse:collapse">${row('Visitors', `${visits.visitors} (${visits.views} page views, ${dur(visits.secs / Math.max(1, visits.visitors))} on the site each on average)`)}${row('New sign-ups', users.k_total ? `${users.new24} (Kiteo: ${users.k_new24} today, ${users.k_total} in total)` : users.new24)}${row('Sign-ups, last 7 days', users.new7)}${row('Customer accounts in total', users.total)}
+    <table style="border-collapse:collapse">${row('Visitors', `${visits.visitors} (${visits.views} page views, ${dur(visits.secs / Math.max(1, visits.visitors))} on the site each on average)`)}${row('New sign-ups', users.new24)}${row('Sign-ups, last 7 days', users.new7)}${row('Customer accounts in total', users.total)}
     ${row('Asked to email the audit link', `${leads.new24} (${leads.total} in total)`)}${row('Audits run', `${audits.n} (by ${audits.people} ${audits.people === 1 ? 'person' : 'people'})`)}${row('AED 55 pop-up', `${ev.offer} seen, ${ev.offer_click} clicked`)}${row('Unlock offers seen', ev.paywall)}${row('Checkouts started', ev.checkout)}
     ${row('New subscriptions', subs24.n)}${row('Full reports unlocked', unlocks.n)}${row('Paying accounts now', paid)}
     ${row('Ad accounts connected (all users)', `Meta ${conns.meta} · Google ${conns.google} · Snapchat ${conns.snap} · TikTok ${conns.tiktok}`)}</table>
