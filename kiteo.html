@@ -1597,7 +1597,7 @@ html[data-brand=kiteo] .page[data-page=khow] .steps3{padding-top:72px}
       <li>Get alerts and a monthly report in Arabic or English</li>
       <li>Start with a free AI check, then upgrade when you're ready</li>
     </ul>
-    <p class="muted small">Questions? Email <a href="mailto:admin@optiroas.com" class="notr">admin@optiroas.com</a>.</p>
+    <p class="muted small">Questions? Email <a href="mailto:admin@kiteoai.com" class="notr">admin@kiteoai.com</a>.</p>
   </aside>
   <aside class="authside oside">
     <div class="eyebrow">Your account</div>
@@ -4862,6 +4862,14 @@ const PAGES=['start','home','how','delivered','pillars','calculator','platforms'
 if(!ST.page)ST.page='home';
 document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-go-guides]');if(a){e.preventDefault();go('platforms')}});
 function openGuide(k){const id='g-'+(k==='orders'?'salla':k);go('platforms');const d=$(id);if(d){document.querySelectorAll('#guides details.g').forEach(x=>x.open=x.id===id);setTimeout(()=>d.scrollIntoView({block:'start',behavior:'smooth'}),60)}}
+// Kiteo has its own support mailbox: show admin@kiteoai.com wherever the shared page says admin@optiroas.com.
+(function(){if(!window.KITEO)return;const A='admin@optiroas.com',B='admin@kiteoai.com';
+  const fix=root=>{if(!root)return;if(root.nodeType===3){if(root.nodeValue.includes(A))root.nodeValue=root.nodeValue.split(A).join(B);return}
+    if(root.nodeType!==1)return;if(root.href&&String(root.getAttribute('href')||'').includes(A))root.setAttribute('href',root.getAttribute('href').split(A).join(B));
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while(n=w.nextNode())if(n.nodeValue.includes(A))n.nodeValue=n.nodeValue.split(A).join(B);
+    root.querySelectorAll&&root.querySelectorAll('a[href*="'+A+'"]').forEach(a=>a.setAttribute('href',a.getAttribute('href').split(A).join(B)))};
+  const start=()=>{fix(document.body);new MutationObserver(ms=>ms.forEach(m=>{m.addedNodes.forEach(fix);if(m.type==='characterData')fix(m.target)})).observe(document.body,{childList:true,subtree:true,characterData:true})};
+  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start):start()})();
 function go(pg,anchor){
   if(!window.KITEO&&(pg==='ai'||pg==='ai-visibility'||['khome','kfeatures','khow','ksoon','kbook'].includes(pg)))pg='home';
   if(window.KITEO){if(pg==='workspace')pg=ST.me&&ST.me.user?'ai':'khome';if(pg==='home'||['audit','start','live','pricing','how','platforms','delivered','pillars','calculator','faq'].includes(pg))pg='khome'}

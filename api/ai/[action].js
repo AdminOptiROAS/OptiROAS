@@ -1,5 +1,5 @@
 import { ensureSchema, currentUser, sql, json, body, emailOk, brandOf } from '../_lib/core.js';
-import { sendMail, layout, mailOn, KITEO_SITE } from '../_lib/mail.js';
+import { sendMail, layout, mailOn, KITEO_SITE , KITEO_SUPPORT } from '../_lib/mail.js';
 import { ensureAi, aiAllowed, aiTeam as team, enqueue, work, summary, factKey, enginesOn, ENGINES, COUNTRIES, RUNS } from '../_lib/ai.js';
 import { demand } from '../_lib/ai-demand.js';
 import { parseGa4 } from '../_lib/ai-visits.js';
@@ -103,9 +103,9 @@ export default async function handler(req, res) {
     await sql`alter table ai_requests add column if not exists service text`;
     await sql`insert into ai_requests(email, name, phone, brand, website, country, lang, user_id, service) values(${email}, ${f.name}, ${f.phone}, ${f.brand}, ${f.website}, ${f.country}, ${ar ? 'ar' : 'en'}, ${me ? me.id : null}, ${service})`;
     if (mailOn()) {
-      const team = (process.env.ADMIN_EMAILS || 'admin@optiroas.com').split(',').map(x => x.trim()).filter(Boolean);
+      const team = (process.env.KITEO_TEAM_EMAILS || KITEO_SUPPORT()).split(',').map(x => x.trim()).filter(Boolean);
       const lines = [`Brand: ${f.brand}`, `Website: ${f.website || '-'}`, `Country: ${(COUNTRIES[f.country] || {}).en}`, `Name: ${f.name || '-'}`, `Email: ${email}`, `Phone / WhatsApp: ${f.phone || '-'}`, `Language: ${ar ? 'Arabic' : 'English'}`];
-      for (const t of team) await sendMail({ to: t, subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements', commerce: 'Kiteo Commerce waitlist' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: service === 'commerce' ? 'New Kiteo Commerce waitlist sign-up' : 'New AI visibility check request', intro: service === 'commerce' ? 'Someone joined the Kiteo Commerce waitlist on kiteoai.com.' : 'Someone asked for a free AI visibility check on kiteoai.com.', paras: lines, button: 'Open Kiteo', link: `${KITEO_SITE()}/#ai-visibility`, outro: 'Reply to the client within one working day.', brand: 'kiteo' }) }).catch(() => {});
+      for (const t of team) await sendMail({ to: t, brand: 'kiteo', subject: `${{ check: 'AI visibility check', reviews: 'Reviews programme', content: 'AI content package', listings: 'Listings and placements', commerce: 'Kiteo Commerce waitlist' }[service]} request: ${f.brand}`, ...layout({ lang: 'en', title: service === 'commerce' ? 'New Kiteo Commerce waitlist sign-up' : 'New AI visibility check request', intro: service === 'commerce' ? 'Someone joined the Kiteo Commerce waitlist on kiteoai.com.' : 'Someone asked for a free AI visibility check on kiteoai.com.', paras: lines, button: 'Open Kiteo', link: `${KITEO_SITE()}/#ai-visibility`, outro: 'Reply to the client within one working day.', brand: 'kiteo' }) }).catch(() => {});
       if (service === 'commerce') await sendMail({ to: email, subject: ar ? 'أنت على قائمة انتظار Kiteo Commerce' : 'You’re on the Kiteo Commerce waitlist', ...layout({ lang: ar ? 'ar' : 'en',
         title: ar ? 'شكرًا، تم تسجيلك' : 'Thanks, you’re on the list',
         intro: ar ? `سنراسلك قبل إطلاق التسوق والدفع داخل مساعدات الذكاء الاصطناعي في الخليج، لنجهّز ${f.brand} من أول يوم.` : `We’ll email you before shopping and checkout inside AI assistants launches in the Gulf, so ${f.brand} is ready from day one.`,

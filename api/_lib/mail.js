@@ -3,14 +3,17 @@ export const mailOn = () => !!process.env.RESEND_API_KEY;
 export const SITE = () => process.env.SITE_URL || 'https://optiroas.com';
 const FROM = () => process.env.EMAIL_FROM || 'OptiROAS <noreply@optiroas.com>';
 const SUPPORT = 'admin@optiroas.com';
+// Kiteo has its own support mailbox; until kiteoai.com is verified in Resend, Kiteo emails go out as "Kiteo" from the OptiROAS sending domain.
+export const KITEO_SUPPORT = () => process.env.KITEO_SUPPORT_EMAIL || 'admin@kiteoai.com';
+const KITEO_FROM = () => process.env.KITEO_EMAIL_FROM || FROM().replace(/^[^<]*</, 'Kiteo <');
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-export async function sendMail({ to, subject, html, text, attachments }) {
+export async function sendMail({ to, subject, html, text, attachments, brand }) {
   if (!mailOn()) { console.error('mail: RESEND_API_KEY not set, email not sent:', subject); return false; }
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM(), to: [to], subject, html, text, reply_to: SUPPORT, ...(attachments && attachments.length ? { attachments } : {}) })
+      body: JSON.stringify({ from: brand === 'kiteo' ? KITEO_FROM() : FROM(), to: [to], subject, html, text, reply_to: brand === 'kiteo' ? KITEO_SUPPORT() : SUPPORT, ...(attachments && attachments.length ? { attachments } : {}) })
     });
     if (!r.ok) { console.error('mail: Resend returned', r.status, (await r.text()).slice(0, 300)); return false; }
     return true;
@@ -32,7 +35,7 @@ export function layout({ lang, title, intro, button, link, outro, paras = [], un
 ${paras.map(x => `<tr><td style="padding-top:10px;font-size:15px;line-height:1.6;color:#3d4f5c">${Array.isArray(x) ? `${esc(x[0])} <a href="${esc(x[1])}" style="color:${C};font-weight:600">${esc(x[2])}</a>` : esc(x)}</td></tr>`).join('')}
 <tr><td style="padding:24px 0"><a href="${esc(link)}" style="background:${C};color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:700;display:inline-block">${esc(button)}</a></td></tr>
 <tr><td style="font-size:13px;line-height:1.6;color:#6b7c88">${esc(outro)}<br><br>${ar ? 'إذا لم يعمل الزر، انسخ هذا الرابط:' : 'If the button doesn’t work, copy this link:'}<br><span style="word-break:break-all">${esc(link)}</span></td></tr>
-</table><p style="font-size:12px;color:#8a99a4">${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? ` · <a href="${esc(unsub)}" style="color:#8a99a4">${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}</a>` : ''}</p></td></tr></table></body></html>`;
-  const text = `${title}\n\n${intro}\n\n${paras.map(x => (Array.isArray(x) ? `${x[0]} ${x[2]}: ${x[1]}` : x) + '\n\n').join('')}${button}: ${link}\n\n${outro}\n\n${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${SUPPORT}${unsub ? `\n${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}: ${unsub}` : ''}`;
-  return { html, text };
+</table><p style="font-size:12px;color:#8a99a4">${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${K ? KITEO_SUPPORT() : SUPPORT}${unsub ? ` · <a href="${esc(unsub)}" style="color:#8a99a4">${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}</a>` : ''}</p></td></tr></table></body></html>`;
+  const text = `${title}\n\n${intro}\n\n${paras.map(x => (Array.isArray(x) ? `${x[0]} ${x[2]}: ${x[1]}` : x) + '\n\n').join('')}${button}: ${link}\n\n${outro}\n\n${K ? 'Kiteo' : 'OptiROAS'}, a product of Baan Technology Services FZC · ${K ? KITEO_SUPPORT() : SUPPORT}${unsub ? `\n${ar ? 'إلغاء الاشتراك' : 'Unsubscribe'}: ${unsub}` : ''}`;
+  return { html, text, brand: K ? 'kiteo' : undefined };
 }

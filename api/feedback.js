@@ -1,5 +1,5 @@
-import { ensureSchema, sql, json, body, currentUser, emailOk } from './_lib/core.js';
-import { sendMail, mailOn } from './_lib/mail.js';
+import { ensureSchema, sql, json, body, currentUser, emailOk, brandOf } from './_lib/core.js';
+import { sendMail, mailOn, KITEO_SUPPORT } from './_lib/mail.js';
 
 // Stores feedback from the site widget and emails it to the team when email is set up.
 export default async function handler(req, res) {
@@ -15,7 +15,8 @@ export default async function handler(req, res) {
   await sql`insert into feedback(user_id,email,rating,message,page,lang,ua) values(${user ? user.id : null},${email},${rating || null},${msg},${String(b.page || '').slice(0, 200)},${b.lang === 'ar' ? 'ar' : 'en'},${String(req.headers['user-agent'] || '').slice(0, 200)})`;
   if (mailOn()) {
     const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    await sendMail({ to: process.env.FEEDBACK_TO || 'admin@optiroas.com', subject: `OptiROAS feedback${rating ? ` · ${rating}/5` : ''}${b.page ? ` · ${String(b.page).slice(0, 40)}` : ''}`,
+    const K = brandOf(req) === 'kiteo';
+    await sendMail({ to: K ? KITEO_SUPPORT() : (process.env.FEEDBACK_TO || 'admin@optiroas.com'), subject: `${K ? 'Kiteo' : 'OptiROAS'} feedback${rating ? ` · ${rating}/5` : ''}${b.page ? ` · ${String(b.page).slice(0, 40)}` : ''}`,
       html: `<p><b>Rating:</b> ${rating || '—'}/5<br><b>From:</b> ${esc(email || 'anonymous')}<br><b>Page:</b> ${esc(b.page || '')}<br><b>Language:</b> ${b.lang === 'ar' ? 'Arabic' : 'English'}</p><p style="white-space:pre-wrap">${esc(msg)}</p>`,
       text: `Rating: ${rating || '-'}/5\nFrom: ${email || 'anonymous'}\nPage: ${b.page || ''}\n\n${msg}` });
   }
