@@ -203,7 +203,7 @@ export default async function handler(req, res) {
     const e = await syncGa(u.id, prop);
     if (e) {
       if (!br.ga_property) await sql`update ai_brands set ga_property=null where user_id=${u.id}`;
-      const msg = e.code === 'access' ? `OptiROAS can’t see property ${prop} yet. In Google Analytics → Admin → Property access management, add ${gaEmail()} as a Viewer, then try again.`
+      const msg = e.code === 'access' ? `Kiteo can’t see property ${prop} yet. In Google Analytics → Admin → Property access management, add ${gaEmail()} as a Viewer, then try again.`
         : e.code === 'property' ? `Google Analytics doesn’t recognise property ${prop}. Copy the Property ID from Admin → Property details (a number, not the G- measurement ID).` : e.message;
       return json(res, 400, { error: msg });
     }
