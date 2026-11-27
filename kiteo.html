@@ -3825,7 +3825,7 @@ function kPriceInit(){const P=$('kplan');if(!P)return;const u=ST.me&&ST.me.user,
   const S=$('kpState'),Pt=$('kpPortal');$('kpBuy').hidden=!!sub;Pt.hidden=!sub;S.hidden=!sub;
   if(sub){Pt.href=KSTRIPE.portal;Pt.rel='noopener';S.textContent=TR('You’re subscribed to Kiteo. Thank you!','أنت مشترك في Kiteo. شكرًا لك!')}}
 // After sign-up or sign-in from the pricing page, continue to payment
-function kPaidThanks(){if(!window.KITEO||!/[?&]paid=1\b/.test(location.search))return;toast(TR('Payment received. Welcome to Kiteo! Your dashboard is unlocking now.','تم الدفع. أهلًا بك في Kiteo! لوحتك تُفتح الآن.'),7000);try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}setTimeout(()=>loadMe(),4000)}
+function kPaidThanks(){if(!window.KITEO||!/[?&]paid=1\b/.test(location.search))return;try{const q=new URLSearchParams(location.search),c=q.get('c')==='yearly'?'yearly':'monthly';px('Subscribe',{value:KPRICE[c],currency:'AED',content_name:'Kiteo '+c})}catch(x){}toast(TR('Payment received. Welcome to Kiteo! Your dashboard is unlocking now.','تم الدفع. أهلًا بك في Kiteo! لوحتك تُفتح الآن.'),7000);try{history.replaceState(null,'',location.pathname+location.hash)}catch(e){}setTimeout(()=>loadMe(),4000)}
 function kPayResume(){let c=null;try{c=sessionStorage.getItem('kpay')}catch(e){}if(!c||!window.KITEO||!(ST.me&&ST.me.user)||!KSTRIPE[c])return;try{sessionStorage.removeItem('kpay')}catch(e){}if(ST.me.user.plan!=='kiteo')location.href=kPayLink(c)}
 function aivPitch(el){
   const u=(ST.me&&ST.me.user)||{},sel=c=>`<option value="${c[0]}">${esc(LANG==='ar'?c[2]:c[1])}</option>`;
