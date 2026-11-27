@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     for (const r of rows) { const bad = r.last_err && (!r.last_ok || new Date(r.last_err) > new Date(r.last_ok)); H[r.k] = { lastOk: r.last_ok, lastErr: bad ? r.last_err : null, problem: bad ? friendly(r.k, r.err || '') : null }; }
   } catch (e) { }
   const hp = (k, o) => Object.assign(o, H[k] ? { health: H[k] } : {});
-  return json(res, 200, { user: { id: user.id, email: user.email, name: user.name, admin: isAdmin(user), vertical: user.vertical || null, ai: aiAllowed(user) }, usage,
+  return json(res, 200, { user: { id: user.id, email: user.email, name: user.name, admin: isAdmin(user), vertical: user.vertical || null, ai: aiAllowed(user), plan: user.brand === 'kiteo' ? (user.plan || 'free') : undefined }, usage,
     meta: hp('meta', c[0] ? { connected: true, name: c[0].meta_name, since: c[0].connected_at, accounts: accts } : { connected: false }),
     google: hp('google', g[0] ? { connected: true, email: g[0].google_email, note: g[0].note, since: g[0].connected_at, accounts: gaccts } : { connected: false, available: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) }),
     snap: hp('snap', s[0] ? { connected: true, email: s[0].snap_email, name: s[0].snap_name, since: s[0].connected_at, accounts: saccts } : { connected: false, available: !!(process.env.SNAP_CLIENT_ID && process.env.SNAP_CLIENT_SECRET) }),

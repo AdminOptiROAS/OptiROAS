@@ -6,10 +6,12 @@ import { ensureSchema, sql, json } from '../_lib/core.js';
 // customer.subscription.* sets the plan from the subscribed product, and back to free when it ends.
 // Audit plan (AED 55/month, 3 full audits per billing period): its period comes from the subscription events.
 // A paid one-time checkout (mode=payment) adds one audit credit to the user.
+// Kiteo: payment links and subscriptions carry metadata brand=kiteo; those set plan 'kiteo' on the user's Kiteo account (brand='kiteo').
 const PRODUCTS = () => ({
   [process.env.STRIPE_PRODUCT_STARTER || 'prod_VUKZcFyMlsFRoN']: 'starter',
   [process.env.STRIPE_PRODUCT_PRO || 'prod_VUKZ5k8FivEwsL']: 'pro',
-  [process.env.STRIPE_PRODUCT_AUDIT || 'prod_VXJClD7uvpwsMN']: 'audit'
+  [process.env.STRIPE_PRODUCT_AUDIT || 'prod_VXJClD7uvpwsMN']: 'audit',
+  [process.env.STRIPE_PRODUCT_KITEO || 'prod_kiteo_unset']: 'kiteo'
 });
 // Payment link for the Audit plan (AED 55 a month), so checkout can set the plan before the subscription event arrives
 const AUDIT_LINK = () => process.env.STRIPE_LINK_AUDIT || 'plink_1UWEbV2cgkqFH4LbYq4pbDFY';
@@ -45,6 +47,12 @@ export default async function handler(req, res) {
     if (!u[0]) { console.error('stripe webhook: no OptiROAS user for audit payment', o.id); return json(res, 200, { received: true }); }
     const ins = await sql`insert into audit_payments(session_id, user_id, amount) values(${o.id}, ${u[0].id}, ${o.amount_total || 0}) on conflict do nothing returning session_id`;
     if (ins.length) await sql`update users set audit_credits = audit_credits + 1 where id=${u[0].id}`;
+  } else if (ev.type === 'checkout.session.completed' && o.mode === 'subscription' && o.metadata && o.metadata.brand === 'kiteo') {
+    const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
+    const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
+    const u = ref ? await sql`select id from users where id=${ref} and brand='kiteo'` : await sql`select id from users where email=${email} and brand='kiteo'`;
+    if (u[0]) await sql`update users set stripe_customer_id=${o.customer}, plan='kiteo' where id=${u[0].id}`;
+    else console.error('stripe webhook: no Kiteo user for checkout', o.id);
   } else if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
@@ -56,7 +64,8 @@ export default async function handler(req, res) {
     else console.error('stripe webhook: no OptiROAS user for checkout', o.id);
   } else if (/^customer\.subscription\.(created|updated|deleted)$/.test(ev.type)) {
     const prod = o.items && o.items.data && o.items.data[0] && o.items.data[0].price && o.items.data[0].price.product;
-    const plan = ev.type.endsWith('deleted') || !LIVE.has(o.status) ? 'free' : (PRODUCTS()[prod] || 'paid');
+    const kiteo = (o.metadata && o.metadata.brand === 'kiteo') || PRODUCTS()[prod] === 'kiteo';
+    const plan = ev.type.endsWith('deleted') || !LIVE.has(o.status) ? 'free' : kiteo ? 'kiteo' : (PRODUCTS()[prod] || 'paid');
     const it = o.items && o.items.data && o.items.data[0] || {};
     const ps = ts(o.current_period_start || it.current_period_start), pe = ts(o.current_period_end || it.current_period_end);
     const r = await sql`update users set plan=${plan}, period_start=coalesce(${ps}, period_start), period_end=coalesce(${pe}, period_end) where stripe_customer_id=${o.customer} returning id`;
