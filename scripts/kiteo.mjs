@@ -25,5 +25,7 @@ rep(/<!-- Google tag \(gtag\.js\) -->[\s\S]*?<\/script>\s*<script>[\s\S]*?<\/scr
 </script>`);
 // Meta: kiteoai.com reports to the Kiteo pixel, not OptiROAS's (head snippet, noscript image and the in-page events).
 rep(/29179497201735288/g, '29394428376884505');
+// Snapchat: kiteoai.com reports to the Kiteo Snap pixel, not OptiROAS's (base code and the in-page events).
+rep(/70531021-0759-43b3-af5b-6367514d7f14/g, 'daa4eed4-98ce-4871-b232-16d4e296bde0');
 fs.writeFileSync(new URL('../kiteo.html', import.meta.url), s);
 console.log('kiteo.html written', s.length);
