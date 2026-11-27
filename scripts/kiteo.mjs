@@ -23,5 +23,7 @@ rep(/<!-- Google tag \(gtag\.js\) -->[\s\S]*?<\/script>\s*<script>[\s\S]*?<\/scr
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 </script>`);
+// Meta: kiteoai.com reports to the Kiteo pixel, not OptiROAS's (head snippet, noscript image and the in-page events).
+rep(/29179497201735288/g, '29394428376884505');
 fs.writeFileSync(new URL('../kiteo.html', import.meta.url), s);
 console.log('kiteo.html written', s.length);
