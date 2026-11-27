@@ -11,7 +11,7 @@ const PRODUCTS = () => ({
   [process.env.STRIPE_PRODUCT_STARTER || 'prod_VUKZcFyMlsFRoN']: 'starter',
   [process.env.STRIPE_PRODUCT_PRO || 'prod_VUKZ5k8FivEwsL']: 'pro',
   [process.env.STRIPE_PRODUCT_AUDIT || 'prod_VXJClD7uvpwsMN']: 'audit',
-  [process.env.STRIPE_PRODUCT_KITEO || 'prod_kiteo_unset']: 'kiteo'
+  [process.env.STRIPE_PRODUCT_KITEO || 'prod_VhtDgM0HkivV7q']: 'kiteo'
 });
 // Payment link for the Audit plan (AED 55 a month), so checkout can set the plan before the subscription event arrives
 const AUDIT_LINK = () => process.env.STRIPE_LINK_AUDIT || 'plink_1UWEbV2cgkqFH4LbYq4pbDFY';

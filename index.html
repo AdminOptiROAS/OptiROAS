@@ -3720,7 +3720,7 @@ function kWaitInit(){const F=$('kwaitForm');if(!F||F._on)return;F._on=1;F.addEve
   if(!br){say(TR('Enter your brand name.','أدخل اسم علامتك التجارية.'),1);F.brand.focus();return}
   b.disabled=true;try{await api('/api/ai/request',{method:'POST',body:JSON.stringify({service:'commerce',email:em,brand:br,website2:F.website2.value,lang:LANG})});say(TR('You’re on the list. We’ll email you before launch.','تم تسجيلك. سنراسلك قبل الإطلاق.'));F.reset()}catch(er){say(er.message,1)}b.disabled=false})}
 // Kiteo subscription (Black Friday prices: AED 475/month, AED 4,845/year). Payment links carry metadata brand=kiteo; the Stripe webhook sets plan 'kiteo'.
-const KSTRIPE={monthly:'',yearly:'',portal:'https://billing.stripe.com/p/login/eVq3co03ZdG53mc2Un7N600'};
+const KSTRIPE={monthly:'https://buy.stripe.com/7sY8wI8AvbxXe0QamP7N607',yearly:'https://buy.stripe.com/eVq9AM9EzatT9KA52v7N608',portal:'https://billing.stripe.com/p/login/eVq3co03ZdG53mc2Un7N600'};
 const KPRICE={monthly:475,yearly:4845};
 const kPayLink=c=>{const b=KSTRIPE[c]||'',u=ST.me&&ST.me.user;return b&&u?`${b}?client_reference_id=${encodeURIComponent(u.id)}&prefilled_email=${encodeURIComponent(u.email)}`:b};
 function kPriceInit(){const P=$('kplan');if(!P)return;const u=ST.me&&ST.me.user,sub=u&&u.plan==='kiteo';
