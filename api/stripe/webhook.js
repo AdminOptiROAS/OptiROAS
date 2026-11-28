@@ -53,6 +53,9 @@ export default async function handler(req, res) {
     const u = ref ? await sql`select id from users where id=${ref} and brand='kiteo'` : await sql`select id from users where email=${email} and brand='kiteo'`;
     if (u[0]) await sql`update users set stripe_customer_id=${o.customer}, plan='kiteo' where id=${u[0].id}`;
     else console.error('stripe webhook: no Kiteo user for checkout', o.id);
+    // For the daily Kiteo report: amount paid (after any promo code), billing cycle and whether a code was used
+    const off = o.total_details && o.total_details.amount_discount || 0;
+    await sql`insert into site_events(user_id, ev, site, val, detail) values(${u[0] ? u[0].id : null}, 'k_subscribed', 'kiteo', ${(o.amount_total || 0) / 100}, ${[(o.metadata && o.metadata.cycle) || '', off ? 'promo code' : ''].filter(Boolean).join(' · ')})`;
   } else if (ev.type === 'checkout.session.completed' && o.mode === 'subscription') {
     const email = String(o.customer_details && o.customer_details.email || o.customer_email || '').toLowerCase();
     const ref = /^[0-9a-f-]{36}$/i.test(o.client_reference_id || '') ? o.client_reference_id : null;
@@ -70,6 +73,7 @@ export default async function handler(req, res) {
     const ps = ts(o.current_period_start || it.current_period_start), pe = ts(o.current_period_end || it.current_period_end);
     const r = await sql`update users set plan=${plan}, period_start=coalesce(${ps}, period_start), period_end=coalesce(${pe}, period_end) where stripe_customer_id=${o.customer} returning id`;
     if (!r.length) console.error('stripe webhook: no user yet for customer', o.customer, ev.type);
+    if (kiteo && ev.type === 'customer.subscription.deleted') await sql`insert into site_events(user_id, ev, site, detail) values(${r[0] ? r[0].id : null}, 'k_cancelled', 'kiteo', ${(o.metadata && o.metadata.cycle) || ''})`;
   }
   return json(res, 200, { received: true });
 }

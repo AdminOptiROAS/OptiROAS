@@ -3823,7 +3823,7 @@ function kPriceInit(){const P=$('kplan');if(!P)return;const u=ST.me&&ST.me.user,
   if(!P._on){P._on=1;document.querySelectorAll('.kcycle button').forEach(b=>b.onclick=()=>set(b.dataset.c));
     $('kpBuy').onclick=e=>{e.preventDefault();const c=P.dataset.cycle;
       if(!KSTRIPE[c]){toast(TR('Online payment opens shortly. Message us and we’ll set you up today.','الدفع الإلكتروني يُفعّل قريبًا. راسلنا ونفعّل اشتراكك اليوم.'),6000);return}
-      try{px('InitiateCheckout',{value:KPRICE[c],currency:'AED',content_name:'Kiteo '+c})}catch(x){}
+      try{px('InitiateCheckout',{value:KPRICE[c],currency:'AED',content_name:'Kiteo '+c})}catch(x){}track('k_checkout');
       if(!u){try{sessionStorage.setItem('kpay',c)}catch(x){}ST.acctMode='signup';openAcct(TR('Create your Kiteo account first. You’ll go straight to payment after.','أنشئ حسابك في Kiteo أولًا، وبعدها تنتقل مباشرة إلى الدفع.'));return}
       location.href=kPayLink(c)}}
   const S=$('kpState'),Pt=$('kpPortal');$('kpBuy').hidden=!!sub;Pt.hidden=!sub;S.hidden=!sub;

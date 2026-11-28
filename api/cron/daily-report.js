@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     where a.at > now() - interval '24 hours' and lower(u.email) <> all(${ext})`);
   const ev = await one(sql`select count(*) filter (where ev='checkout_start')::int as checkout, count(*) filter (where ev='paywall_open')::int as paywall,
       count(*) filter (where ev='offer_open')::int as offer, count(*) filter (where ev='offer_click')::int as offer_click
-    from site_events where at > now() - interval '24 hours'`);
+    from site_events where coalesce(site,'optiroas')='optiroas' and at > now() - interval '24 hours'`);
   const leads = await one(sql`select count(*) filter (where created_at > now() - interval '24 hours')::int as new24, count(*)::int as total from leads where email <> all(${ext})`);
   const plans = await sql`select plan, count(*)::int as n from users where brand='optiroas' and plan <> 'free' and lower(email) <> all(${ext}) group by plan order by plan`;
   const subs24 = await one(sql`select count(*)::int as n from users where brand='optiroas' and plan <> 'free' and period_start > now() - interval '24 hours' and lower(email) <> all(${ext})`);
@@ -83,12 +83,12 @@ export default async function handler(req, res) {
   const tv = (await sql`select distinct pv.vid from page_views pv join users u on u.id=pv.user_id where pv.vid is not null and lower(u.email) = any(${ext})`).map(r => r.vid);
   const teamVid = tv.length ? tv : ['-'];
   const visits = await one(sql`select count(distinct vid)::int as visitors, coalesce(sum(n),0)::int as views, coalesce(sum(secs),0)::int as secs
-    from page_views where at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid}))`);
+    from page_views where coalesce(site,'optiroas')='optiroas' and at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid}))`);
   const pages = await sql`select page, sum(n)::int as views, count(distinct vid)::int as visitors, sum(secs)::int as secs
-    from page_views where at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid}))
+    from page_views where coalesce(site,'optiroas')='optiroas' and at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid}))
     group by page having sum(n) > 0 order by views desc limit 15`;
   const visitSrc = await sql`select coalesce(nullif(src,''),'direct / unknown') as src, count(distinct vid)::int as visitors
-    from page_views where at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid})) group by 1 order by 2 desc limit 10`;
+    from page_views where coalesce(site,'optiroas')='optiroas' and at > now() - interval '24 hours' and (vid is null or vid <> all(${teamVid})) group by 1 order by 2 desc limit 10`;
   const fb = await sql`select rating, message, page, created_at from feedback where created_at > now() - interval '24 hours' order by created_at desc limit 10`;
 
   const dur = t => { t = Math.round(t || 0); return t < 60 ? `${t}s` : `${Math.floor(t / 60)}m ${String(t % 60).padStart(2, '0')}s`; };

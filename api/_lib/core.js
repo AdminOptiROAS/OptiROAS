@@ -114,6 +114,11 @@ export function ensureSchema() {
       id bigserial primary key, vid text, user_id uuid, page text not null, n int not null default 1, secs int not null default 0,
       src text, at timestamptz not null default now())`;
     await sql`create index if not exists page_views_at on page_views(at)`;
+    // Which site a page view / event came from ('optiroas' or 'kiteo'; old rows are OptiROAS), and an optional amount and detail for events
+    await sql`alter table page_views add column if not exists site text`;
+    await sql`alter table site_events add column if not exists site text`;
+    await sql`alter table site_events add column if not exists val numeric`;
+    await sql`alter table site_events add column if not exists detail text`;
     // Follow-up email series after sign-up (language chosen at sign-up, last step sent, marketing opt-out)
     await sql`alter table users add column if not exists lang text`;
     await sql`alter table users add column if not exists nurture_step int not null default 0`;
